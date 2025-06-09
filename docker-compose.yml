@@ -1,0 +1,39 @@
+services:
+  bp_sync:
+    build:
+      context: ./bp_sync
+      dockerfile: Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+
+  bp_sync-migrations:
+    build:
+      context: ./bp_sync
+      dockerfile: Dockerfile
+    restart: no
+    depends_on:
+      db:
+        condition: service_healthy
+    command: alembic upgrade head
+
+  bp_sync-test:
+    build:
+      context: ./bp_sync
+      dockerfile: Dockerfile_tests
+    restart: no
+
+  db:
+    image: postgres:17.4-bookworm
+    restart: always
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "psql -h localhost -U $${POSTGRES_USER} -c select 1 -d $${POSTGRES_DB}"]
+      interval: 5s
+      retries: 5
+      start_period: 0s
+      timeout: 10s
+
+volumes:
+  db_data:
