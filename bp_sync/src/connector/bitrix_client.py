@@ -18,8 +18,23 @@ class Bitrix24Client:
         self.refresh_token = None
         self.expires_at = None
 
-    def get_auth_code(self) -> str:
-        ...
+    async def get_auth_code(self):
+        url = f"https://{self.bitrix_domain}/oauth/authorize"
+        params_data = {
+            "client_id": self.client_id,
+            "response_type": "code"
+        }
+
+        async with httpx.AsyncClient(timeout=30) as client:
+            try:
+                res = await client.get(
+                    url,
+                    params=params_data,
+                    auth=(settings.BITRIX_LOGIN, settings.BITRIX_PASS)
+                )
+            except Exception as e:
+                print(f"Ошибка запроса авторизации: {str(e)}")
+                return None
 
     def get_auth_url(self, state: str | None = None) -> str:
         """Генерация URL для авторизации в Bitrix24"""

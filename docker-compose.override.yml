@@ -18,3 +18,7 @@ services:
      - 5442:5432
     env_file:
       - ./.env
+
+  redis:
+    ports:
+      - 6379:6379

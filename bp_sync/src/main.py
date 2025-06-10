@@ -4,6 +4,7 @@ from typing import AsyncIterator
 import uvicorn
 from fastapi import FastAPI
 from fastapi.responses import ORJSONResponse
+from redis.asyncio import Redis
 from sqladmin import Admin
 
 # from admin.admin_models import ProductAdmin, ProductHSAdmin
@@ -14,13 +15,14 @@ from sqladmin import Admin
 from core.logger import LOGGING, logger
 from core.settings import settings
 from db.postgres import engine
+from db import redis
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    ...
+    redis.redis = Redis(host=settings.REDIS_HOST, port=settings.REDIS_PORT)
     yield
-    ...
+    await redis.redis.close()
 
 
 app = FastAPI(

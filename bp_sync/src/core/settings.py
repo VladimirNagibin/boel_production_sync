@@ -29,6 +29,11 @@ class Settings(BaseSettings):  # type: ignore
     BITRIX_PORTAL: str
     BITRIX_REDIRECT_URI: str
 
+    REDIS_HOST: str
+    REDIS_PORT: int
+
+    ENCRYPTION_KEY: str = "your_fernet_key_here"  # сгенерировать Fernet.generate_key()
+
     BASE_DIR: str = str(Path(__file__).resolve().parent.parent)
     LOGGING_FILE_MAX_BYTES: int = 500_000
 
