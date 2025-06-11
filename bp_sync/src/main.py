@@ -12,12 +12,18 @@ from sqladmin import Admin
 # from admin.authenticate import BasicAuthBackend
 # from api.v1.health import health_router
 # from api.v1.products import product_router
-# from api.v1.products_hs import producths_router
+from api.v1.b24 import b24_router
 from core.logger import LOGGING, logger
 from core.settings import settings
 from db.postgres import engine
 from db import redis
 
+#from cryptography.fernet import Fernet
+#new_key = Fernet.generate_key()
+
+# Преобразовать в строку для хранения
+#key_str = new_key.decode('utf-8')
+#print("Сгенерированный ключ:", key_str)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -52,7 +58,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# app.include_router(product_router, prefix="/api/v1/qr", tags=["qr"])
+app.include_router(b24_router, prefix="/api/v1/b24", tags=["b24"])
 # app.include_router(health_router, prefix="/api/v1/health", tags=["health"])
 # app.include_router(producths_router, prefix="/api/v1/hs", tags=["hs"])
 # auth_backend = BasicAuthBackend()

@@ -1,9 +1,11 @@
-import os
-from datetime import timedelta
+from functools import lru_cache
+
 from cryptography.fernet import Fernet
+from fastapi import Depends
 from redis.asyncio import Redis
 
 from core.settings import settings
+from db.redis import get_redis
 
 
 class TokenStorage:
@@ -17,69 +19,52 @@ class TokenStorage:
     def _decrypt(self, encrypted: bytes) -> str:
         return self.cipher.decrypt(encrypted).decode()
 
-    def save_refresh_token(
+    async def save_token(
         self,
-        refresh_token: str,
+        token: str,
+        token_type: str,  # refresh_token, access_token
         user_id: str = str(settings.SERVICE_USER),
         provider: str = settings.PROVIDER_B24,
-    ):
+        expires_in: int = 15_552_000  # 180 дней refresh / 1 час access
+    ) -> None:
         """Сохраняет токен с шифрованием"""
-        key = f"refresh_token:{user_id}:{provider}"
-        refresh = self._encrypt(refresh_token)
+        key = f"{token_type}:{user_id}:{provider}"
+        encrypted_token = self._encrypt(token)
 
-        self.redis.hset(key, refresh)
+        await self.redis.set(
+            name=key,
+            value=encrypted_token,
+            ex=expires_in
+        )
 
-    def get_tokens(self, user_id: str, provider: str) -> dict:
-        """Получает и расшифровывает токены"""
-        key = f"external_tokens:{user_id}:{provider}"
-        data = self.redis.hgetall(key)
-
-        if not data:
-            return None
-
-        return {
-            "access_token": self._decrypt(data[b"access"]),
-            "refresh_token": self._decrypt(data[b"refresh"]),
-        }
-
-
-
-
-
-    def save_tokens(
+    async def get_token(
         self,
-        user_id: str,
-        provider: str,
-        access_token: str,
-        refresh_token: str,
-        expires_in: int
-    ):
-        """Сохраняет токены с TTL и шифрованием"""
-        key = f"external_tokens:{user_id}:{provider}"
+        token_type: str,  # refresh_token, access_token
+        user_id: str = str(settings.SERVICE_USER),
+        provider: str = settings.PROVIDER_B24
+    ) -> str | None:
+        """Получает и расшифровывает токен"""
+        key = f"{token_type}:{user_id}:{provider}"
+        encrypted_token = await self.redis.get(key)
 
-        # Шифруем токены
-        encrypted_data = {
-            "access": self._encrypt(access_token),
-            "refresh": self._encrypt(refresh_token),
-        }
-
-        # Сохраняем в Redis с TTL (expires_in + буфер)
-        self.redis.hset(key, mapping=encrypted_data)
-        self.redis.expire(key, timedelta(seconds=expires_in + 300))
-
-    def get_tokens(self, user_id: str, provider: str) -> dict:
-        """Получает и расшифровывает токены"""
-        key = f"external_tokens:{user_id}:{provider}"
-        data = self.redis.hgetall(key)
-
-        if not data:
+        if not encrypted_token:
             return None
 
-        return {
-            "access_token": self._decrypt(data[b"access"]),
-            "refresh_token": self._decrypt(data[b"refresh"]),
-        }
+        return self._decrypt(encrypted_token)
 
-    def delete_tokens(self, user_id: str, provider: str):
-        key = f"external_tokens:{user_id}:{provider}"
-        self.redis.delete(key)
+    async def delete_token(
+        self,
+        token_type: str,  # refresh_token, access_token
+        user_id: str = str(settings.SERVICE_USER),
+        provider: str = settings.PROVIDER_B24
+    ):
+        """Удаляет токен из хранилища"""
+        key = f"{token_type}:{user_id}:{provider}"
+        await self.redis.delete(key)
+
+
+@lru_cache()
+def get_token_storage(
+    redis: Redis = Depends(get_redis),
+) -> TokenStorage:
+    return TokenStorage(redis)
