@@ -16,6 +16,8 @@ class Settings(BaseSettings):  # type: ignore
     POSTGRES_PASSWORD: str = "postgres"
     POSTGRES_DB: str = "bp_sync"
     POSTGRES_DB_ECHO: bool = True
+    SERVICE_USER: int
+    PROVIDER_B24: str = "B24"
 
     SECRET_KEY: str = "your-secret-key"
     ALGORITHM: str = "HS256"
@@ -31,6 +33,7 @@ class Settings(BaseSettings):  # type: ignore
 
     REDIS_HOST: str
     REDIS_PORT: int
+    REDIS_PASSWORD: str
 
     ENCRYPTION_KEY: str = "your_fernet_key_here"  # сгенерировать Fernet.generate_key()
 

@@ -1,5 +1,5 @@
 services:
-  mark:
+  bp_sync:
     volumes:
       - ./bp_sync/src:/opt/app
     env_file:
@@ -7,7 +7,7 @@ services:
     ports:
      - 8000:8000
 
-  mark-migrations:
+  bp_sync-migrations:
     volumes:
       - ./bp_sync/src:/opt/app
     env_file:

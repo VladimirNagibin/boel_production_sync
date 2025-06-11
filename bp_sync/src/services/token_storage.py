@@ -17,6 +17,35 @@ class TokenStorage:
     def _decrypt(self, encrypted: bytes) -> str:
         return self.cipher.decrypt(encrypted).decode()
 
+    def save_refresh_token(
+        self,
+        refresh_token: str,
+        user_id: str = str(settings.SERVICE_USER),
+        provider: str = settings.PROVIDER_B24,
+    ):
+        """Сохраняет токен с шифрованием"""
+        key = f"refresh_token:{user_id}:{provider}"
+        refresh = self._encrypt(refresh_token)
+
+        self.redis.hset(key, refresh)
+
+    def get_tokens(self, user_id: str, provider: str) -> dict:
+        """Получает и расшифровывает токены"""
+        key = f"external_tokens:{user_id}:{provider}"
+        data = self.redis.hgetall(key)
+
+        if not data:
+            return None
+
+        return {
+            "access_token": self._decrypt(data[b"access"]),
+            "refresh_token": self._decrypt(data[b"refresh"]),
+        }
+
+
+
+
+
     def save_tokens(
         self,
         user_id: str,
@@ -27,13 +56,13 @@ class TokenStorage:
     ):
         """Сохраняет токены с TTL и шифрованием"""
         key = f"external_tokens:{user_id}:{provider}"
-        
+
         # Шифруем токены
         encrypted_data = {
             "access": self._encrypt(access_token),
             "refresh": self._encrypt(refresh_token),
         }
-        
+
         # Сохраняем в Redis с TTL (expires_in + буфер)
         self.redis.hset(key, mapping=encrypted_data)
         self.redis.expire(key, timedelta(seconds=expires_in + 300))
@@ -42,10 +71,10 @@ class TokenStorage:
         """Получает и расшифровывает токены"""
         key = f"external_tokens:{user_id}:{provider}"
         data = self.redis.hgetall(key)
-        
+
         if not data:
             return None
-            
+
         return {
             "access_token": self._decrypt(data[b"access"]),
             "refresh_token": self._decrypt(data[b"refresh"]),
