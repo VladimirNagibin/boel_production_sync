@@ -22,5 +22,5 @@ class BitrixApiError(HTTPException):
     ):
         super().__init__(
             status_code=status_code,
-            detail=f"Bitrix API error: {error_description}"
+            detail=f"Bitrix API error: {error_description}",
         )

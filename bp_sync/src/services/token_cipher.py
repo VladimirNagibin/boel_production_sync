@@ -1,6 +1,6 @@
 import asyncio
-from functools import lru_cache
-from functools import partial
+from functools import lru_cache, partial
+
 from cryptography.fernet import Fernet, InvalidToken
 
 from core.logger import logger

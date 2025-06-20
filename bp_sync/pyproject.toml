@@ -19,7 +19,6 @@ sqladmin = "^0.20.1"
 pandas = "^2.2.3"
 redis = "^6.2.0"
 cryptography = "^45.0.4"
-selenium = "^4.33.0"
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.10.0"

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import Column, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from db.postgres import Base
@@ -16,6 +16,7 @@ class TypeDeal(Base):
     UC_76MJ0I - Входящие
     UC_FSOZEI - Исходящие
     """
+
     type_id: Mapped[str] = mapped_column(unique=True)
     name: Mapped[str]
     deals: Mapped[list["Deal"]] = relationship(
@@ -35,20 +36,21 @@ class Stage(Base):
     LOSE - Проиграна
     APOLOGY - Анализ проигрыша
     """
+
     stage_id: Mapped[str] = mapped_column(unique=True)
-    deals: Mapped[list["Deal"]] = relationship(
-        "Deal", back_populates="stage"
-    )
+    deals: Mapped[list["Deal"]] = relationship("Deal", back_populates="stage")
 
 
 class Deal(Base):
     deal_id: Mapped[int] = mapped_column(unique=True)  # ID
     title: Mapped[str]  # TITLE
-    type_id: Mapped[str] = mapped_column(ForeignKey("typedeals.type_id"))  # TYPE_ID
+    type_id: Mapped[str] = mapped_column(
+        ForeignKey("typedeals.type_id")
+    )  # TYPE_ID
     type_deal: Mapped["TypeDeal"] = relationship(
         "TypeDeal", back_populates="deals"
     )
-    stage_id: Mapped[str] = mapped_column(ForeignKey("stages.stage_id"))  # STAGE_ID
-    stage: Mapped["Stage"] = relationship(
-        "Stage", back_populates="deals"
-    )
+    stage_id: Mapped[str] = mapped_column(
+        ForeignKey("stages.stage_id")
+    )  # STAGE_ID
+    stage: Mapped["Stage"] = relationship("Stage", back_populates="deals")
