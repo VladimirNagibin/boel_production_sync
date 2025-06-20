@@ -14,7 +14,9 @@ class BitrixAuthError(Exception):
         super().__init__(message)
 
 
-class BitrixApiError(HTTPException):
+class BitrixApiError(HTTPException):  # type: ignore[misc]
+    """Custom exception for Bitrix24 API errors"""
+
     def __init__(
         self,
         status_code: int = 500,

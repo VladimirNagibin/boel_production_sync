@@ -59,9 +59,16 @@ class BitrixOAuthClient(BaseBitrixClient):
             )
             logger.error(f"Bitrix OAuth error: {error_msg}")
             raise BitrixAuthError(detail=f"OAuth error: {error_msg}")
+        access_token = token_data["access_token"]
+        if not isinstance(access_token, str):
+            logger.error(
+                f"Invalid access_token type: {type(access_token).__name__}"
+            )
+            raise BitrixAuthError(detail="Invalid access_token format")
+
         await self._save_tokens(token_data)
         logger.info("Access token refreshed successfully")
-        return token_data["access_token"]
+        return access_token
 
     async def fetch_token(self, code: str) -> str:
         """Получение токена по коду авторизации"""
@@ -79,11 +86,17 @@ class BitrixOAuthClient(BaseBitrixClient):
             )
             logger.error(f"Bitrix OAuth error: {error_msg}")
             raise BitrixAuthError(detail=f"OAuth error: {error_msg}")
+        access_token = token_data["access_token"]
+        if not isinstance(access_token, str):
+            logger.error(
+                f"Invalid access_token type: {type(access_token).__name__}"
+            )
+            raise BitrixAuthError(detail="Invalid access_token format")
         await self._save_tokens(token_data)
         logger.info("New tokens fetched and saved successfully")
-        return token_data["access_token"]
+        return access_token
 
-    async def _save_tokens(self, token_data: Dict[str, str]):
+    async def _save_tokens(self, token_data: Dict[str, str]) -> None:
         """Сохранение полученных токенов"""
         try:
             await self.token_storage.save_token(
