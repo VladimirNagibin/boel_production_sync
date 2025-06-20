@@ -35,7 +35,9 @@ class Settings(BaseSettings):  # type: ignore
     REDIS_PORT: int
     REDIS_PASSWORD: str
 
-    ENCRYPTION_KEY: str = "your_fernet_key_here"  # сгенерировать Fernet.generate_key()
+    ENCRYPTION_KEY: str = (
+        "your_fernet_key_here"  # сгенерировать Fernet.generate_key()
+    )
 
     BASE_DIR: str = str(Path(__file__).resolve().parent.parent)
     LOGGING_FILE_MAX_BYTES: int = 500_000

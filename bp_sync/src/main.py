@@ -15,15 +15,16 @@ from sqladmin import Admin
 from api.v1.b24 import b24_router
 from core.logger import LOGGING, logger
 from core.settings import settings
-from db.postgres import engine
 from db import redis
+from db.postgres import engine
 
-#from cryptography.fernet import Fernet
-#new_key = Fernet.generate_key()
+# from cryptography.fernet import Fernet
+# new_key = Fernet.generate_key()
 
 # Преобразовать в строку для хранения
-#key_str = new_key.decode('utf-8')
-#print("Сгенерированный ключ:", key_str)
+# key_str = new_key.decode('utf-8')
+# print("Сгенерированный ключ:", key_str)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
