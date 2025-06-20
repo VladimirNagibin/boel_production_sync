@@ -79,7 +79,7 @@ class TokenStorage:
                 logger.debug(f"Token deleted for {key}")
             else:
                 logger.debug(f"Token not found for deletion: {key}")
-            return success
+            return bool(success)
         except RedisError as e:
             logger.error(f"Redis delete error for {key}: {e}")
             raise ConnectionError("Token deletion failed") from e

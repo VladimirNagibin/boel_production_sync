@@ -6,7 +6,6 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.responses import ORJSONResponse
 from redis.asyncio import Redis
-from sqladmin import Admin
 
 # from admin.admin_models import ProductAdmin, ProductHSAdmin
 # from admin.authenticate import BasicAuthBackend
@@ -16,7 +15,11 @@ from api.v1.b24 import b24_router
 from core.logger import LOGGING, logger
 from core.settings import settings
 from db import redis
-from db.postgres import engine
+
+# from sqladmin import Admin
+
+
+# from db.postgres import engine
 
 # from cryptography.fernet import Fernet
 # new_key = Fernet.generate_key()
@@ -28,7 +31,7 @@ from db.postgres import engine
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    redis.redis = Redis(  # type: ignore[assignment]
+    redis.redis = Redis(
         host=settings.REDIS_HOST,
         port=settings.REDIS_PORT,
         db=0,

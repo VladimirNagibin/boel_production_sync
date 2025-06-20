@@ -1,5 +1,5 @@
 import asyncio
-from functools import lru_cache, partial
+from functools import lru_cache
 
 from cryptography.fernet import Fernet, InvalidToken
 
@@ -17,11 +17,8 @@ class TokenCipher:
 
     async def encrypt(self, data: str) -> bytes:
         """Асинхронное шифрование строки в байты"""
-        loop = asyncio.get_event_loop()
         try:
-            encrypted_data = await loop.run_in_executor(
-                None, partial(self.cipher.encrypt, data.encode())
-            )
+            encrypted_data = await asyncio.to_thread(self._encrypt_sync, data)
             return encrypted_data
         except Exception as e:
             logger.error(f"Encryption failed: {e}")
@@ -29,18 +26,27 @@ class TokenCipher:
 
     async def decrypt(self, encrypted_data: bytes) -> str:
         """Асинхронное дешифрование байтов в строку"""
-        loop = asyncio.get_event_loop()
         try:
-            decrypted_bytes = await loop.run_in_executor(
-                None, partial(self.cipher.decrypt, encrypted_data)
+            decrypted_str = await asyncio.to_thread(
+                self._decrypt_sync, encrypted_data
             )
-            return decrypted_bytes.decode()
+            return decrypted_str
         except InvalidToken as e:
             logger.warning(f"Invalid token decryption attempt: {e}")
             raise ValueError("Invalid or corrupted token") from e
         except Exception as e:
             logger.error(f"Decryption failed: {e}")
             raise RuntimeError("Token decryption error") from e
+
+    def _encrypt_sync(self, data: str) -> bytes:
+        return self.cipher.encrypt(  # type: ignore[no-any-return]
+            data.encode()
+        )
+
+    def _decrypt_sync(self, encrypted_data: bytes) -> str:
+        return self.cipher.decrypt(  # type: ignore[no-any-return]
+            encrypted_data
+        ).decode()
 
 
 @lru_cache(maxsize=1)

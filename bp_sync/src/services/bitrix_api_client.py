@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, cast
 from urllib.parse import urljoin
 
 from fastapi import status
@@ -48,10 +48,22 @@ class BitrixAPIClient(BaseBitrixClient):
                 payload = {"auth": access_token}
                 if params:
                     payload.update(params)
-                result = await self._post(url, payload)
-                if "error" in result:
-                    self._handle_api_error(result, attempt)
-                return result.get("result", result)
+                response = await self._post(url, payload)
+                if "error" in response:
+                    self._handle_api_error(response, attempt)
+                result = response.get("result", response)
+
+                # Гарантируем, что возвращаем словарь
+                if isinstance(result, dict):
+                    return cast(dict[str, Any], result)
+                logger.warning(
+                    "API response result is not a dictionary: "
+                    f"{type(result).__name__}"
+                )
+                # Оборачиваем не-dict результат в словарь
+                return {"result": result}
+
+                # return result.get("result", result)
             except BitrixAuthError as e:
                 logger.error(f"Authentication error: {str(e)}")
                 if attempt > self.max_retries:

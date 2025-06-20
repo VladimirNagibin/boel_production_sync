@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, cast
 
 import httpx
 from fastapi import status
@@ -8,6 +8,7 @@ from core.logger import logger
 from .exceptions import BitrixApiError, BitrixAuthError
 
 DEFAULT_TIMEOUT = 10
+JsonResponse = dict[str, Any]
 
 
 class BaseBitrixClient:
@@ -16,12 +17,17 @@ class BaseBitrixClient:
 
     async def _get(
         self, url: str, params: dict[str, Any] | None = None
-    ) -> dict[str, Any]:
+    ) -> JsonResponse:
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 response = await client.get(url, params=params)
                 response.raise_for_status()
-                return response.json()
+                json_data = response.json()
+                if not isinstance(json_data, dict):
+                    raise ValueError(
+                        f"Expected JSON object, got {type(json_data).__name__}"
+                    )
+                return cast(JsonResponse, json_data)
         except httpx.HTTPStatusError as e:
             detail = e.response.json().get("error_description", str(e))
             logger.error(f"HTTP error: {e.response.status_code}")
@@ -35,7 +41,7 @@ class BaseBitrixClient:
             logger.error(f"Invalid JSON response: {e}")
             raise BitrixAuthError("Invalid response format from Bitrix24")
 
-    async def _post(self, url: str, payload: dict[str, Any]) -> dict[str, Any]:
+    async def _post(self, url: str, payload: dict[str, Any]) -> JsonResponse:
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 response = await client.post(
@@ -44,7 +50,12 @@ class BaseBitrixClient:
                     headers={"Content-Type": "application/json"},
                 )
                 response.raise_for_status()
-                return response.json()
+                json_data = response.json()
+                if not isinstance(json_data, dict):
+                    raise ValueError(
+                        f"Expected JSON object, got {type(json_data).__name__}"
+                    )
+                return cast(JsonResponse, json_data)
         except httpx.HTTPStatusError as e:
             logger.error(
                 f"API HTTP error {e.response.status_code}: {e.response.text}"
