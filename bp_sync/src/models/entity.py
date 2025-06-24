@@ -1,5 +1,6 @@
+import uuid
 from datetime import datetime
-from enum import StrEnum
+from enum import IntEnum, StrEnum
 
 from sqlalchemy import (  # , Column, Integer, String
     CheckConstraint,
@@ -14,7 +15,7 @@ from db.postgres import Base
 
 class DealType(Base):
     """
-    Тип сделки:
+    Типы сделок:
     1 - Продажа BOEL
     3 - Продажа Колонны
     5 - Интернет продажа
@@ -30,20 +31,23 @@ class DealType(Base):
     type_id: Mapped[str] = mapped_column(unique=True)
     name: Mapped[str]
     deals: Mapped[list["Deal"]] = relationship("Deal", back_populates="type")
+    lead_deals: Mapped[list["Deal"]] = relationship(
+        "Deal", back_populates="lead_type"
+    )
 
 
 class DealStage(Base):
     """
-    Стадия:
-    NEW - Не разобрано
-    PREPAYMENT_INVOICE - Выявление потребности
-    PREPARATION - Заинтересован
-    EXECUTING - Согласование условий договор
-    FINAL_INVOICE - Выставление счёта
-    1 - На отгрузку
-    WON - Выиграна
-    LOSE - Проиграна
-    APOLOGY - Анализ проигрыша
+    Стадии сделок:
+    1. NEW - Не разобрано
+    2. PREPAYMENT_INVOICE - Выявление потребности
+    3. PREPARATION - Заинтересован
+    4. EXECUTING - Согласование условий договор
+    5. FINAL_INVOICE - Выставление счёта
+    6. 1 - На отгрузку
+    7. WON - Выиграна
+    8. LOSE - Проиграна
+    9. APOLOGY - Анализ проигрыша
     """
 
     __tablename__ = "deal_stages"
@@ -51,11 +55,14 @@ class DealStage(Base):
     name: Mapped[str]
     order: Mapped[int] = mapped_column(unique=True)  # порядковый номер
     deals: Mapped[list["Deal"]] = relationship("Deal", back_populates="stage")
+    current_deals: Mapped[list["Deal"]] = relationship(
+        "Deal", back_populates="current_stage"
+    )
 
 
 class Currency(Base):
     """
-    Валюта:
+    Валюты:
     ID    name              cource~ nominal
     RUB - Российский рубль  1       1
     USD - Доллар США        78.4839 1
@@ -132,6 +139,9 @@ class User(Base):
     last_activity_deals: Mapped[list["Deal"]] = relationship(
         "Deal", back_populates="last_activity_user"
     )
+    defect_deals: Mapped[list["Deal"]] = relationship(
+        "Deal", back_populates="defect_expert"
+    )
 
 
 class Category(Base):
@@ -158,7 +168,7 @@ class StageSemanticEnum(StrEnum):
     F - Провал
     """
 
-    IN_PROCESS = "P"
+    PROSPECTIVE = "P"
     SUCCESS = "S"
     FAIL = "F"
 
@@ -166,16 +176,50 @@ class StageSemanticEnum(StrEnum):
 class Source(Base):
     """
     Источники сделок:
-    PARTNER : Существующий клиент
+    PARTNER :  Существующий клиент
     19 : Новый клиент
-    20 : Шоурум
-    21 : Интернет
+    CALL : Звонок
+    WEB : Веб-сайт BOELSHOP
+    16 : OZON
+    17 : WILDBERRIES
+    7 : ЮЛА
+    5 : АВИТО
+    9|AVITO : Avito - BOEL SHOP AVITO
+    STORE : Интернет-магазин
+    UC_7VUX6L : Другое
+    1|VK : ВКонтакте - Открытая линия
+    CALLBACK : Обратный звонок
+    WEBFORM : CRM-форма
+    12 : Алиэкспресс
+    RC_GENERATOR : Генератор продаж
+    UC_2THEVX : Шоп и периферия
+    REPEAT_SALE : Повторные продажи
+    # 20 : Шоурум
+    # 21 : Интернет
     """
 
     __tablename__ = "sources"
     source_id: Mapped[str] = mapped_column(unique=True)
     name: Mapped[str]
     deals: Mapped[list["Deal"]] = relationship("Deal", back_populates="source")
+
+
+class CreationSource(Base):
+    """
+    Источники создания сделок:
+    499 : Существующий клиент
+    501 : Новый клиент
+    503 : Шоурум
+    505 : Интернет
+    # Ручная / Автоматическая
+    """
+
+    __tablename__ = "creation_sources"
+    creation_source_id: Mapped[int] = mapped_column(unique=True)
+    name: Mapped[str]
+    deals: Mapped[list["Deal"]] = relationship(
+        "Deal", back_populates="creation_source"
+    )
 
 
 class MainActivity(Base):
@@ -200,7 +244,141 @@ class MainActivity(Base):
     )
 
 
+class TypePaymentEnum(IntEnum):
+    """
+    Типы оплат:
+    377 - Предоплата
+    379 - Отсрочка
+    381 - Частичная
+    0 - Не определено
+    """
+
+    PREPAYMENT = 377
+    POSTPONEMENT = 379
+    PARTPAYMENT = 381
+    NOT_DEFINE = 0
+
+
+class TypeShipmentEnum(IntEnum):
+    """
+    Типы отгрузки:
+    515 - Самовывоз
+    517 - Доставка курьером
+    519 - Отправка ТК
+    0 - Не определено
+    """
+
+    PICKUP = 515
+    DELIVERY_COURIER = 517
+    TRANSPORT_COMPANY = 519
+    NOT_DEFINE = 0
+
+
+class ProcessingStatusEnum(IntEnum):
+    """
+    Статусы обработки:
+    781 - ОК
+    783 - Риск просрочки
+    785 - Просрочен
+    0 - Не определено
+    """
+
+    OK = 781
+    AT_RISK = 783
+    OVERDUE = 785
+    NOT_DEFINE = 0
+
+
+class InvoiceStage(Base):
+    """
+    Стадии счетов:
+    1. N - новый
+    2. S - отправлен
+    3. 1 - выгружен в 1С
+    4. P - успешный
+    5. D - не оплачен
+    """
+
+    __tablename__ = "invoice_stages"
+    stage_id: Mapped[str] = mapped_column(unique=True)
+    name: Mapped[str]
+    order: Mapped[int] = mapped_column(unique=True)  # порядковый номер
+    deals: Mapped[list["Deal"]] = relationship(
+        "Deal", back_populates="invoice_stage"
+    )
+
+
+class Billing(Base):
+    """
+    Платежи
+    """
+
+    __tablename__ = "billings"
+    type_bill: Mapped[str]  # нал/безнал
+    amount: Mapped[float]
+    date_bill: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    deal_id: Mapped[str] = mapped_column(ForeignKey("deal.id"))
+    deal: Mapped["Deal"] = relationship("Deal", back_populates="billings")
+
+
+class ShippingCompany(Base):
+    """
+    Фирмы отгрузки
+    439 : Системы
+    441 : Элемент
+    443 : Торговый дом СР
+    445 : ТехТорг
+    447 : ИП Гузиков М.Г.
+    773 : ИП Воробьев Д.В.
+    777 : Эксперты розлива
+    """
+
+    __tablename__ = "shipping_companies"
+    company_id: Mapped[int] = mapped_column(unique=True)
+    name: Mapped[str]
+    deals: Mapped[list["Deal"]] = relationship(
+        "Deal", back_populates="shipping_company"
+    )
+
+
+class Warehouse(Base):
+    """
+    Склады
+    597 : Нск
+    599 : Спб
+    601 : Кдр
+    603 : Мск
+    """
+
+    __tablename__ = "warehouses"
+    warehouse_id: Mapped[int] = mapped_column(unique=True)
+    name: Mapped[str]
+    deals: Mapped[list["Deal"]] = relationship(
+        "Deal", back_populates="warehouse"
+    )
+
+
+class DefectType(Base):
+    """
+    Виды неисправностей:
+    . - Некомплектная поставка
+    . - Некачественная сборка/проверка
+    . - Дефект материала
+    . - Дефект изготовления комплектующих
+    . - Транспортное повреждение
+    . - Негарантийная поломка
+    """
+
+    __tablename__ = "defect_types"
+    defect_id: Mapped[int] = mapped_column(unique=True)
+    name: Mapped[str]
+    deal_id: Mapped[str] = mapped_column(ForeignKey("deal.id"))
+    deal: Mapped["Deal"] = relationship("Deal", back_populates="defects")
+
+
 class Deal(Base):
+    """Сделки"""
+
     __tablename__ = "deals"
     __table_args__ = (
         CheckConstraint("opportunity >= 0", name="non_negative_opportunity"),
@@ -294,8 +472,8 @@ class Deal(Base):
             StageSemanticEnum,
             name="deal_stage_enum",
             create_type=False,
-            default=0,
-            server_default="NOT_DEFINED",
+            default=StageSemanticEnum.PROSPECTIVE,
+            server_default="P",
         )
     )
     is_new: Mapped[bool]  # IS_NEW : Флаг новой сделки (Y/N)
@@ -345,3 +523,111 @@ class Deal(Base):
     )
     city: Mapped[str | None]  # UF_CRM_DCT_CITY : Город (населённый пункт)
     source_external: Mapped[str | None]  # UF_CRM_DCT_SOURCE : Источник внешний
+    is_shipment_approved: Mapped[bool | None]
+    # UF_CRM_60D2AFAEB32CC : Разрешение на отгрузку (1/0)
+    lead_type_id: Mapped[str | None] = mapped_column(
+        ForeignKey("deal_types.type_id")
+    )  # UF_CRM_612463720554B : Тип лида привязанного к сделке
+    lead_type: Mapped["DealType"] = relationship(
+        "DealType", back_populates="lead_deals"
+    )
+    payment_deadline: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True)
+    )  # UF_CRM_1632738230 :  Срок оплаты счёта
+    payment_type: Mapped[str] = mapped_column(
+        PgEnum(
+            TypePaymentEnum,
+            name="type_payment_enum",
+            create_type=False,
+            default=TypePaymentEnum.NOT_DEFINE,
+            server_default=0,
+        )
+    )  # UF_CRM_1632738315 : Тип оплаты счёта
+    invoice_stage_id: Mapped[str] = mapped_column(
+        ForeignKey("invoice_stages.stage_id")
+    )  # UF_CRM_1632738354 : Идентификатор стадии счёта
+    invoice_stage: Mapped["InvoiceStage"] = relationship(
+        "InvoiceStage", back_populates="deals"
+    )
+    billings: Mapped["Billing"] = relationship(
+        "Billing", back_populates="deal"
+    )  # UF_CRM_1632738424* : Платёжки по счёту
+    is_shipment_approved_invoice: Mapped[bool | None]
+    # UF_CRM_1632738559 : Разрешение на отгрузку счёта (1/0)
+    current_stage_id: Mapped[str] = mapped_column(
+        ForeignKey("deal_stages.stage_id")
+    )  # UF_CRM_1632738604 : Идентификатор стадии сделки
+    current_stage: Mapped["DealStage"] = relationship(
+        "DealStage", back_populates="current_deals"
+    )
+    shipping_company_id: Mapped[int] = mapped_column(
+        ForeignKey("shipping_companies.company_id")
+    )  # UF_CRM_1650617036 : Ид фирмы отгрузки
+    shipping_company: Mapped["ShippingCompany"] = relationship(
+        "ShippingCompany", back_populates="deals"
+    )
+    creation_source_id: Mapped[int] = mapped_column(
+        ForeignKey("creation_sources.creation_source_id")
+    )  # UF_CRM_1654577096 : Идентификатор сводного источника (авто/ручной)
+    creation_source: Mapped["CreationSource"] = relationship(
+        "CreationSource", back_populates="deals"
+    )
+    shipping_type: Mapped[str] = mapped_column(
+        PgEnum(
+            TypeShipmentEnum,
+            name="type_shipment_enum",
+            create_type=False,
+            default=TypeShipmentEnum.NOT_DEFINE,
+            server_default=0,
+        )
+    )  # UF_CRM_1655141630 : Тип отгрузки
+
+    # Ссылка на родительскую сделку
+    parent_deal_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("deals.id"), nullable=True
+    )  # UF_CRM_1655891443 : Родительская сделка
+
+    # Отношение к связанным сделкам
+    related_deals: Mapped[list["Deal"]] = relationship(
+        "Deal", back_populates="patrnt_deal", remote_side="[Deal.id]"
+    )  # UF_CRM_1658467259* : Связанные сделки
+
+    # Отношение к родительской сделке
+    parent_deal: Mapped["Deal"] = relationship(
+        "Deal",
+        back_populates="related_deals",
+        remote_side="[Deal.id]",
+        foreign_keys="[Deal.parent_deal_id]",
+    )
+    id_printed_form: Mapped[str | None]
+    # UF_CRM_1656227383 : Ид печатной формы
+    payment_grace_period: Mapped[int | None]
+    # UF_CRM_1656582798 Отсрочка платежа в днях
+    warehouse_id: Mapped[int] = mapped_column(
+        ForeignKey("warehouses.warehouse_id")
+    )  # UF_CRM_1659326670 : Ид склада
+    warehouse: Mapped["Warehouse"] = relationship(
+        "Warehouse", back_populates="deals"
+    )
+    processing_status: Mapped[str] = mapped_column(
+        PgEnum(
+            ProcessingStatusEnum,
+            name="processing_status_enum",
+            create_type=False,
+            default=ProcessingStatusEnum.NOT_DEFINE,
+            server_default=0,
+        )
+    )  # UF_CRM_1750571370 : Статус обработки
+
+    # Поля сервисных сделок
+    defects: Mapped["DefectType"] = relationship(
+        "DefectType", back_populates="deal"
+    )  # UF_CRM_1655615996118* : Дефекты из списка по сделке
+    defect_conclusion: Mapped[str | None]
+    # UF_CRM_1655618110493 : Итоговое заключение
+    defect_expert_id: Mapped[int] = mapped_column(
+        ForeignKey("users.user_id")
+    )  # UF_CRM_1655618547 : Ид эксперта по дефектам
+    defect_expert: Mapped["User"] = relationship(
+        "User", back_populates="defect_deals"
+    )

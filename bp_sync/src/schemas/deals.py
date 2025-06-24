@@ -33,7 +33,8 @@ class DealCreateBase(BaseModel):  # type: ignore[misc]
 
     @validator("PROBABILITY")  # type: ignore[misc]
     def validate_probability(cls, v: Optional[int]) -> Optional[int]:
-        if v is not None and (v < 0 or v > 100):
+        """Кастомная валидация вероятности сделки"""
+        if v is not None and (0 <= v <= 100):
             raise ValueError("Probability must be between 0 and 100")
         return v
 
