@@ -113,16 +113,16 @@ class Deal(Base, UserRelationsMixin):
     date_modify: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), comment="Дата изменения"
     )  # DATE_MODIFY : Дата изменения
-    moved_time: Mapped[datetime] = mapped_column(
+    moved_time: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), comment="Время перемещения"
     )  # MOVED_TIME : Дата перемещения элемента на текущую стадию
-    last_activity_time: Mapped[datetime] = mapped_column(
+    last_activity_time: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), comment="Время последней активности"
     )  # LAST_ACTIVITY_TIME : Время последней активности
     last_communication_time: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), comment="Время последней коммуникации"
     )  # LAST_COMMUNICATION_TIME : Дата ???
-    payment_deadline: Mapped[datetime] = mapped_column(
+    payment_deadline: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), comment="Срок оплаты"
     )  # UF_CRM_1632738230 :  Срок оплаты счёта
 
@@ -189,13 +189,13 @@ class Deal(Base, UserRelationsMixin):
     )  # UF_CRM_1750571370 : Статус обработки
 
     # Связи с другими сущностями
-    currency_id: Mapped[str] = mapped_column(
+    currency_id: Mapped[str | None] = mapped_column(
         ForeignKey("currencies.external_id")
     )  # CURRENCY_ID : Ид валюты
     currency: Mapped["Currency"] = relationship(
         "Currency", back_populates="deals"
     )
-    type_id: Mapped[str] = mapped_column(
+    type_id: Mapped[str | None] = mapped_column(
         ForeignKey("deal_types.external_id")
     )  # TYPE_ID : Тип сделки
     type: Mapped["DealType"] = relationship("DealType", back_populates="deals")
@@ -205,17 +205,17 @@ class Deal(Base, UserRelationsMixin):
     stage: Mapped["DealStage"] = relationship(
         "DealStage", back_populates="deals"
     )
-    lead_id: Mapped[int] = mapped_column(
+    lead_id: Mapped[int | None] = mapped_column(
         ForeignKey("leads.external_id")
     )  # LEAD_ID : Ид лида
     lead: Mapped["Lead"] = relationship("Lead", back_populates="deals")
-    company_id: Mapped[int] = mapped_column(
+    company_id: Mapped[int | None] = mapped_column(
         ForeignKey("companies.external_id")
     )  # COMPANY_ID : Ид компании
     company: Mapped["Company"] = relationship(
         "Company", back_populates="deals"
     )
-    contact_id: Mapped[int] = mapped_column(
+    contact_id: Mapped[int | None] = mapped_column(
         ForeignKey("contacts.external_id")
     )  # CONTACT_ID : Ид контакта
     contact: Mapped["Contact"] = relationship(
@@ -227,7 +227,7 @@ class Deal(Base, UserRelationsMixin):
     category: Mapped["Category"] = relationship(
         "Category", back_populates="deals"
     )
-    source_id: Mapped[int] = mapped_column(
+    source_id: Mapped[str | None] = mapped_column(
         ForeignKey("sources.external_id")
     )  # SOURCE_ID : Идентификатор источника (сводно)
     source: Mapped["Source"] = relationship("Source", back_populates="deals")
@@ -243,31 +243,31 @@ class Deal(Base, UserRelationsMixin):
     lead_type: Mapped["DealType"] = relationship(
         "DealType", back_populates="lead_deals"
     )
-    invoice_stage_id: Mapped[str] = mapped_column(
+    invoice_stage_id: Mapped[str | None] = mapped_column(
         ForeignKey("invoice_stages.external_id")
     )  # UF_CRM_1632738354 : Идентификатор стадии счёта
     invoice_stage: Mapped["InvoiceStage"] = relationship(
         "InvoiceStage", back_populates="deals"
     )
-    current_stage_id: Mapped[str] = mapped_column(
+    current_stage_id: Mapped[str | None] = mapped_column(
         ForeignKey("deal_stages.external_id")
     )  # UF_CRM_1632738604 : Ид стадии сделки (для фиксации предыдущей стадии)
     current_stage: Mapped["DealStage"] = relationship(
         "DealStage", back_populates="current_deals"
     )
-    shipping_company_id: Mapped[int] = mapped_column(
+    shipping_company_id: Mapped[int | None] = mapped_column(
         ForeignKey("shipping_companies.external_id")
     )  # UF_CRM_1650617036 : Ид фирмы отгрузки
     shipping_company: Mapped["ShippingCompany"] = relationship(
         "ShippingCompany", back_populates="deals"
     )
-    creation_source_id: Mapped[int] = mapped_column(
+    creation_source_id: Mapped[int | None] = mapped_column(
         ForeignKey("creation_sources.external_id")
     )  # UF_CRM_1654577096 : Идентификатор сводного источника (авто/ручной)
     creation_source: Mapped["CreationSource"] = relationship(
         "CreationSource", back_populates="deals"
     )
-    warehouse_id: Mapped[int] = mapped_column(
+    warehouse_id: Mapped[int | None] = mapped_column(
         ForeignKey("warehouses.external_id")
     )  # UF_CRM_1659326670 : Ид склада
     warehouse: Mapped["Warehouse"] = relationship(

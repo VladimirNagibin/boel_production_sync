@@ -4,6 +4,7 @@ from fastapi.responses import JSONResponse
 from core.logger import logger
 
 # from services.bitrix_api_client import BitrixAPIClient
+from schemas.deals import DealCreate
 from services.bitrix_clients import BitrixAPIClient1, get_bitrix_client1
 from services.bitrix_dependencies import (  # , get_bitrix_client
     get_oauth_client,
@@ -24,9 +25,11 @@ async def check(
     bitrix_client: BitrixAPIClient1 = Depends(get_bitrix_client1),
     token_storage: TokenStorage = Depends(get_token_storage),
 ) -> JSONResponse:
-    res = await bitrix_client.get_deal(50301)
+    res = await bitrix_client.get_deal(50323)
     # await token_storage.delete_token("access_token")
     if res:
+        deal_create = DealCreate(**res)
+        print(deal_create.model_dump())
         return JSONResponse(
             status_code=status.HTTP_200_OK,
             content={
