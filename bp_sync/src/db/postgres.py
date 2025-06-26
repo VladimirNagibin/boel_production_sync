@@ -10,10 +10,9 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine,
 )
-from sqlalchemy.orm import (
+from sqlalchemy.orm import (  # declared_attr,
     DeclarativeBase,
     Mapped,
-    declared_attr,
     mapped_column,
 )
 
@@ -42,10 +41,10 @@ class Base(AsyncAttrs, DeclarativeBase):  # type: ignore[misc]
         server_default=func.now(), onupdate=func.now()
     )
 
-    @declared_attr.directive  # type: ignore
-    def __tablename__(cls) -> str:
-        cls_name = cls.__name__.lower()
-        return f"{cls_name}s"
+    # @declared_attr.directive  # type: ignore
+    # def __tablename__(cls) -> str:
+    #    cls_name = cls.__name__.lower()
+    #    return f"{cls_name}s"
 
 
 async def create_database() -> None:
