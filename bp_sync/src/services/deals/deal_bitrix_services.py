@@ -3,17 +3,16 @@ from typing import Any
 
 from fastapi import Depends
 
-from .bitrix_api_client import BitrixAPIClient
-from .bitrix_dependencies import get_bitrix_client
+from ..bitrix_services.bitrix_api_client import BitrixAPIClient
+from ..dependencies import get_bitrix_client
 
 # from core.logger import logger
 
 
-class BitrixAPIClient1:
+class DealBitrixClient:
     def __init__(self, bitrix_client: BitrixAPIClient):
         self.bitrix_client = bitrix_client
 
-    # Примеры конкретных методов API
     async def get_deal(self, deal_id: int) -> dict[Any, Any]:
         """Получение сделки по ID"""
         return await self.bitrix_client.call_api(
@@ -44,7 +43,7 @@ class BitrixAPIClient1:
 
 
 @lru_cache()
-def get_bitrix_client1(
+def get_deal_bitrix_client(
     bitrix_client: BitrixAPIClient = Depends(get_bitrix_client),
-) -> BitrixAPIClient1:
-    return BitrixAPIClient1(bitrix_client)
+) -> DealBitrixClient:
+    return DealBitrixClient(bitrix_client)

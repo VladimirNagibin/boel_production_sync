@@ -4,14 +4,20 @@ from fastapi.responses import JSONResponse
 from core.logger import logger
 
 # from services.bitrix_api_client import BitrixAPIClient
-from schemas.deals import DealCreate
-from services.bitrix_clients import BitrixAPIClient1, get_bitrix_client1
-from services.bitrix_dependencies import (  # , get_bitrix_client
+from schemas.deal_schemas import DealCreate
+from services.bitrix_services.bitrix_oauth_client import BitrixOAuthClient
+from services.deals.deal_bitrix_services import (
+    DealBitrixClient,
+    get_deal_bitrix_client,
+)
+from services.dependencies import (  # , get_bitrix_client
     get_oauth_client,
 )
-from services.bitrix_oauth_client import BitrixOAuthClient
 from services.exceptions import BitrixAuthError
-from services.token_storage import TokenStorage, get_token_storage
+from services.token_services.token_storage import (
+    TokenStorage,
+    get_token_storage,
+)
 
 b24_router = APIRouter()
 
@@ -22,10 +28,10 @@ b24_router = APIRouter()
     description="Information about persistency redis.",
 )  # type: ignore
 async def check(
-    bitrix_client: BitrixAPIClient1 = Depends(get_bitrix_client1),
+    deal_bitrix_client: DealBitrixClient = Depends(get_deal_bitrix_client),
     token_storage: TokenStorage = Depends(get_token_storage),
 ) -> JSONResponse:
-    res = await bitrix_client.get_deal(50323)
+    res = await deal_bitrix_client.get_deal(50815)
     # await token_storage.delete_token("access_token")
     if res:
         deal_create = DealCreate(**res)

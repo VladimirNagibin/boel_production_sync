@@ -7,7 +7,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .bases import NameIntIdEntity, NameStrIdEntity
 
 if TYPE_CHECKING:
-    from .deal import Deal  # Типизация только при проверке типов
+    from .deal_models import Deal  # Типизация только при проверке типов
 
 
 class Currency(NameStrIdEntity):
