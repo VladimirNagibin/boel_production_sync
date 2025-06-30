@@ -5,9 +5,9 @@ from fastapi import status
 
 from core.logger import logger
 
+from ..exceptions import BitrixApiError, BitrixAuthError
 from .base_bitrix_client import DEFAULT_TIMEOUT, BaseBitrixClient
 from .bitrix_oauth_client import BitrixOAuthClient
-from .exceptions import BitrixApiError, BitrixAuthError
 
 MAX_RETRIES = 2
 REST_API_BASE = "/rest/"

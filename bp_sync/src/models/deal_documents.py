@@ -8,7 +8,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from db.postgres import Base
 
 if TYPE_CHECKING:
-    from .deal import Deal  # Типизация только при проверке типов
+    from .deal_models import Deal  # Типизация только при проверке типов
 
 
 class Billing(Base):

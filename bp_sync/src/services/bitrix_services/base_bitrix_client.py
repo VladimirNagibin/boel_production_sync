@@ -5,7 +5,7 @@ from fastapi import status
 
 from core.logger import logger
 
-from .exceptions import BitrixApiError, BitrixAuthError
+from ..exceptions import BitrixApiError, BitrixAuthError
 
 DEFAULT_TIMEOUT = 10
 JsonResponse = dict[str, Any]

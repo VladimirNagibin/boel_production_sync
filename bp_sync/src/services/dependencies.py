@@ -4,9 +4,9 @@ from fastapi import Depends
 
 from core.settings import settings
 
-from .bitrix_api_client import BitrixAPIClient
-from .bitrix_oauth_client import BitrixOAuthClient
-from .token_storage import TokenStorage, get_token_storage
+from .bitrix_services.bitrix_api_client import BitrixAPIClient
+from .bitrix_services.bitrix_oauth_client import BitrixOAuthClient
+from .token_services.token_storage import TokenStorage, get_token_storage
 
 MAXSIZE = 1
 

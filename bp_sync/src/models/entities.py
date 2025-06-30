@@ -5,7 +5,7 @@ from sqlalchemy.orm import Mapped, relationship
 from .bases import IntIdEntity, NameIntIdEntity
 
 if TYPE_CHECKING:
-    from .deal import Deal  # Типизация только при проверке типов
+    from .deal_models import Deal  # Типизация только при проверке типов
 
 
 class Lead(IntIdEntity):

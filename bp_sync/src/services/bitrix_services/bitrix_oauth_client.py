@@ -3,9 +3,9 @@ from urllib.parse import urlencode
 
 from core.logger import logger
 
+from ..exceptions import BitrixAuthError
+from ..token_services.token_storage import TokenStorage
 from .base_bitrix_client import DEFAULT_TIMEOUT, BaseBitrixClient
-from .exceptions import BitrixAuthError
-from .token_storage import TokenStorage
 
 OAUTH_ENDPOINT = "/oauth/authorize/"
 TOKEN_ENDPOINT = "/oauth/token/"

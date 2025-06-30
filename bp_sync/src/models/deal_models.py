@@ -120,7 +120,7 @@ class Deal(Base, UserRelationsMixin):
         DateTime(timezone=True), comment="Время последней активности"
     )  # LAST_ACTIVITY_TIME : Время последней активности
     last_communication_time: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), comment="Время последней коммуникации"
+        DateTime(timezone=False), comment="Время последней коммуникации"
     )  # LAST_COMMUNICATION_TIME : Дата ???
     payment_deadline: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), comment="Срок оплаты"
