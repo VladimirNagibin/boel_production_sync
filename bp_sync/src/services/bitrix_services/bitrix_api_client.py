@@ -1,4 +1,4 @@
-from typing import Any, cast
+from typing import Any
 from urllib.parse import urljoin
 
 from fastapi import status
@@ -51,24 +51,20 @@ class BitrixAPIClient(BaseBitrixClient):
                 response = await self._post(url, payload)
                 if "error" in response:
                     self._handle_api_error(response, attempt)
-                result = response.get("result", response)
 
-                # Гарантируем, что возвращаем словарь
-                if isinstance(result, dict):
-                    return cast(dict[str, Any], result)
-                logger.warning(
-                    "API response result is not a dictionary: "
-                    f"{type(result).__name__}"
+                if response.get("result"):
+                    return response
+                logger.error(f"Response has no result. {method}: {params}")
+                raise BitrixApiError(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    error_description="Response has no result.",
                 )
-                # Оборачиваем не-dict результат в словарь
-                return {"result": result}
-
-                # return result.get("result", result)
             except BitrixAuthError as e:
                 logger.error(f"Authentication error: {str(e)}")
                 if attempt > self.max_retries:
                     raise
                 continue
+        logger.error(f"Token refresh failed after retries. {method}: {params}")
         raise BitrixAuthError("Token refresh failed after retries")
 
     def _handle_api_error(
