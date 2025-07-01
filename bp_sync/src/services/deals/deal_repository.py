@@ -33,8 +33,13 @@ class DealRepository:
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()  # type: ignore
 
-    async def update_deal(self, deal_schema: DealUpdate) -> DealDB:
+    async def update_deal_by_external_id(
+        self, deal_schema: DealUpdate
+    ) -> DealDB:
         """Обновляет существующую сделку"""
+        if not deal_schema.external_id:
+            # logger.error("Update failed: Missing deal ID")
+            raise ValueError("Deal ID is required for update")
         update_data = deal_schema.model_dump(exclude_unset=True)
         external_id = deal_schema.external_id
 
@@ -55,7 +60,7 @@ class DealRepository:
             await self.session.rollback()
             raise self._deal_not_found_exception(external_id)
 
-    async def del_deal_by_external_id(self, external_id: int) -> bool:
+    async def delete_deal_by_external_id(self, external_id: int) -> bool:
         """Удаляет сделку по external_id, возвращает статус операции"""
         stmt = delete(DealDB).where(DealDB.external_id == external_id)
         result = await self.session.execute(stmt)

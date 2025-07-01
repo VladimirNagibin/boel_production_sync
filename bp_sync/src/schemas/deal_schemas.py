@@ -303,7 +303,7 @@ class DealUpdate(BaseModel):  # type: ignore[misc]
     """Модель для частичного обновления сделок"""
 
     # Основные поля с алиасами (все необязательные)
-    external_id: int = Field(..., alias="ID")
+    external_id: Optional[int] = Field(None, alias="ID")
     title: Optional[str] = Field(None, alias="TITLE")
     comments: Optional[str] = Field(None, alias="COMMENTS")
     additional_info: Optional[str] = Field(None, alias="ADDITIONAL_INFO")
@@ -339,6 +339,7 @@ class DealUpdate(BaseModel):  # type: ignore[misc]
     # Временные метки
     begindate: Optional[datetime] = Field(None, alias="BEGINDATE")
     closedate: Optional[datetime] = Field(None, alias="CLOSEDATE")
+    date_create: Optional[datetime] = Field(None, alias="DATE_CREATE")
     date_modify: Optional[datetime] = Field(None, alias="DATE_MODIFY")
     moved_time: Optional[datetime] = Field(None, alias="MOVED_TIME")
     last_activity_time: Optional[datetime] = Field(
@@ -392,6 +393,7 @@ class DealUpdate(BaseModel):  # type: ignore[misc]
 
     # Связи по пользователю
     assigned_by_id: Optional[int] = Field(None, alias="ASSIGNED_BY_ID")
+    created_by_id: Optional[int] = Field(None, alias="CREATED_BY_ID")
     modify_by_id: Optional[int] = Field(None, alias="MODIFY_BY_ID")
     moved_by_id: Optional[int] = Field(None, alias="MOVED_BY_ID")
     last_activity_by: Optional[int] = Field(None, alias="LAST_ACTIVITY_BY")
@@ -453,6 +455,7 @@ class DealUpdate(BaseModel):  # type: ignore[misc]
         "creation_source_id",
         "warehouse_id",
         "assigned_by_id",
+        "created_by_id",
         "modify_by_id",
         "moved_by_id",
         "last_activity_by",
@@ -567,6 +570,40 @@ class DealUpdate(BaseModel):  # type: ignore[misc]
             v, ProcessingStatusEnum, ProcessingStatusEnum.NOT_DEFINE
         )
 
+    def to_bitrix_dict(self) -> dict[str, Any]:
+        # Преобразуем модель в словарь (с алиасами, без None)
+        data = self.model_dump(
+            by_alias=True,
+            exclude_none=True,
+            exclude_unset=True,  # опционально: исключить неустановленные поля
+        )
+
+        # Дополнительные преобразования
+        result: dict[str, Any] = {}
+        for alias, value in data.items():
+            if isinstance(value, bool):
+                if alias in ("UF_CRM_60D2AFAEB32CC", "UF_CRM_1632738559"):
+                    result[alias] = "1" if value else "0"
+                else:
+                    # Булёвы значения -> "Y"/"N"
+                    result[alias] = "Y" if value else "N"
+            elif isinstance(value, datetime):
+                # Особый формат для last_communication_time
+                if alias == "LAST_COMMUNICATION_TIME":
+                    result[alias] = value.strftime("%d.%m.%Y %H:%M:%S")
+                # Стандартный ISO формат для остальных дат
+                else:
+                    iso_format = value.strftime("%Y-%m-%dT%H:%M:%S%z")
+                    if iso_format and iso_format[-5] in ("+", "-"):
+                        iso_format = f"{iso_format[:-2]}:{iso_format[-2:]}"
+                    result[alias] = iso_format
+            elif alias == "ID":
+                continue
+            else:
+                # Остальные значения без изменений
+                result[alias] = value
+        return result
+
     model_config = ConfigDict(
         use_enum_values=True,
         populate_by_name=True,
@@ -575,33 +612,17 @@ class DealUpdate(BaseModel):  # type: ignore[misc]
     )
 
 
-class DealResponse(BaseModel):  # type: ignore[misc]
-    """Схема для ответа API"""
-
-    id: int = Field(..., description="Внутренний ID в базе данных")
-    deal_id: int = Field(..., description="Уникальный ID сделки")
-    title: str = Field(..., description="Название сделки")
-    type_id: str = Field(..., description="ID типа сделки")
-    stage_id: str = Field(..., description="ID стадии сделки")
-    currency_id: str = Field(..., description="ID валюты")
-    opportunity: float = Field(..., description="Сумма сделки")
-    is_manual_opportunity: bool = Field(
-        ..., description="Ручное изменение суммы"
-    )
-    probability: Optional[int] = Field(
-        None, description="Вероятность закрытия"
-    )
-
-    model_config = ConfigDict(
-        from_attributes=True,  # Заменяет orm_mode=True
-        populate_by_name=True,
-    )
-
-
 class DealListResponse(BaseModel):  # type: ignore[misc]
     """Схема для ответа со списком сделок"""
 
-    items: list[DealResponse]
-    count: int
+    result: list[DealUpdate]
+    next: int | None = None
+    total: int
 
-    model_config = ConfigDict(from_attributes=True)
+    #  model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(
+        use_enum_values=True,
+        populate_by_name=True,
+        arbitrary_types_allowed=True,
+        extra="ignore",
+    )
