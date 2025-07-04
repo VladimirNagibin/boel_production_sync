@@ -4,9 +4,9 @@ from enum import IntEnum, StrEnum
 class StageSemanticEnum(StrEnum):
     """
     Статусы стадии сделки:
-    P - В работе
-    S - Успешная
-    F - Провал
+    P - В работе(processing)
+    S - Успешная(success)
+    F - Провал(failed)
     """
 
     PROSPECTIVE = "P"

@@ -9,17 +9,19 @@ from db.postgres import Base
 
 from .bases import UserRelationsMixin
 from .deal_documents import Billing
-from .entities import Company, Contact, Lead
+from .entities import Company, Contact
 from .enums import (
     ProcessingStatusEnum,
     StageSemanticEnum,
     TypePaymentEnum,
     TypeShipmentEnum,
 )
+from .lead_models import Lead
 from .references import (
     Category,
     CreationSource,
     Currency,
+    DealFailureReason,
     DealStage,
     DealType,
     DefectType,
@@ -121,7 +123,7 @@ class Deal(Base, UserRelationsMixin):
     )  # LAST_ACTIVITY_TIME : Время последней активности
     last_communication_time: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=False), comment="Время последней коммуникации"
-    )  # LAST_COMMUNICATION_TIME : Дата ???
+    )  # LAST_COMMUNICATION_TIME : Дата 02.02.2024  15:21:08
     payment_deadline: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), comment="Срок оплаты"
     )  # UF_CRM_1632738230 :  Срок оплаты счёта
@@ -142,7 +144,7 @@ class Deal(Base, UserRelationsMixin):
     origin_id: Mapped[str | None] = mapped_column(
         comment="ID элемента в источнике"
     )  # ORIGIN_ID : Идентификатор элемента в источнике данных
-    id_printed_form: Mapped[str | None] = mapped_column(
+    printed_form_id: Mapped[str | None] = mapped_column(
         comment="ID печатной формы"
     )  # UF_CRM_1656227383 : Ид печатной формы(доставка)
 
@@ -273,6 +275,12 @@ class Deal(Base, UserRelationsMixin):
     warehouse: Mapped["Warehouse"] = relationship(
         "Warehouse", back_populates="deals"
     )
+    deal_failure_reason_id: Mapped[int | None] = mapped_column(
+        ForeignKey("deal_failure_reasons.external_id")
+    )  # UF_CRM_652940014E9A5 : Ид причины провала
+    deal_failure_reason: Mapped["DealFailureReason"] = relationship(
+        "DealFailureReason", back_populates="deals"
+    )
 
     # Поля сервисных сделок
     defects: Mapped["DefectType"] = relationship(
@@ -295,3 +303,103 @@ class Deal(Base, UserRelationsMixin):
         remote_side="[Deal.id]",
         # foreign_keys="[Deal.parent_deal_id]",
     )  # Отношение к родительской сделке
+
+    # Маркетинговые метки
+    utm_source: Mapped[str | None] = mapped_column(
+        comment="Рекламная система"
+    )  # UTM_SOURCE : Рекламная система (Yandex-Direct, Google-Adwords и др)
+    utm_medium: Mapped[str | None] = mapped_column(
+        comment="Тип трафика"
+    )  # UTM_MEDIUM : Тип трафика: CPC (объявления), CPM (баннеры)
+    utm_campaign: Mapped[str | None] = mapped_column(
+        comment="Обозначение рекламной кампании"
+    )  # UTM_CAMPAIGN : Обозначение рекламной кампании
+    utm_content: Mapped[str | None] = mapped_column(
+        comment="Содержание кампании"
+    )  # UTM_CONTENT : Содержание кампании. Например, для контекстных
+    # объявлений
+    utm_term: Mapped[str | None] = mapped_column(
+        comment="Тип трафика"
+    )  # UTM_TERM : Условие поиска кампании. Например, ключевые слова
+    # контекстной рекламы
+    mgo_cc_entry_id: Mapped[str | None] = mapped_column(
+        comment="ID звонка"
+    )  # UF_CRM_MGO_CC_ENTRY_ID : ID звонка
+    mgo_cc_channel_type: Mapped[str | None] = mapped_column(
+        comment="Канал обращения"
+    )  # UF_CRM_MGO_CC_CHANNEL_TYPE : Канал обращения
+    mgo_cc_result: Mapped[str | None] = mapped_column(
+        comment="Результат обращения"
+    )  # UF_CRM_MGO_CC_RESULT : Результат обращения
+    mgo_cc_entry_point: Mapped[str | None] = mapped_column(
+        comment="Точка входа обращения"
+    )  # UF_CRM_MGO_CC_ENTRY_POINT : Точка входа обращения
+    mgo_cc_create: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), comment="Дата/время создания обращения"
+    )  # UF_CRM_MGO_CC_CREATE : Дата/время создания обращения
+    mgo_cc_end: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), comment="Дата/время завершения обращения"
+    )  # UF_CRM_MGO_CC_END : Дата/время завершения обращения
+    mgo_cc_tag_id: Mapped[str | None] = mapped_column(
+        comment="Тематики обращения"
+    )  # UF_CRM_MGO_CC_TAG_ID : Тематики обращения
+    calltouch_site_id: Mapped[str | None] = mapped_column(
+        comment="ID сайта в Calltouch"
+    )  # UF_CRM_665F0885515AE : ID сайта в Calltouch
+    calltouch_call_id: Mapped[str | None] = mapped_column(
+        comment="ID звонка в Calltouch"
+    )  # UF_CRM_665F08858FCF0 : ID звонка в Calltouch
+    calltouch_request_id: Mapped[str | None] = mapped_column(
+        comment="ID заявки в Calltouch"
+    )  # UF_CRM_665F0885BB4E2 : ID заявки в Calltouch
+    yaclientid: Mapped[str | None] = mapped_column(
+        comment="yaclientid"
+    )  # UF_CRM_1739185983784 : yaclientid
+
+    # Социальные профили
+    wz_instagram: Mapped[str | None] = mapped_column(
+        comment="Instagram"
+    )  # UF_CRM_63A031829F8E2 : Instagram
+    wz_vc: Mapped[str | None] = mapped_column(
+        comment="VC"
+    )  # UF_CRM_63A03182BF864 : VC
+    wz_telegram_username: Mapped[str | None] = mapped_column(
+        comment="Telegram username"
+    )  # UF_CRM_63A03182D063B : Telegram username
+    wz_telegram_id: Mapped[str | None] = mapped_column(
+        comment="Telegram Id"
+    )  # UF_CRM_63A03182DFB0F : Telegram Id
+    wz_avito: Mapped[str | None] = mapped_column(
+        comment="Avito"
+    )  # UF_CRM_63ABEBD42730D : Avito
+    """ remaining fields:
+    "TAX_VALUE": double, Ставка налога
+    "QUOTE_ID": int, Идентификатор квоты
+    "LOCATION_ID": int, Местоположение клиента
+
+    "UF_CRM_1598883220": str, Промывочная жидкость клиента
+    "UF_CRM_1598883274": list, Пеногасители клиента
+    "UF_CRM_1617951428": list,	ТК клиента
+
+    "UF_CRM_ZOOM_MEET_LINK": str, Ссылка на Zoom
+    "UF_CRM_ZOOM_MEET_TZ": str, Дата/время Zoom
+
+    "UF_CRM_DCT_UID": ДКТ: client_id
+    "UF_CRM_DCT_CID": ДКТ: client_cid
+    "UF_CRM_DCT_YA_CID": ДКТ: ya_client_id
+    "UF_CRM_DCT_MEDIUM": ДКТ: Канал
+    "UF_CRM_DCT_CAMPAIGN": ДКТ: Кампания
+    "UF_CRM_DCT_CONTENT": ДКТ: Содержимое
+    "UF_CRM_DCT_TERM": ДКТ: Что искал
+    "UF_CRM_DCT_DURATION": ДКТ: Время на сайте
+    "UF_CRM_DCT_PAGE": ДКТ: Страница звонка
+    "UF_CRM_DCT_CONTEXT": ДКТ: Контекст вызова
+    "UF_CRM_DCT_CUSTOM": ДКТ: Custom
+    "UF_CRM_DCT_WID_NAME": ДКТ: Имя виджета
+    "UF_CRM_DCT_TYPE": ДКТ: Тип заявки
+    "UF_CRM_DCT_SID": ДКТ: client_sid
+
+    "UF_CRM_ROISTAT": riostat
+
+    "UF_CRM_1657360424": html ссылка
+    """
