@@ -83,6 +83,7 @@ class DealBitrixClient:
 
         return success  # type: ignore[no-any-return]
 
+    @handle_bitrix_errors()
     async def list_deals(
         self,
         select: list[str] | None = None,

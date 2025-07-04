@@ -73,7 +73,7 @@ class DealCreate(BaseModel):  # type: ignore[misc]
     source_external: Optional[str] = Field(None, alias="UF_CRM_DCT_SOURCE")
     originator_id: Optional[str] = Field(None, alias="ORIGINATOR_ID")
     origin_id: Optional[str] = Field(None, alias="ORIGIN_ID")
-    id_printed_form: Optional[str] = Field(None, alias="UF_CRM_1656227383")
+    printed_form_id: Optional[str] = Field(None, alias="UF_CRM_1656227383")
 
     # Перечисляемые типы
     stage_semantic_id: StageSemanticEnum = Field(
@@ -105,6 +105,9 @@ class DealCreate(BaseModel):  # type: ignore[misc]
     shipping_company_id: Optional[int] = Field(None, alias="UF_CRM_1650617036")
     creation_source_id: Optional[int] = Field(None, alias="UF_CRM_1654577096")
     warehouse_id: Optional[int] = Field(None, alias="UF_CRM_1659326670")
+    deal_failure_reason_id: Optional[int] = Field(
+        None, alias="UF_CRM_652940014E9A5"
+    )
 
     # Связи по пользователю
     assigned_by_id: int = Field(..., alias="ASSIGNED_BY_ID")
@@ -121,6 +124,47 @@ class DealCreate(BaseModel):  # type: ignore[misc]
 
     # Связанные сделки (доставка)
     parent_deal_id: Optional[int] = Field(None, alias="UF_CRM_1655891443")
+
+    # Маркетинговые метки
+    utm_source: Optional[str] = Field(None, alias="UTM_SOURCE")
+    utm_medium: Optional[str] = Field(None, alias="UTM_MEDIUM")
+    utm_campaign: Optional[str] = Field(None, alias="UTM_CAMPAIGN")
+    utm_content: Optional[str] = Field(None, alias="UTM_CONTENT")
+    utm_term: Optional[str] = Field(None, alias="UTM_TERM")
+    mgo_cc_entry_id: Optional[str] = Field(
+        None, alias="UF_CRM_MGO_CC_ENTRY_ID"
+    )
+    mgo_cc_channel_type: Optional[str] = Field(
+        None, alias="UF_CRM_MGO_CC_CHANNEL_TYPE"
+    )
+    mgo_cc_result: Optional[str] = Field(None, alias="UF_CRM_MGO_CC_RESULT")
+    mgo_cc_entry_point: Optional[str] = Field(
+        None, alias="UF_CRM_MGO_CC_ENTRY_POINT"
+    )
+    mgo_cc_create: Optional[datetime] = Field(
+        None, alias="UF_CRM_MGO_CC_CREATE"
+    )
+    mgo_cc_end: Optional[datetime] = Field(None, alias="UF_CRM_MGO_CC_END")
+    mgo_cc_tag_id: Optional[str] = Field(None, alias="UF_CRM_MGO_CC_TAG_ID")
+    calltouch_site_id: Optional[str] = Field(
+        None, alias="UF_CRM_665F0885515AE"
+    )
+    calltouch_call_id: Optional[str] = Field(
+        None, alias="UF_CRM_665F08858FCF0"
+    )
+    calltouch_request_id: Optional[str] = Field(
+        None, alias="UF_CRM_665F0885BB4E2"
+    )
+    yaclientid: Optional[str] = Field(None, alias="UF_CRM_1739185983784")
+
+    # Социальные профили
+    wz_instagram: Optional[str] = Field(None, alias="UF_CRM_63A031829F8E2")
+    wz_vc: Optional[str] = Field(None, alias="UF_CRM_63A03182BF864")
+    wz_telegram_username: Optional[str] = Field(
+        None, alias="UF_CRM_63A03182D063B"
+    )
+    wz_telegram_id: Optional[str] = Field(None, alias="UF_CRM_63A03182DFB0F")
+    wz_avito: Optional[str] = Field(None, alias="UF_CRM_63ABEBD42730D")
 
     # Универсальный валидатор для всех полей
     @model_validator(mode="before")  # type: ignore[misc]
@@ -172,6 +216,7 @@ class DealCreate(BaseModel):  # type: ignore[misc]
         "shipping_company_id",
         "creation_source_id",
         "warehouse_id",
+        "deal_failure_reason_id",
         "assigned_by_id",
         "created_by_id",
         "modify_by_id",
@@ -235,7 +280,8 @@ class DealCreate(BaseModel):  # type: ignore[misc]
         "payment_deadline",
         "moved_time",
         "last_activity_time",
-        # "last_communication_time",
+        "mgo_cc_create",
+        "mgo_cc_end",
         mode="before",
     )  # type: ignore[misc]
     @classmethod
@@ -358,7 +404,7 @@ class DealUpdate(BaseModel):  # type: ignore[misc]
     source_external: Optional[str] = Field(None, alias="UF_CRM_DCT_SOURCE")
     originator_id: Optional[str] = Field(None, alias="ORIGINATOR_ID")
     origin_id: Optional[str] = Field(None, alias="ORIGIN_ID")
-    id_printed_form: Optional[str] = Field(None, alias="UF_CRM_1656227383")
+    printed_form_id: Optional[str] = Field(None, alias="UF_CRM_1656227383")
 
     # Перечисляемые типы
     stage_semantic_id: Optional[StageSemanticEnum] = Field(
@@ -390,6 +436,9 @@ class DealUpdate(BaseModel):  # type: ignore[misc]
     shipping_company_id: Optional[int] = Field(None, alias="UF_CRM_1650617036")
     creation_source_id: Optional[int] = Field(None, alias="UF_CRM_1654577096")
     warehouse_id: Optional[int] = Field(None, alias="UF_CRM_1659326670")
+    deal_failure_reason_id: Optional[int] = Field(
+        None, alias="UF_CRM_652940014E9A5"
+    )
 
     # Связи по пользователю
     assigned_by_id: Optional[int] = Field(None, alias="ASSIGNED_BY_ID")
@@ -406,6 +455,47 @@ class DealUpdate(BaseModel):  # type: ignore[misc]
 
     # Связанные сделки (доставка)
     parent_deal_id: Optional[int] = Field(None, alias="UF_CRM_1655891443")
+
+    # Маркетинговые метки
+    utm_source: Optional[str] = Field(None, alias="UTM_SOURCE")
+    utm_medium: Optional[str] = Field(None, alias="UTM_MEDIUM")
+    utm_campaign: Optional[str] = Field(None, alias="UTM_CAMPAIGN")
+    utm_content: Optional[str] = Field(None, alias="UTM_CONTENT")
+    utm_term: Optional[str] = Field(None, alias="UTM_TERM")
+    mgo_cc_entry_id: Optional[str] = Field(
+        None, alias="UF_CRM_MGO_CC_ENTRY_ID"
+    )
+    mgo_cc_channel_type: Optional[str] = Field(
+        None, alias="UF_CRM_MGO_CC_CHANNEL_TYPE"
+    )
+    mgo_cc_result: Optional[str] = Field(None, alias="UF_CRM_MGO_CC_RESULT")
+    mgo_cc_entry_point: Optional[str] = Field(
+        None, alias="UF_CRM_MGO_CC_ENTRY_POINT"
+    )
+    mgo_cc_create: Optional[datetime] = Field(
+        None, alias="UF_CRM_MGO_CC_CREATE"
+    )
+    mgo_cc_end: Optional[datetime] = Field(None, alias="UF_CRM_MGO_CC_END")
+    mgo_cc_tag_id: Optional[str] = Field(None, alias="UF_CRM_MGO_CC_TAG_ID")
+    calltouch_site_id: Optional[str] = Field(
+        None, alias="UF_CRM_665F0885515AE"
+    )
+    calltouch_call_id: Optional[str] = Field(
+        None, alias="UF_CRM_665F08858FCF0"
+    )
+    calltouch_request_id: Optional[str] = Field(
+        None, alias="UF_CRM_665F0885BB4E2"
+    )
+    yaclientid: Optional[str] = Field(None, alias="UF_CRM_1739185983784")
+
+    # Социальные профили
+    wz_instagram: Optional[str] = Field(None, alias="UF_CRM_63A031829F8E2")
+    wz_vc: Optional[str] = Field(None, alias="UF_CRM_63A03182BF864")
+    wz_telegram_username: Optional[str] = Field(
+        None, alias="UF_CRM_63A03182D063B"
+    )
+    wz_telegram_id: Optional[str] = Field(None, alias="UF_CRM_63A03182DFB0F")
+    wz_avito: Optional[str] = Field(None, alias="UF_CRM_63ABEBD42730D")
 
     # Валидаторы (такие же как в DealCreate)
     @model_validator(mode="before")  # type: ignore[misc]
@@ -454,6 +544,7 @@ class DealUpdate(BaseModel):  # type: ignore[misc]
         "shipping_company_id",
         "creation_source_id",
         "warehouse_id",
+        "deal_failure_reason_id",
         "assigned_by_id",
         "created_by_id",
         "modify_by_id",
@@ -478,7 +569,8 @@ class DealUpdate(BaseModel):  # type: ignore[misc]
         "payment_deadline",
         "moved_time",
         "last_activity_time",
-        # "last_communication_time",
+        "mgo_cc_create",
+        "mgo_cc_end",
         mode="before",
     )  # type: ignore[misc]
     @classmethod
