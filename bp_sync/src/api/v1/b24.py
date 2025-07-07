@@ -4,7 +4,8 @@ from fastapi.responses import JSONResponse
 from core.logger import logger
 
 # from services.bitrix_api_client import BitrixAPIClient
-# from schemas.deal_schemas import DealCreate, DealUpdate
+# from schemas.deal_schemas import DealUpdate
+from schemas.lead_schemas import LeadUpdate
 from services.bitrix_services.bitrix_oauth_client import BitrixOAuthClient
 from services.deals.deal_bitrix_services import (
     DealBitrixClient,
@@ -14,6 +15,10 @@ from services.dependencies import (  # , get_bitrix_client
     get_oauth_client,
 )
 from services.exceptions import BitrixAuthError
+from services.leads.lead_bitrix_services import (
+    LeadBitrixClient,
+    get_lead_bitrix_client,
+)
 from services.token_services.token_storage import (
     TokenStorage,
     get_token_storage,
@@ -29,18 +34,23 @@ b24_router = APIRouter()
 )  # type: ignore
 async def check(
     deal_bitrix_client: DealBitrixClient = Depends(get_deal_bitrix_client),
+    lead_bitrix_client: LeadBitrixClient = Depends(get_lead_bitrix_client),
     token_storage: TokenStorage = Depends(get_token_storage),
 ) -> JSONResponse:
-    res = await deal_bitrix_client.get_deal(50301)
+    res = await deal_bitrix_client.get(50301)
+    lead = await lead_bitrix_client.get(59819)
     # res2 = DealUpdate(**res.model_dump(by_alias=True, exclude_unset=True))
-    # res2.title = "NEW TEST 2"
+    lead2 = LeadUpdate(**lead.model_dump(by_alias=True, exclude_unset=True))
+
+    lead2.title = "NEW TEST 2"
     # res2.shipping_type = 517
-    # res2 = DealUpdate(title="QWERTY")
+    # res2 = LeadUpdate(title="QWERTY")
+    res3 = await lead_bitrix_client.create(lead2)
     # print(res2.title)
-    res3 = await deal_bitrix_client.list_deals(
-        filter_deals={"ID": 11}, select=["is_new"], start=0
-    )
-    # print(res3)
+    # res3 = await deal_bitrix_client.list(
+    #    filter_deals={"ID": 11}, select=["is_new"], start=0
+    # )
+    print(lead)
     # await token_storage.delete_token("access_token")
     if res:
         #  deal_create = DealCreate(**res)
@@ -49,7 +59,8 @@ async def check(
             status_code=status.HTTP_200_OK,
             content={
                 "status": "success",
-                "result": res3.model_dump(),
+                "bool": res3,
+                "result": lead2.to_bitrix_dict(),
             },
         )
     return JSONResponse(

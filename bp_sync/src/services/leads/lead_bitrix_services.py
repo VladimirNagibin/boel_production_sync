@@ -1,33 +1,33 @@
 from fastapi import Depends
 
-from schemas.deal_schemas import DealCreate, DealUpdate  # DealListResponse,
+from schemas.lead_schemas import LeadCreate, LeadUpdate  # , LeadListResponse
 
 from ..bitrix_services.bitrix_api_client import BitrixAPIClient
 from ..bitrix_services.entity_bitrix_services import BaseBitrixEntityClient
 from ..dependencies import get_bitrix_client
 
 
-class DealBitrixClient(BaseBitrixEntityClient[DealCreate, DealUpdate]):
-    entity_name = "deal"
-    create_schema = DealCreate
-    update_schema = DealUpdate
+class LeadBitrixClient(BaseBitrixEntityClient[LeadCreate, LeadUpdate]):
+    entity_name = "lead"
+    create_schema = LeadCreate
+    update_schema = LeadUpdate
 
     """
     def __init__(self, bitrix_client: BitrixAPIClient):
         self.bitrix_client = bitrix_client
 
     @handle_bitrix_errors()
-    async def create_deal(self, deal_data: DealUpdate) -> int | None:
-        "Создание новой сделки"
-        logger.info(f"Creating new deal: {deal_data.title}")
+    async def create_lead(self, lead_data: LeadUpdate) -> int | None:
+        "Создание нового лида"
+        logger.info(f"Creating new lead: {lead_data.title}")
         result = await self.bitrix_client.call_api(
-            "crm.deal.add", {"fields": deal_data.to_bitrix_dict()}
+            "crm.lead.add", {"fields": lead_data.to_bitrix_dict()}
         )
-        if deal_id := result.get("result"):
-            logger.info(f"Deal created successfully: ID={deal_id}")
-            return deal_id  # type: ignore[no-any-return]
+        if lead_id := result.get("result"):
+            logger.info(f"Lead created successfully: ID={lead_id}")
+            return lead_id  # type: ignore[no-any-return]
         logger.error(
-            f"Failed to create deal: {deal_data.model_dump()}"
+            f"Failed to create deal: {lead_data.model_dump()}"
             f"{result.get('error', 'Unknown error')}"
         )
         raise BitrixApiError(
@@ -36,67 +36,67 @@ class DealBitrixClient(BaseBitrixEntityClient[DealCreate, DealUpdate]):
         )
 
     @handle_bitrix_errors()
-    async def get_deal(self, deal_id: int) -> DealCreate:
-        "Получение сделки по ID"
-        logger.debug(f"Fetching deal ID={deal_id}")
+    async def get_lead(self, lead_id: int) -> LeadCreate:
+        "Получение лида по ID"
+        logger.debug(f"Fetching lead ID={lead_id}")
         response = await self.bitrix_client.call_api(
-            "crm.deal.get", {"id": deal_id}
+            "crm.lead.get", {"id": lead_id}
         )
-        if not (deal_data := response.get("result")):
-            logger.warning(f"Deal not found: ID={deal_id}")
-            raise HTTPException(status_code=404, detail="Deal not found")
-        return DealCreate(**deal_data)
+        if not (lead_data := response.get("result")):
+            logger.warning(f"Lead not found: ID={lead_id}")
+            raise HTTPException(status_code=404, detail="Lead not found")
+        return LeadCreate(**lead_data)
 
     @handle_bitrix_errors()
-    async def update_deal(self, deal_data: DealUpdate) -> bool:
-        "Обновление сделки"
-        if not deal_data.external_id:
-            logger.error("Update failed: Missing deal ID")
-            raise ValueError("Deal ID is required for update")
+    async def update_lead(self, lead_data: LeadUpdate) -> bool:
+        "Обновление лида"
+        if not lead_data.external_id:
+            logger.error("Update failed: Missing lead ID")
+            raise ValueError("Lead ID is required for update")
 
-        deal_id = deal_data.external_id
-        logger.info(f"Updating deal ID={deal_id}")
+        lead_id = lead_data.external_id
+        logger.info(f"Updating lead ID={lead_id}")
         result = await self.bitrix_client.call_api(
-            "crm.deal.update",
-            {"id": deal_id, "fields": deal_data.to_bitrix_dict()},
+            "crm.lead.update",
+            {"id": lead_id, "fields": lead_data.to_bitrix_dict()},
         )
 
         if success := result.get("result", False):
-            logger.info(f"Deal updated successfully: ID={deal_id}")
+            logger.info(f"Lead updated successfully: ID={lead_id}")
         else:
             error = result.get("error", "Unknown error")
-            logger.error(f"Failed to update deal ID={deal_id}: {error}")
+            logger.error(f"Failed to update lead ID={lead_id}: {error}")
         return success  # type: ignore[no-any-return]
 
     @handle_bitrix_errors()
-    async def delete_deal(self, deal_id: int) -> bool:
-        "Удаление сделки по ID"
-        logger.info(f"Deleting deal ID={deal_id}")
+    async def delete_lead(self, lead_id: int) -> bool:
+        "Удаление лида по ID"
+        logger.info(f"Deleting lead ID={lead_id}")
         result = await self.bitrix_client.call_api(
-            "crm.deal.delete", {"id": deal_id}
+            "crm.lead.delete", {"id": lead_id}
         )
 
         if success := result.get("result", False):
-            logger.info(f"Deal deleted successfully: ID={deal_id}")
+            logger.info(f"Lead deleted successfully: ID={lead_id}")
         else:
             error = result.get("error", "Unknown error")
-            logger.error(f"Failed to delete deal ID={deal_id}: {error}")
+            logger.error(f"Failed to delete lead ID={lead_id}: {error}")
 
         return success  # type: ignore[no-any-return]
     """
     """
     @handle_bitrix_errors()
-    async def list_deals(
+    async def list_leads(
         self,
         select: list[str] | None = None,
-        filter_deals: dict[str, Any] | None = None,
+        filter_leads: dict[str, Any] | None = None,
         order: dict[str, str] | None = None,
         start: int = 0,
-    ) -> DealListResponse:
+    ) -> LeadListResponse:
     """
-    """Список сделок с фильтрацией
+    """Список лидов с фильтрацией
 
-        Получает список сделок из Bitrix24 с возможностью фильтрации,
+        Получает список лидов из Bitrix24 с возможностью фильтрации,
         сортировки и постраничной выборки.
 
         Args:
@@ -139,18 +139,18 @@ class DealBitrixClient(BaseBitrixEntityClient[DealCreate, DealUpdate]):
                 - Пример: для 2-й страницы передать 50
 
         Returns:
-            DealListResponse: Объект с результатами выборки:
+            LeadListResponse: Объект с результатами выборки:
                 - result: список сделок
                 - total: общее количество сделок
                 - next: смещение для следующей страницы (если есть)
 
         Example:
-            Получить сделки с фильтрацией и сортировкой:
+            Получить лиды с фильтрацией и сортировкой:
             ```python
-            deals = await client.list_deals(
+            leads = await client.list_leads(
                 select=["ID", "TITLE", "OPPORTUNITY"],
                 filter={
-                    "CATEGORY_ID": 1,
+                    "SOURCE_ID": 1,
                     ">OPPORTUNITY": 10000,
                     "<=OPPORTUNITY": 20000,
                     "@ASSIGNED_BY_ID": [1, 6]
@@ -168,7 +168,7 @@ class DealBitrixClient(BaseBitrixEntityClient[DealCreate, DealUpdate]):
             -d '{
                 "SELECT": ["ID", "TITLE", "OPPORTUNITY"],
                 "FILTER": {
-                    "CATEGORY_ID": 1,
+                    "SOURCE_ID": 1,
                     ">OPPORTUNITY": 10000,
                     "<=OPPORTUNITY": 20000,
                     "@ASSIGNED_BY_ID": [1, 6]
@@ -176,42 +176,42 @@ class DealBitrixClient(BaseBitrixEntityClient[DealCreate, DealUpdate]):
                 "ORDER": {"OPPORTUNITY": "ASC"},
                 "start": 0
             }' \\
-            https://example.bitrix24.ru/rest/user_id/webhook/crm.deal.list
+            https://example.bitrix24.ru/rest/user_id/webhook/crm.lead.list
             ```
         """
     """
         logger.debug(
-            f"Fetching deals list: "
-            f"select={select}, filter={filter_deals}, "
+            f"Fetching leads list: "
+            f"select={select}, filter={filter_leads}, "
             f"order={order}, start={start}"
         )
 
         params: dict[str, Any] = {}
         if select:
             params["select"] = select
-        if filter_deals:
-            params["filter"] = filter_deals
+        if filter_leads:
+            params["filter"] = filter_leads
         if order:
             params["order"] = order
         if start:
             params["start"] = start
 
-        response = await self.bitrix_client.call_api("crm.deal.list", params)
+        response = await self.bitrix_client.call_api("crm.lead.list", params)
 
-        deals = [DealUpdate(**deal) for deal in response.get("result", [])]
+        leads = [LeadUpdate(**lead) for lead in response.get("result", [])]
         total = response.get("total", 0)
         next_page = response.get("next")
 
-        logger.info(f"Fetched {len(deals)} of {total} deals")
-        return DealListResponse(
-            result=deals,
+        logger.info(f"Fetched {len(leads)} of {total} deals")
+        return LeadListResponse(
+            result=leads,
             total=total,
             next=next_page,
         )
-    """
+        """
 
 
-def get_deal_bitrix_client(
+def get_lead_bitrix_client(
     bitrix_client: BitrixAPIClient = Depends(get_bitrix_client),
-) -> DealBitrixClient:
-    return DealBitrixClient(bitrix_client)
+) -> LeadBitrixClient:
+    return LeadBitrixClient(bitrix_client)

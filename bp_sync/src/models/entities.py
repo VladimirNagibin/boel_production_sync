@@ -2,20 +2,24 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy.orm import Mapped, relationship
 
-from .bases import IntIdEntity, NameIntIdEntity
-from .communications import CommunicationChannel as ComChannel
+from .bases import CommunicationIntIdEntity, EntityType, NameIntIdEntity
 
 if TYPE_CHECKING:
     from .deal_models import Deal
     from .lead_models import Lead
 
 
-class Contact(IntIdEntity):
+class Contact(CommunicationIntIdEntity):
     """
     Контакты
     """
 
     __tablename__ = "contacts"
+
+    @property
+    def entity_type(self) -> EntityType:
+        return EntityType.CONTACT
+
     deals: Mapped[list["Deal"]] = relationship(
         "Deal", back_populates="contact"
     )
@@ -23,23 +27,18 @@ class Contact(IntIdEntity):
         "Lead", back_populates="contact"
     )
 
-    phones: Mapped[list["ComChannel"]] = relationship(
-        "ComChannel",
-        primaryjoin=(
-            "and_(foreign(ComChannel.entity_type)=='contact', "
-            "foreign(ComChannel.entity_id)==external_id)"
-        ),
-        viewonly=True,
-        lazy="selectin",
-    )
 
-
-class Company(IntIdEntity):
+class Company(CommunicationIntIdEntity):
     """
     Компании
     """
 
     __tablename__ = "companies"
+
+    @property
+    def entity_type(self) -> EntityType:
+        return EntityType.COMPANY
+
     deals: Mapped[list["Deal"]] = relationship(
         "Deal", back_populates="company"
     )
@@ -54,6 +53,7 @@ class User(NameIntIdEntity):
     """
 
     __tablename__ = "users"
+
     assigned_deals: Mapped[list["Deal"]] = relationship(
         "Deal", back_populates="assigned_user"
     )
