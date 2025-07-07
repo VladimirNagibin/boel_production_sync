@@ -19,10 +19,18 @@ from sqlalchemy.orm import (  # declared_attr,
 from core.settings import settings
 
 engine = create_async_engine(
-    settings.dsn, echo=settings.POSTGRES_DB_ECHO, future=True
+    settings.dsn,
+    echo=settings.POSTGRES_DB_ECHO,
+    future=True,
+    pool_pre_ping=True,
+    pool_size=20,
+    max_overflow=10,
 )
 async_session = async_sessionmaker(
-    engine, class_=AsyncSession, expire_on_commit=False
+    engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
+    autoflush=False,
 )
 
 
@@ -35,10 +43,16 @@ class Base(AsyncAttrs, DeclarativeBase):  # type: ignore[misc]
         primary_key=True,
         default=uuid.uuid4,
         server_default=func.gen_random_uuid(),
+        comment="Уникальный идентификатор",
     )
-    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        server_default=func.now(),
+        comment="Дата и время создания",
+    )
     updated_at: Mapped[datetime] = mapped_column(
-        server_default=func.now(), onupdate=func.now()
+        server_default=func.now(),
+        onupdate=func.now(),
+        comment="Дата и время последнего обновления",
     )
 
     # @declared_attr.directive  # type: ignore

@@ -5,7 +5,7 @@ from sqlalchemy import CheckConstraint, DateTime, ForeignKey
 from sqlalchemy.dialects.postgresql import ENUM as PgEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from .bases import IntIdEntity
+from .bases import CommunicationIntIdEntity, EntityType
 from .entities import Company, Contact, User
 from .enums import StageSemanticEnum
 from .references import (
@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from .deal_models import Deal
 
 
-class Lead(IntIdEntity):
+class Lead(CommunicationIntIdEntity):
     """
     Лиды
     """
@@ -357,3 +357,7 @@ class Lead(IntIdEntity):
 
     "UF_CRM_ROISTAT": riostat
     """
+
+    @property
+    def entity_type(self) -> EntityType:
+        return EntityType.LEAD

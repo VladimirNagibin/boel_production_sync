@@ -24,10 +24,13 @@ from models.references import (
 )
 from schemas.deal_schemas import DealCreate, DealUpdate
 
+from ..leads.lead_services import LeadClient, get_lead_client
+
 
 class DealRepository:
-    def __init__(self, session: AsyncSession):
+    def __init__(self, session: AsyncSession, lead_client: LeadClient):
         self.session = session
+        self.lead_client = lead_client
 
     async def create_deal(self, deal_schema: DealCreate) -> DealDB:
         """Создает новую сделку с проверкой на дубликаты"""
@@ -39,6 +42,18 @@ class DealRepository:
             raise self._deal_conflict_exception(external_id)
 
         try:
+            errors = await self._check_related_objects_exist(deal_schema)
+            if errors:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Related objects not found {errors}",
+                )
+            errors = await self._check_or_create_related_objects(deal_schema)
+            if errors:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Related objects can't created {errors}",
+                )
             new_deal = DealDB(**deal_schema.model_dump())
             self.session.add(new_deal)
             await self.session.commit()
@@ -102,6 +117,18 @@ class DealRepository:
         )
 
         try:
+            errors = await self._check_related_objects_exist(deal_schema)
+            if errors:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Related objects not found {errors}",
+                )
+            errors = await self._check_or_create_related_objects(deal_schema)
+            if errors:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Related objects can't created {errors}",
+                )
             result = await self.session.execute(stmt)
             updated_deal = result.scalar_one()
             await self.session.commit()
@@ -297,7 +324,8 @@ class DealRepository:
                 DealFailureReason, external_id=deal_failure_reason_id
             ):
                 errors.append(
-                    f"DealFailureReason with id={parent_deal_id} not found"
+                    f"DealFailureReason with id={deal_failure_reason_id} "
+                    "not found"
                 )
 
         return errors
@@ -310,10 +338,18 @@ class DealRepository:
 
         # Проверка Lead
         if lead_id := deal_schema.lead_id:
-            if not await self._check_object_exists(
-                LeadDB, external_id=lead_id
-            ):
-                errors.append(f"Lead with id={lead_id:} not found")
+            try:
+                if not await self._check_object_exists(
+                    LeadDB, external_id=lead_id
+                ):
+                    await self.lead_client.create_lead(lead_id)
+                else:
+                    await self.lead_client.update_lead(lead_id)
+            except Exception as e:
+                errors.append(
+                    f"Lead with id={lead_id:} not found and can't created "
+                    f"{str(e)}"
+                )
 
         """
         # Проверка Company
@@ -394,5 +430,6 @@ class DealRepository:
 
 def get_deal_repository(
     session: AsyncSession = Depends(get_session),
+    lead_client: LeadClient = Depends(get_lead_client),
 ) -> DealRepository:
-    return DealRepository(session)
+    return DealRepository(session, lead_client)

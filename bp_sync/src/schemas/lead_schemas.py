@@ -3,57 +3,66 @@ from enum import Enum
 from typing import Any, Optional, Type, TypeVar
 
 from pydantic import (
+    BaseModel,
+    ConfigDict,
     Field,
     field_validator,
     model_validator,
 )
 
-from models.enums import (
-    ProcessingStatusEnum,
-    StageSemanticEnum,
-    TypePaymentEnum,
-    TypeShipmentEnum,
-)
+from models.enums import StageSemanticEnum
 
 from .base_schemas import BaseCreateSchema, BaseUpdateSchema
 
 EnumT = TypeVar("EnumT", bound=Enum)
 
 
-class DealCreate(BaseCreateSchema):
+class CommunicationChannel(BaseModel):  # type: ignore[misc]
+    """Схема коммуникации"""
+
+    external_id: int | None = Field(None, alias="ID")
+    type_id: str | None = Field(None, alias="TYPE_ID")
+    value_type: str = Field(..., alias="VALUE_TYPE")
+    value: str = Field(..., alias="VALUE")
+
+    #  model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(
+        populate_by_name=True,
+        arbitrary_types_allowed=True,
+        extra="ignore",
+    )
+
+
+class LeadCreate(BaseCreateSchema):
     # Поля с алиасами для соответствия SQLAlchemy модели
 
     # Идентификаторы и основные данные
     external_id: int = Field(..., alias="ID")
     title: str = Field(..., alias="TITLE")
     comments: Optional[str] = Field(None, alias="COMMENTS")
-    additional_info: Optional[str] = Field(None, alias="ADDITIONAL_INFO")
+    name: Optional[str] = Field(None, alias="NAME")
+    second_name: Optional[str] = Field(None, alias="SECOND_NAME")
+    last_name: Optional[str] = Field(None, alias="LAST_NAME")
+    post: Optional[str] = Field(None, alias="POST")
+    company_title: Optional[str] = Field(None, alias="COMPANY_TITLE")
 
     # Статусы и флаги
-    probability: Optional[int] = Field(None, alias="PROBABILITY")
     is_manual_opportunity: bool = Field(False, alias="IS_MANUAL_OPPORTUNITY")
     opened: bool = Field(True, alias="OPENED")
-    closed: bool = Field(False, alias="CLOSED")
-    is_new: bool = Field(False, alias="IS_NEW")
-    is_recurring: bool = Field(False, alias="IS_RECURRING")
     is_return_customer: bool = Field(False, alias="IS_RETURN_CUSTOMER")
-    is_repeated_approach: bool = Field(False, alias="IS_REPEATED_APPROACH")
     is_shipment_approved: Optional[bool] = Field(
-        None, alias="UF_CRM_60D2AFAEB32CC"
+        None, alias="UF_CRM_1623830089"
     )
-    is_shipment_approved_invoice: Optional[bool] = Field(
-        None, alias="UF_CRM_1632738559"
-    )
+    has_phone: bool = Field(..., alias="HAS_PHONE")
+    has_email: bool = Field(..., alias="HAS_EMAIL")
+    has_imol: bool = Field(..., alias="HAS_IMOL")
 
     # Финансовые данные
     opportunity: float = Field(0.0, alias="OPPORTUNITY")
-    payment_grace_period: Optional[int] = Field(
-        None, alias="UF_CRM_1656582798"
-    )
 
     # Временные метки
-    begindate: datetime = Field(..., alias="BEGINDATE")
-    closedate: datetime = Field(..., alias="CLOSEDATE")
+    birthdate: Optional[datetime] = Field(None, alias="BIRTHDATE")
+    date_closed: datetime = Field(..., alias="DATE_CLOSED")
     date_create: datetime = Field(..., alias="DATE_CREATE")
     date_modify: datetime = Field(..., alias="DATE_MODIFY")
     moved_time: Optional[datetime] = Field(None, alias="MOVED_TIME")
@@ -63,50 +72,47 @@ class DealCreate(BaseCreateSchema):
     last_communication_time: Optional[datetime] = Field(
         None, alias="LAST_COMMUNICATION_TIME"
     )
-    payment_deadline: Optional[datetime] = Field(
-        None, alias="UF_CRM_1632738230"
-    )
 
     # География и источники
     city: Optional[str] = Field(None, alias="UF_CRM_DCT_CITY")
     source_description: Optional[str] = Field(None, alias="SOURCE_DESCRIPTION")
+    status_description: Optional[str] = Field(None, alias="STATUS_DESCRIPTION")
     source_external: Optional[str] = Field(None, alias="UF_CRM_DCT_SOURCE")
     originator_id: Optional[str] = Field(None, alias="ORIGINATOR_ID")
     origin_id: Optional[str] = Field(None, alias="ORIGIN_ID")
-    printed_form_id: Optional[str] = Field(None, alias="UF_CRM_1656227383")
+
+    # Адрес
+    address: Optional[str] = Field(None, alias="ADDRESS")
+    address_2: Optional[str] = Field(None, alias="ADDRESS_2")
+    address_city: Optional[str] = Field(None, alias="ADDRESS_CITY")
+    address_postal_code: Optional[str] = Field(
+        None, alias="ADDRESS_POSTAL_CODE"
+    )
+    address_region: Optional[str] = Field(None, alias="ADDRESS_REGION")
+    address_province: Optional[str] = Field(None, alias="ADDRESS_PROVINCE")
+    address_country: Optional[str] = Field(None, alias="ADDRESS_COUNTRY")
+    address_country_code: Optional[str] = Field(
+        None, alias="ADDRESS_COUNTRY_CODE"
+    )
+    address_loc_addr_id: Optional[int] = Field(
+        None, alias="ADDRESS_LOC_ADDR_ID"
+    )
 
     # Перечисляемые типы
-    stage_semantic_id: StageSemanticEnum = Field(
-        StageSemanticEnum.PROSPECTIVE, alias="STAGE_SEMANTIC_ID"
-    )
-    payment_type: TypePaymentEnum = Field(
-        TypePaymentEnum.NOT_DEFINE, alias="UF_CRM_1632738315"
-    )
-    shipping_type: TypeShipmentEnum = Field(
-        TypeShipmentEnum.NOT_DEFINE, alias="UF_CRM_1655141630"
-    )
-    processing_status: ProcessingStatusEnum = Field(
-        ProcessingStatusEnum.NOT_DEFINE, alias="UF_CRM_1750571370"
+    status_semantic_id: StageSemanticEnum = Field(
+        StageSemanticEnum.PROSPECTIVE, alias="STATUS_SEMANTIC_ID"
     )
 
     # Связи с другими сущностями
     currency_id: Optional[str] = Field(None, alias="CURRENCY_ID")
-    type_id: Optional[str] = Field(None, alias="TYPE_ID")
-    stage_id: str = Field(..., alias="STAGE_ID")
-    lead_id: Optional[int] = Field(None, alias="LEAD_ID")
+    type_id: Optional[str] = Field(None, alias="UF_CRM_1629271075")
+    status_id: str = Field(..., alias="STATUS_ID")
     company_id: Optional[int] = Field(None, alias="COMPANY_ID")
     contact_id: Optional[int] = Field(None, alias="CONTACT_ID")
-    category_id: int = Field(..., alias="CATEGORY_ID")
     source_id: Optional[str] = Field(None, alias="SOURCE_ID")
-    main_activity_id: Optional[int] = Field(None, alias="UF_CRM_1598883361")
-    lead_type_id: Optional[str] = Field(None, alias="UF_CRM_612463720554B")
-    invoice_stage_id: Optional[str] = Field(None, alias="UF_CRM_1632738354")
-    current_stage_id: Optional[str] = Field(None, alias="UF_CRM_1632738604")
-    shipping_company_id: Optional[int] = Field(None, alias="UF_CRM_1650617036")
-    creation_source_id: Optional[int] = Field(None, alias="UF_CRM_1654577096")
-    warehouse_id: Optional[int] = Field(None, alias="UF_CRM_1659326670")
+    main_activity_id: Optional[int] = Field(None, alias="UF_CRM_1598882174")
     deal_failure_reason_id: Optional[int] = Field(
-        None, alias="UF_CRM_652940014E9A5"
+        None, alias="UF_CRM_1697036607"
     )
 
     # Связи по пользователю
@@ -115,15 +121,6 @@ class DealCreate(BaseCreateSchema):
     modify_by_id: int = Field(..., alias="MODIFY_BY_ID")
     moved_by_id: Optional[int] = Field(None, alias="MOVED_BY_ID")
     last_activity_by: Optional[int] = Field(None, alias="LAST_ACTIVITY_BY")
-    defect_expert_id: Optional[int] = Field(None, alias="UF_CRM_1655618547")
-
-    # Поля сервисных сделок
-    defect_conclusion: Optional[str] = Field(
-        None, alias="UF_CRM_1655618110493"
-    )
-
-    # Связанные сделки (доставка)
-    parent_deal_id: Optional[int] = Field(None, alias="UF_CRM_1655891443")
 
     # Маркетинговые метки
     utm_source: Optional[str] = Field(None, alias="UTM_SOURCE")
@@ -147,24 +144,37 @@ class DealCreate(BaseCreateSchema):
     mgo_cc_end: Optional[datetime] = Field(None, alias="UF_CRM_MGO_CC_END")
     mgo_cc_tag_id: Optional[str] = Field(None, alias="UF_CRM_MGO_CC_TAG_ID")
     calltouch_site_id: Optional[str] = Field(
-        None, alias="UF_CRM_665F0885515AE"
+        None, alias="UF_CRM_CALLTOUCHT413"
     )
     calltouch_call_id: Optional[str] = Field(
-        None, alias="UF_CRM_665F08858FCF0"
+        None, alias="UF_CRM_CALLTOUCH3ZFT"
     )
     calltouch_request_id: Optional[str] = Field(
-        None, alias="UF_CRM_665F0885BB4E2"
+        None, alias="UF_CRM_CALLTOUCHWG9P"
     )
-    yaclientid: Optional[str] = Field(None, alias="UF_CRM_1739185983784")
+    yaclientid: Optional[str] = Field(None, alias="UF_CRM_1739432591418")
 
     # Социальные профили
-    wz_instagram: Optional[str] = Field(None, alias="UF_CRM_63A031829F8E2")
-    wz_vc: Optional[str] = Field(None, alias="UF_CRM_63A03182BF864")
+    wz_instagram: Optional[str] = Field(None, alias="UF_CRM_INSTAGRAM_WZ")
+    wz_vc: Optional[str] = Field(None, alias="UF_CRM_VK_WZ")
     wz_telegram_username: Optional[str] = Field(
-        None, alias="UF_CRM_63A03182D063B"
+        None, alias="UF_CRM_TELEGRAMUSERNAME_WZ"
     )
-    wz_telegram_id: Optional[str] = Field(None, alias="UF_CRM_63A03182DFB0F")
-    wz_avito: Optional[str] = Field(None, alias="UF_CRM_63ABEBD42730D")
+    wz_telegram_id: Optional[str] = Field(None, alias="UF_CRM_TELEGRAMID_WZ")
+    wz_avito: Optional[str] = Field(None, alias="UF_CRM_AVITO_WZ")
+
+    # Коммуникации
+    phone: Optional[list[CommunicationChannel] | None] = Field(
+        None, alias="PHONE"
+    )
+    email: Optional[list[CommunicationChannel] | None] = Field(
+        None, alias="EMAIL"
+    )
+    web: Optional[list[CommunicationChannel] | None] = Field(None, alias="WEB")
+    im: Optional[list[CommunicationChannel] | None] = Field(None, alias="IM")
+    link: Optional[list[CommunicationChannel] | None] = Field(
+        None, alias="LINK"
+    )
 
     # Универсальный валидатор для всех полей
     @model_validator(mode="before")  # type: ignore[misc]
@@ -183,14 +193,12 @@ class DealCreate(BaseCreateSchema):
     # Валидаторы для преобразования значений
     @field_validator(
         "opened",
-        "closed",
-        "is_new",
-        "is_recurring",
         "is_return_customer",
-        "is_repeated_approach",
         "is_manual_opportunity",
         "is_shipment_approved",
-        "is_shipment_approved_invoice",
+        "has_phone",
+        "has_email",
+        "has_imol",
         mode="before",
     )  # type: ignore[misc]
     @classmethod
@@ -207,30 +215,35 @@ class DealCreate(BaseCreateSchema):
         return False
 
     @field_validator(
-        "probability",
-        "payment_grace_period",
-        "lead_id",
-        "company_id",
         "contact_id",
         "main_activity_id",
-        "shipping_company_id",
-        "creation_source_id",
-        "warehouse_id",
         "deal_failure_reason_id",
         "assigned_by_id",
         "created_by_id",
         "modify_by_id",
         "moved_by_id",
         "last_activity_by",
-        "defect_expert_id",
-        "parent_deal_id",
-        "category_id",
+        "address_loc_addr_id",
         mode="before",
     )  # type: ignore[misc]
     @classmethod
     def normalize_numeric_fields(cls, v: Any) -> Optional[int]:
         """Обрабатывает числовые поля: пустые значения → None, строки → int"""
         if v is None or v == "":
+            return None
+        try:
+            return int(v)
+        except (ValueError, TypeError):
+            return None
+
+    @field_validator(
+        "company_id",
+        mode="before",
+    )  # type: ignore[misc]
+    @classmethod
+    def normalize_company_id_fields(cls, v: Any) -> Optional[int]:
+        """Обрабатывает числовые поля: 0 → None, строки → int"""
+        if v is None or v == "" or v == "0":
             return None
         try:
             return int(v)
@@ -255,36 +268,15 @@ class DealCreate(BaseCreateSchema):
         except (ValueError, TypeError):
             return default
 
-    @field_validator("stage_semantic_id", mode="before")  # type: ignore[misc]
+    @field_validator("status_semantic_id", mode="before")  # type: ignore[misc]
     @classmethod
-    def convert_stage_semantic_id(cls, v: Any) -> StageSemanticEnum:
+    def convert_status_semantic_id(cls, v: Any) -> StageSemanticEnum:
         return cls._convert_enum_value(
             v, StageSemanticEnum, StageSemanticEnum.PROSPECTIVE
         )
 
-    @field_validator("payment_type", mode="before")  # type: ignore[misc]
-    @classmethod
-    def convert_payment_type(cls, v: Any) -> TypePaymentEnum:
-        return cls._convert_enum_value(
-            v, TypePaymentEnum, TypePaymentEnum.NOT_DEFINE
-        )
-
-    @field_validator("shipping_type", mode="before")  # type: ignore[misc]
-    @classmethod
-    def convert_shipping_type(cls, v: Any) -> TypeShipmentEnum:
-        return cls._convert_enum_value(
-            v, TypeShipmentEnum, TypeShipmentEnum.NOT_DEFINE
-        )
-
-    @field_validator("processing_status", mode="before")  # type: ignore[misc]
-    @classmethod
-    def convert_processing_status(cls, v: Any) -> ProcessingStatusEnum:
-        return cls._convert_enum_value(
-            v, ProcessingStatusEnum, ProcessingStatusEnum.NOT_DEFINE
-        )
-
     @field_validator(
-        "payment_deadline",
+        "birthdate",
         "moved_time",
         "last_activity_time",
         "mgo_cc_create",
@@ -331,61 +323,41 @@ class DealCreate(BaseCreateSchema):
         except (ValueError, TypeError):
             raise ValueError(f"Неверный формат даты: {v}")
 
-    @field_validator("probability", mode="before")  # type: ignore[misc]
-    @classmethod
-    def validate_probability(cls, v: Any) -> Optional[int]:
-        """Валидация и нормализация вероятности"""
-        if v in ("", None):
-            return None
-        try:
-            value = int(v)
-            if 0 <= value <= 100:
-                return value
-            return None
-        except (ValueError, TypeError):
-            return None
 
-
-class DealUpdate(BaseUpdateSchema):
+class LeadUpdate(BaseUpdateSchema):
     """Модель для частичного обновления сделок"""
 
     # Основные поля с алиасами (все необязательные)
     # external_id: Optional[int] = Field(None, alias="ID")
     title: Optional[str] = Field(None, alias="TITLE")
     comments: Optional[str] = Field(None, alias="COMMENTS")
-    additional_info: Optional[str] = Field(None, alias="ADDITIONAL_INFO")
+    name: Optional[str] = Field(None, alias="NAME")
+    second_name: Optional[str] = Field(None, alias="SECOND_NAME")
+    last_name: Optional[str] = Field(None, alias="LAST_NAME")
+    post: Optional[str] = Field(None, alias="POST")
+    company_title: Optional[str] = Field(None, alias="COMPANY_TITLE")
 
     # Статусы и флаги
-    probability: Optional[int] = Field(None, alias="PROBABILITY")
     is_manual_opportunity: Optional[bool] = Field(
         None, alias="IS_MANUAL_OPPORTUNITY"
     )
     opened: Optional[bool] = Field(None, alias="OPENED")
-    closed: Optional[bool] = Field(None, alias="CLOSED")
-    is_new: Optional[bool] = Field(None, alias="IS_NEW")
-    is_recurring: Optional[bool] = Field(None, alias="IS_RECURRING")
     is_return_customer: Optional[bool] = Field(
         None, alias="IS_RETURN_CUSTOMER"
     )
-    is_repeated_approach: Optional[bool] = Field(
-        None, alias="IS_REPEATED_APPROACH"
-    )
     is_shipment_approved: Optional[bool] = Field(
-        None, alias="UF_CRM_60D2AFAEB32CC"
+        None, alias="UF_CRM_1623830089"
     )
-    is_shipment_approved_invoice: Optional[bool] = Field(
-        None, alias="UF_CRM_1632738559"
-    )
+    has_phone: Optional[bool] = Field(None, alias="HAS_PHONE")
+    has_email: Optional[bool] = Field(None, alias="HAS_EMAIL")
+    has_imol: Optional[bool] = Field(None, alias="HAS_IMOL")
 
     # Финансовые данные
     opportunity: Optional[float] = Field(None, alias="OPPORTUNITY")
-    payment_grace_period: Optional[int] = Field(
-        None, alias="UF_CRM_1656582798"
-    )
 
     # Временные метки
-    begindate: Optional[datetime] = Field(None, alias="BEGINDATE")
-    closedate: Optional[datetime] = Field(None, alias="CLOSEDATE")
+    birthdate: Optional[datetime] = Field(None, alias="BIRTHDATE")
+    date_closed: Optional[datetime] = Field(None, alias="DATE_CLOSED")
     date_create: Optional[datetime] = Field(None, alias="DATE_CREATE")
     date_modify: Optional[datetime] = Field(None, alias="DATE_MODIFY")
     moved_time: Optional[datetime] = Field(None, alias="MOVED_TIME")
@@ -395,50 +367,47 @@ class DealUpdate(BaseUpdateSchema):
     last_communication_time: Optional[datetime] = Field(
         None, alias="LAST_COMMUNICATION_TIME"
     )
-    payment_deadline: Optional[datetime] = Field(
-        None, alias="UF_CRM_1632738230"
-    )
 
     # География и источники
     city: Optional[str] = Field(None, alias="UF_CRM_DCT_CITY")
     source_description: Optional[str] = Field(None, alias="SOURCE_DESCRIPTION")
+    status_description: Optional[str] = Field(None, alias="STATUS_DESCRIPTION")
     source_external: Optional[str] = Field(None, alias="UF_CRM_DCT_SOURCE")
     originator_id: Optional[str] = Field(None, alias="ORIGINATOR_ID")
     origin_id: Optional[str] = Field(None, alias="ORIGIN_ID")
-    printed_form_id: Optional[str] = Field(None, alias="UF_CRM_1656227383")
+
+    # Адрес
+    address: Optional[str] = Field(None, alias="ADDRESS")
+    address_2: Optional[str] = Field(None, alias="ADDRESS_2")
+    address_city: Optional[str] = Field(None, alias="ADDRESS_CITY")
+    address_postal_code: Optional[str] = Field(
+        None, alias="ADDRESS_POSTAL_CODE"
+    )
+    address_region: Optional[str] = Field(None, alias="ADDRESS_REGION")
+    address_province: Optional[str] = Field(None, alias="ADDRESS_PROVINCE")
+    address_country: Optional[str] = Field(None, alias="ADDRESS_COUNTRY")
+    address_country_code: Optional[str] = Field(
+        None, alias="ADDRESS_COUNTRY_CODE"
+    )
+    address_loc_addr_id: Optional[int] = Field(
+        None, alias="ADDRESS_LOC_ADDR_ID"
+    )
 
     # Перечисляемые типы
-    stage_semantic_id: Optional[StageSemanticEnum] = Field(
-        None, alias="STAGE_SEMANTIC_ID"
-    )
-    payment_type: Optional[TypePaymentEnum] = Field(
-        None, alias="UF_CRM_1632738315"
-    )
-    shipping_type: Optional[TypeShipmentEnum] = Field(
-        None, alias="UF_CRM_1655141630"
-    )
-    processing_status: Optional[ProcessingStatusEnum] = Field(
-        None, alias="UF_CRM_1750571370"
+    status_semantic_id: Optional[StageSemanticEnum] = Field(
+        None, alias="STATUS_SEMANTIC_ID"
     )
 
     # Связи с другими сущностями
     currency_id: Optional[str] = Field(None, alias="CURRENCY_ID")
-    type_id: Optional[str] = Field(None, alias="TYPE_ID")
-    stage_id: Optional[str] = Field(None, alias="STAGE_ID")
-    lead_id: Optional[int] = Field(None, alias="LEAD_ID")
+    type_id: Optional[str] = Field(None, alias="UF_CRM_1629271075")
+    status_id: Optional[str] = Field(None, alias="STATUS_ID")
     company_id: Optional[int] = Field(None, alias="COMPANY_ID")
     contact_id: Optional[int] = Field(None, alias="CONTACT_ID")
-    category_id: Optional[int] = Field(None, alias="CATEGORY_ID")
     source_id: Optional[str] = Field(None, alias="SOURCE_ID")
-    main_activity_id: Optional[int] = Field(None, alias="UF_CRM_1598883361")
-    lead_type_id: Optional[str] = Field(None, alias="UF_CRM_612463720554B")
-    invoice_stage_id: Optional[str] = Field(None, alias="UF_CRM_1632738354")
-    current_stage_id: Optional[str] = Field(None, alias="UF_CRM_1632738604")
-    shipping_company_id: Optional[int] = Field(None, alias="UF_CRM_1650617036")
-    creation_source_id: Optional[int] = Field(None, alias="UF_CRM_1654577096")
-    warehouse_id: Optional[int] = Field(None, alias="UF_CRM_1659326670")
+    main_activity_id: Optional[int] = Field(None, alias="UF_CRM_1598882174")
     deal_failure_reason_id: Optional[int] = Field(
-        None, alias="UF_CRM_652940014E9A5"
+        None, alias="UF_CRM_1697036607"
     )
 
     # Связи по пользователю
@@ -447,15 +416,6 @@ class DealUpdate(BaseUpdateSchema):
     modify_by_id: Optional[int] = Field(None, alias="MODIFY_BY_ID")
     moved_by_id: Optional[int] = Field(None, alias="MOVED_BY_ID")
     last_activity_by: Optional[int] = Field(None, alias="LAST_ACTIVITY_BY")
-    defect_expert_id: Optional[int] = Field(None, alias="UF_CRM_1655618547")
-
-    # Поля сервисных сделок
-    defect_conclusion: Optional[str] = Field(
-        None, alias="UF_CRM_1655618110493"
-    )
-
-    # Связанные сделки (доставка)
-    parent_deal_id: Optional[int] = Field(None, alias="UF_CRM_1655891443")
 
     # Маркетинговые метки
     utm_source: Optional[str] = Field(None, alias="UTM_SOURCE")
@@ -479,29 +439,43 @@ class DealUpdate(BaseUpdateSchema):
     mgo_cc_end: Optional[datetime] = Field(None, alias="UF_CRM_MGO_CC_END")
     mgo_cc_tag_id: Optional[str] = Field(None, alias="UF_CRM_MGO_CC_TAG_ID")
     calltouch_site_id: Optional[str] = Field(
-        None, alias="UF_CRM_665F0885515AE"
+        None, alias="UF_CRM_CALLTOUCHT413"
     )
     calltouch_call_id: Optional[str] = Field(
-        None, alias="UF_CRM_665F08858FCF0"
+        None, alias="UF_CRM_CALLTOUCH3ZFT"
     )
     calltouch_request_id: Optional[str] = Field(
-        None, alias="UF_CRM_665F0885BB4E2"
+        None, alias="UF_CRM_CALLTOUCHWG9P"
     )
-    yaclientid: Optional[str] = Field(None, alias="UF_CRM_1739185983784")
+    yaclientid: Optional[str] = Field(None, alias="UF_CRM_1739432591418")
 
     # Социальные профили
-    wz_instagram: Optional[str] = Field(None, alias="UF_CRM_63A031829F8E2")
-    wz_vc: Optional[str] = Field(None, alias="UF_CRM_63A03182BF864")
+    wz_instagram: Optional[str] = Field(None, alias="UF_CRM_INSTAGRAM_WZ")
+    wz_vc: Optional[str] = Field(None, alias="UF_CRM_VK_WZ")
     wz_telegram_username: Optional[str] = Field(
-        None, alias="UF_CRM_63A03182D063B"
+        None, alias="UF_CRM_TELEGRAMUSERNAME_WZ"
     )
-    wz_telegram_id: Optional[str] = Field(None, alias="UF_CRM_63A03182DFB0F")
-    wz_avito: Optional[str] = Field(None, alias="UF_CRM_63ABEBD42730D")
+    wz_telegram_id: Optional[str] = Field(None, alias="UF_CRM_TELEGRAMID_WZ")
+    wz_avito: Optional[str] = Field(None, alias="UF_CRM_AVITO_WZ")
 
-    # Валидаторы (такие же как в DealCreate)
+    # Коммуникации
+    phone: Optional[list[CommunicationChannel] | None] = Field(
+        None, alias="PHONE"
+    )
+    email: Optional[list[CommunicationChannel] | None] = Field(
+        None, alias="EMAIL"
+    )
+    web: Optional[list[CommunicationChannel] | None] = Field(None, alias="WEB")
+    im: Optional[list[CommunicationChannel] | None] = Field(None, alias="IM")
+    link: Optional[list[CommunicationChannel] | None] = Field(
+        None, alias="LINK"
+    )
+
+    # Универсальный валидатор для всех полей
     @model_validator(mode="before")  # type: ignore[misc]
     @classmethod
     def normalize_empty_values(cls, data: Any) -> Any:
+        """Преобразует пустые строки в None для всех полей"""
         if not isinstance(data, dict):
             return data
 
@@ -511,49 +485,40 @@ class DealUpdate(BaseUpdateSchema):
                 data[field] = None
         return data
 
+    # Валидаторы для преобразования значений
     @field_validator(
         "opened",
-        "closed",
-        "is_new",
-        "is_recurring",
         "is_return_customer",
-        "is_repeated_approach",
         "is_manual_opportunity",
         "is_shipment_approved",
-        "is_shipment_approved_invoice",
+        "has_phone",
+        "has_email",
+        "has_imol",
         mode="before",
     )  # type: ignore[misc]
     @classmethod
-    def convert_to_bool(cls, v: Any) -> Optional[bool]:
+    def convert_to_bool(cls, v: Any) -> bool:
+        """Преобразует различные форматы в булевы значения"""
         if v is None:
-            return None
+            return False
         if isinstance(v, bool):
             return v
         if isinstance(v, str):
             return v.upper() in ("Y", "1", "TRUE", "T", "YES")
         if isinstance(v, int):
             return bool(v)
-        return None
+        return False
 
     @field_validator(
-        "probability",
-        "payment_grace_period",
-        "lead_id",
-        "company_id",
         "contact_id",
         "main_activity_id",
-        "shipping_company_id",
-        "creation_source_id",
-        "warehouse_id",
         "deal_failure_reason_id",
         "assigned_by_id",
         "created_by_id",
         "modify_by_id",
         "moved_by_id",
         "last_activity_by",
-        "defect_expert_id",
-        "parent_deal_id",
-        "category_id",
+        "address_loc_addr_id",
         mode="before",
     )  # type: ignore[misc]
     @classmethod
@@ -567,7 +532,46 @@ class DealUpdate(BaseUpdateSchema):
             return None
 
     @field_validator(
-        "payment_deadline",
+        "company_id",
+        mode="before",
+    )  # type: ignore[misc]
+    @classmethod
+    def normalize_company_id_fields(cls, v: Any) -> Optional[int]:
+        """Обрабатывает числовые поля: 0 → None, строки → int"""
+        if v is None or v == "" or v == "0":
+            return None
+        try:
+            return int(v)
+        except (ValueError, TypeError):
+            return None
+
+    @classmethod
+    def _convert_enum_value(
+        cls, v: Any, enum_type: Type[EnumT], default: EnumT
+    ) -> EnumT:
+        """Вспомогательная функция для преобразования значений enum"""
+        if v is None or v == "":
+            return default
+
+        try:
+            # Пробуем преобразовать строку в число
+            if isinstance(v, str) and v.isdigit():
+                v = int(v)
+
+            # Пробуем найти значение в enum
+            return enum_type(v)
+        except (ValueError, TypeError):
+            return default
+
+    @field_validator("status_semantic_id", mode="before")  # type: ignore[misc]
+    @classmethod
+    def convert_status_semantic_id(cls, v: Any) -> StageSemanticEnum:
+        return cls._convert_enum_value(
+            v, StageSemanticEnum, StageSemanticEnum.PROSPECTIVE
+        )
+
+    @field_validator(
+        "birthdate",
         "moved_time",
         "last_activity_time",
         "mgo_cc_create",
@@ -576,6 +580,7 @@ class DealUpdate(BaseUpdateSchema):
     )  # type: ignore[misc]
     @classmethod
     def normalize_datetime_fields(cls, v: Any) -> Optional[datetime]:
+        """Обрабатывает пустые значения для полей даты/времени"""
         if v is None or v == "":
             return None
         return v  # type: ignore[no-any-return]
@@ -613,61 +618,11 @@ class DealUpdate(BaseUpdateSchema):
         except (ValueError, TypeError):
             raise ValueError(f"Неверный формат даты: {v}")
 
-    @field_validator("probability", mode="before")  # type: ignore[misc]
-    @classmethod
-    def validate_probability(cls, v: Any) -> Optional[int]:
-        if v in ("", None):
-            return None
-        try:
-            value = int(v)
-            if 0 <= value <= 100:
-                return value
-            return None
-        except (ValueError, TypeError):
-            return None
 
-    # Enum-валидаторы
-    @classmethod
-    def _convert_enum_value(
-        cls, v: Any, enum_type: Type[EnumT], default: EnumT
-    ) -> Optional[EnumT]:
-        if v is None or v == "":
-            return None
-        try:
-            if isinstance(v, str) and v.isdigit():
-                v = int(v)
-            return enum_type(v)
-        except (ValueError, TypeError):
-            return None
-
-    @field_validator("payment_type", mode="before")  # type: ignore[misc]
-    @classmethod
-    def convert_payment_type(cls, v: Any) -> Optional[TypePaymentEnum]:
-        return cls._convert_enum_value(
-            v, TypePaymentEnum, TypePaymentEnum.NOT_DEFINE
-        )
-
-    @field_validator("shipping_type", mode="before")  # type: ignore[misc]
-    @classmethod
-    def convert_shipping_type(cls, v: Any) -> Optional[TypeShipmentEnum]:
-        return cls._convert_enum_value(
-            v, TypeShipmentEnum, TypeShipmentEnum.NOT_DEFINE
-        )
-
-    @field_validator("processing_status", mode="before")  # type: ignore[misc]
-    @classmethod
-    def convert_processing_status(
-        cls, v: Any
-    ) -> Optional[ProcessingStatusEnum]:
-        return cls._convert_enum_value(
-            v, ProcessingStatusEnum, ProcessingStatusEnum.NOT_DEFINE
-        )
-
-
-# class DealListResponse(BaseModel):  # type: ignore[misc]
+# class LeadListResponse(BaseModel):  # type: ignore[misc]
 #    """Схема для ответа со списком сделок"""
 
-#    result: list[DealUpdate]
+#    result: list[LeadUpdate]
 #    next: int | None = None
 #    total: int
 
