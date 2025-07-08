@@ -24,7 +24,7 @@ class DealCreate(BaseCreateSchema):
     # Поля с алиасами для соответствия SQLAlchemy модели
 
     # Идентификаторы и основные данные
-    external_id: int = Field(..., alias="ID")
+    # external_id: int = Field(..., alias="ID")
     title: str = Field(..., alias="TITLE")
     comments: Optional[str] = Field(None, alias="COMMENTS")
     additional_info: Optional[str] = Field(None, alias="ADDITIONAL_INFO")
@@ -233,7 +233,23 @@ class DealCreate(BaseCreateSchema):
         if v is None or v == "":
             return None
         try:
+            # v = ''.join(v.split())
             return int(v)
+        except (ValueError, TypeError):
+            return None
+
+    @field_validator(
+        "opportunity",
+        mode="before",
+    )  # type: ignore[misc]
+    @classmethod
+    def normalize_float_fields(cls, v: Any) -> Optional[float]:
+        """Обрабатывает числовые поля: пустые значения → None, строки → int"""
+        if v is None or v == "":
+            return None
+        try:
+            # v = ''.join(v.split())
+            return float(v)
         except (ValueError, TypeError):
             return None
 
@@ -563,6 +579,23 @@ class DealUpdate(BaseUpdateSchema):
             return None
         try:
             return int(v)
+        except (ValueError, TypeError):
+            return None
+
+    @field_validator(
+        "opportunity",
+        mode="before",
+    )  # type: ignore[misc]
+    @classmethod
+    def normalize_float_fields(cls, v: Any) -> Optional[float]:
+        """
+        Обрабатывает числовые поля: пустые значения → None, строки → float
+        """
+        if v is None or v == "":
+            return None
+        try:
+            # v = ''.join(v.split())
+            return float(v)
         except (ValueError, TypeError):
             return None
 

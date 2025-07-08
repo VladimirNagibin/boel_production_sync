@@ -36,6 +36,11 @@ class CommunicationChannelType(Base):
 
 class CommunicationChannel(IntIdEntity):
     __tablename__ = "communication_channels"
+    # __table_args__ = (
+    #    UniqueConstraint(
+    #        "channel_type_id", "value", name="uq_channel_type_value"
+    #    ),
+    # )
     entity_type: Mapped[EntityType] = mapped_column(
         String(20),
         comment="Тип сущности",

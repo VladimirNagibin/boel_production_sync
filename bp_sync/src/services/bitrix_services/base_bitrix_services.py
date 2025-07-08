@@ -9,9 +9,9 @@ from schemas.base_schemas import (
     ListResponseSchema,
 )
 
-from ..bitrix_services.bitrix_api_client import BitrixAPIClient
 from ..decorators import handle_bitrix_errors
 from ..exceptions import BitrixApiError
+from .bitrix_api_client import BitrixAPIClient
 
 # Дженерик для схем
 SchemaTypeCreate = TypeVar("SchemaTypeCreate", bound=BaseCreateSchema)
@@ -124,8 +124,92 @@ class BaseBitrixEntityClient(Generic[SchemaTypeCreate, SchemaTypeUpdate]):
         filter_entity: dict[str, Any] | None = None,
         order: dict[str, str] | None = None,
         start: int = 0,
-    ) -> ListResponseSchema:  # type: ignore[type-arg]
-        """Список сущностей с фильтрацией"""
+    ) -> ListResponseSchema[SchemaTypeUpdate]:
+        """Список сущностей с фильтрацией
+
+        Получает список сущностей из Bitrix24 с возможностью фильтрации,
+        сортировки и постраничной выборки.
+
+        Args:
+            select: Список полей для выборки.
+                - Может содержать маски:
+                    '*' - все основные поля (без пользовательских и
+                          множественных)
+                    'UF_*' - все пользовательские поля (без множественных)
+                - По умолчанию выбираются все поля ('*' + 'UF_*')
+                - Доступные поля: `crm.{entity_name}.fields`
+                - Пример: ["ID", "TITLE", "OPPORTUNITY"]
+
+            filter: Фильтр для выборки сделок.
+                - Формат: {поле: значение}
+                - Поддерживаемые префиксы для операторов:
+                    '>=' - больше или равно
+                    '>'  - больше
+                    '<=' - меньше или равно
+                    '<'  - меньше
+                    '@'  - IN (значение должно быть массивом)
+                    '!@' - NOT IN (значение должно быть массивом)
+                    '%'  - LIKE (поиск подстроки, % не нужен)
+                    '=%' - LIKE с указанием позиции (% в начале)
+                    '=%%' - LIKE с указанием позиции (% в конце)
+                    '=%%%' - LIKE с подстрокой в любой позиции
+                    '='  - равно (по умолчанию)
+                    '!=' - не равно
+                    '!'  - не равно
+                - Не работает с полями типа crm_status, crm_contact ...
+                - Пример: {">OPPORTUNITY": 1000, "CATEGORY_ID": 1}
+
+            order: Сортировка результатов.
+                - Формат: {поле: направление}
+                - Направление: "ASC" (по возрастанию) или "DESC" (по убыванию)
+                - Пример: {"TITLE": "ASC", "DATE_CREATE": "DESC"}
+
+            start: Смещение для постраничной выборки.
+                - Размер страницы фиксирован: 50 записей
+                - Формула: start = (N-1) * 50, где N - номер страницы
+                - Пример: для 2-й страницы передать 50
+
+        Returns:
+            ListResponseSchema: Объект с результатами выборки:
+                - result: список сущностей
+                - total: общее количество сущностей
+                - next: смещение для следующей страницы (если есть)
+
+        Example:
+            Получить сделки с фильтрацией и сортировкой:
+            ```python
+            deals = await client.list(
+                select=["ID", "TITLE", "OPPORTUNITY"],
+                filter={
+                    "CATEGORY_ID": 1,
+                    ">OPPORTUNITY": 10000,
+                    "<=OPPORTUNITY": 20000,
+                    "@ASSIGNED_BY_ID": [1, 6]
+                },
+                order={"OPPORTUNITY": "ASC"},
+                start=0
+            )
+            ```
+
+        Bitrix API Example:
+            ```bash
+            curl -X POST \\
+            -H "Content-Type: application/json" \\
+            -H "Accept: application/json" \\
+            -d '{
+                "SELECT": ["ID", "TITLE", "OPPORTUNITY"],
+                "FILTER": {
+                    "CATEGORY_ID": 1,
+                    ">OPPORTUNITY": 10000,
+                    "<=OPPORTUNITY": 20000,
+                    "@ASSIGNED_BY_ID": [1, 6]
+                },
+                "ORDER": {"OPPORTUNITY": "ASC"},
+                "start": 0
+            }' \\
+            https://example.bitrix24.ru/rest/user_id/webhook/crm.deal.list
+            ```
+        """
         logger.debug(
             f"Fetching {self.entity_name} list: "
             f"select={select}, filter={filter_entity}, "
@@ -154,7 +238,7 @@ class BaseBitrixEntityClient(Generic[SchemaTypeCreate, SchemaTypeUpdate]):
         next_page = response.get("next")
 
         logger.info(f"Fetched {len(entities)} of {total} {self.entity_name}s")
-        return ListResponseSchema(
+        return ListResponseSchema[SchemaTypeUpdate](
             result=entities,
             total=total,
             next=next_page,
