@@ -3,13 +3,13 @@ from typing import Any, Generic, Optional, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from models.bases import CommunicationType
-
 T = TypeVar("T")
 
 
 class BaseCreateSchema(BaseModel):  # type: ignore[misc]
     """Базовая схема для создания сущностей"""
+
+    external_id: int = Field(..., alias="ID")
 
     model_config = ConfigDict(
         use_enum_values=True,
@@ -63,14 +63,6 @@ class BaseUpdateSchema(BaseModel):  # type: ignore[misc]
                     result[alias] = iso_format
             elif alias == "ID":
                 continue
-            elif CommunicationType.has_value(alias):
-                result[alias] = [
-                    {
-                        "VALUE_TYPE": comm["VALUE_TYPE"],
-                        "VALUE": comm["VALUE"],
-                    }
-                    for comm in value
-                ]
             else:
                 # Остальные значения без изменений
                 result[alias] = value

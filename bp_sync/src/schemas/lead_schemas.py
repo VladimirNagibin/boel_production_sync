@@ -37,7 +37,7 @@ class LeadCreate(BaseCreateSchema):
     # Поля с алиасами для соответствия SQLAlchemy модели
 
     # Идентификаторы и основные данные
-    external_id: int = Field(..., alias="ID")
+    # external_id: int = Field(..., alias="ID")
     title: str = Field(..., alias="TITLE")
     comments: Optional[str] = Field(None, alias="COMMENTS")
     name: Optional[str] = Field(None, alias="NAME")
@@ -233,6 +233,23 @@ class LeadCreate(BaseCreateSchema):
             return None
         try:
             return int(v)
+        except (ValueError, TypeError):
+            return None
+
+    @field_validator(
+        "opportunity",
+        mode="before",
+    )  # type: ignore[misc]
+    @classmethod
+    def normalize_float_fields(cls, v: Any) -> Optional[float]:
+        """
+        Обрабатывает числовые поля: пустые значения → None, строки → float
+        """
+        if v is None or v == "":
+            return None
+        try:
+            # v = ''.join(v.split())
+            return float(v)
         except (ValueError, TypeError):
             return None
 
@@ -528,6 +545,23 @@ class LeadUpdate(BaseUpdateSchema):
             return None
         try:
             return int(v)
+        except (ValueError, TypeError):
+            return None
+
+    @field_validator(
+        "opportunity",
+        mode="before",
+    )  # type: ignore[misc]
+    @classmethod
+    def normalize_float_fields(cls, v: Any) -> Optional[float]:
+        """
+        Обрабатывает числовые поля: пустые значения → None, строки → float
+        """
+        if v is None or v == "":
+            return None
+        try:
+            # v = ''.join(v.split())
+            return float(v)
         except (ValueError, TypeError):
             return None
 

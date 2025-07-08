@@ -5,9 +5,7 @@ from sqlalchemy import CheckConstraint, DateTime, ForeignKey
 from sqlalchemy.dialects.postgresql import ENUM as PgEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from db.postgres import Base
-
-from .bases import UserRelationsMixin
+from .bases import IntIdEntity, UserRelationsMixin
 from .deal_documents import Billing
 from .entities import Company, Contact
 from .enums import (
@@ -33,7 +31,7 @@ from .references import (
 )
 
 
-class Deal(Base, UserRelationsMixin):
+class Deal(IntIdEntity, UserRelationsMixin):
     """Сделки"""
 
     __tablename__ = "deals"
@@ -46,9 +44,9 @@ class Deal(Base, UserRelationsMixin):
         CheckConstraint("external_id > 0", name="external_id_positive"),
     )
     # Идентификаторы и основные данные
-    external_id: Mapped[int] = mapped_column(
-        unique=True, comment="Внешний ID сделки"
-    )  # ID : ид
+    # external_id: Mapped[int] = mapped_column(
+    #    unique=True, comment="Внешний ID сделки"
+    # )  # ID : ид
     title: Mapped[str] = mapped_column(
         comment="Название сделки"
     )  # TITLE : Название

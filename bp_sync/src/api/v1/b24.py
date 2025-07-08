@@ -5,7 +5,7 @@ from core.logger import logger
 
 # from services.bitrix_api_client import BitrixAPIClient
 # from schemas.deal_schemas import DealUpdate
-from schemas.lead_schemas import LeadUpdate
+# from schemas.lead_schemas import LeadUpdate
 from services.bitrix_services.bitrix_oauth_client import BitrixOAuthClient
 from services.deals.deal_bitrix_services import (
     DealBitrixClient,
@@ -37,30 +37,34 @@ async def check(
     lead_bitrix_client: LeadBitrixClient = Depends(get_lead_bitrix_client),
     token_storage: TokenStorage = Depends(get_token_storage),
 ) -> JSONResponse:
-    res = await deal_bitrix_client.get(50301)
-    lead = await lead_bitrix_client.get(59819)
+    # res = await deal_bitrix_client.get(51463)
+    # lead = await lead_bitrix_client.get(59773)
     # res2 = DealUpdate(**res.model_dump(by_alias=True, exclude_unset=True))
-    lead2 = LeadUpdate(**lead.model_dump(by_alias=True, exclude_unset=True))
+    # lead2 = LeadUpdate(**lead.model_dump(by_alias=True, exclude_unset=True))
 
-    lead2.title = "NEW TEST 2"
+    # lead2.title = "NEW TEST 2"
+    # lead2.phone[0].value_type = "MOBILE"
+    # lead2.phone[1].value = "777777777777"
     # res2.shipping_type = 517
     # res2 = LeadUpdate(title="QWERTY")
-    res3 = await lead_bitrix_client.create(lead2)
+    # res3 = await lead_bitrix_client.update(lead2)
     # print(res2.title)
-    # res3 = await deal_bitrix_client.list(
-    #    filter_deals={"ID": 11}, select=["is_new"], start=0
-    # )
-    print(lead)
+    res3 = await deal_bitrix_client.list(
+        filter_entity={"ID": 51463},
+        select=["ID", "TITLE", "OPPORTUNITY"],
+        start=0,
+    )
+    print(res3)
     # await token_storage.delete_token("access_token")
-    if res:
+    if res3:
         #  deal_create = DealCreate(**res)
         # print(res.model_dump())
         return JSONResponse(
             status_code=status.HTTP_200_OK,
             content={
                 "status": "success",
-                "bool": res3,
-                "result": lead2.to_bitrix_dict(),
+                "bool": [str(type(res)) for res in res3],
+                # "result": res.to_bitrix_dict(),
             },
         )
     return JSONResponse(
