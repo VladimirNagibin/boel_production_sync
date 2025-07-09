@@ -150,11 +150,3 @@ class CommunicationService:
                 f"ID={entity_id}: {str(e)}"
             )
             raise
-
-    # async def _delete_all_communications(
-    #    self, entity_type: EntityType, entity_id: int
-    # ) -> None:
-    #    """Удаляет все коммуникации сущности"""
-    #    await self.delete_communications(
-    #        entity_type=entity_type, entity_id=entity_id
-    #    )

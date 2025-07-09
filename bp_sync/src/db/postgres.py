@@ -54,6 +54,9 @@ class Base(AsyncAttrs, DeclarativeBase):  # type: ignore[misc]
         onupdate=func.now(),
         comment="Дата и время последнего обновления",
     )
+    is_deleted_in_bitrix: Mapped[bool] = mapped_column(
+        default=False, comment="Удалён в Битрикс"
+    )
 
     # @declared_attr.directive  # type: ignore
     # def __tablename__(cls) -> str:

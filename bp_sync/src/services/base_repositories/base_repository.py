@@ -235,3 +235,60 @@ class BaseRepository(Generic[ModelType, SchemaTypeCreate, SchemaTypeUpdate]):
         stmt = select(model).filter_by(**filters).limit(1)
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none() is not None
+
+    async def set_deleted_in_bitrix(
+        self, external_id: int, is_deleted: bool = True
+    ) -> bool:
+        """
+        Устанавливает флаг is_deleted_in_bitrix для сущности по external_id
+        :param external_id: ID во внешней системе
+        :param is_deleted: новое значение флага удаления
+        :return: True, если обновление прошло успешно
+        """
+        if not await self._exists(external_id):
+            logger.warning(
+                f"Update failed: {self.model.__name__} "
+                f"ID={external_id} not found"
+            )
+            raise self._not_found_exception(external_id)
+
+        try:
+            stmt = (
+                update(self.model)
+                .where(self.model.external_id == external_id)
+                .values(is_deleted_in_bitrix=is_deleted)
+                .execution_options(synchronize_session="fetch")
+            )
+
+            result = await self.session.execute(stmt)
+
+            if result.rowcount == 0:
+                logger.warning(
+                    f"{self.model.__name__} with external_id={external_id} "
+                    "not found"
+                )
+                return False
+
+            await self.session.commit()
+            logger.info(
+                f"{self.model.__name__} ID={external_id} marked as "
+                f"deleted={is_deleted}"
+            )
+            return True
+        except NoResultFound:
+            await self.session.rollback()
+            logger.warning(
+                f"Update failed: {self.model.__name__} "
+                f"ID={external_id} not found"
+            )
+            raise self._not_found_exception(external_id)
+        except SQLAlchemyError as e:
+            await self.session.rollback()
+            logger.exception(
+                f"Database error updating {self.model.__name__} "
+                f"ID={external_id}: {str(e)}"
+            )
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Database operation failed",
+            ) from e

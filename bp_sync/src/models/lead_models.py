@@ -31,6 +31,10 @@ class Lead(CommunicationIntIdEntity):
         CheckConstraint("opportunity >= 0", name="non_negative_opportunity"),
     )
 
+    @property
+    def entity_type(self) -> EntityType:
+        return EntityType.LEAD
+
     # Идентификаторы и основные данные
     title: Mapped[str] = mapped_column(
         comment="Название лида"
@@ -357,7 +361,3 @@ class Lead(CommunicationIntIdEntity):
 
     "UF_CRM_ROISTAT": riostat
     """
-
-    @property
-    def entity_type(self) -> EntityType:
-        return EntityType.LEAD

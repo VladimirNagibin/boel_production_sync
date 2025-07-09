@@ -84,8 +84,11 @@ class BitrixAPIClient(BaseBitrixClient):
             raise BitrixAuthError("Token invalid or expired")
         logger.error(f"Bitrix API error [{error_code}]: {error_desc}")
         raise BitrixApiError(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            error_description=f"Bitrix API error: {error_desc} ({error_code})",
+            status_code=response.get(
+                "status_code", status.HTTP_400_BAD_REQUEST
+            ),
+            error=error_code,
+            error_description=error_desc,
         )
 
     def _invalidate_current_token(self) -> None:

@@ -21,7 +21,7 @@ class BaseBitrixClient:
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 response = await client.get(url, params=params)
-                response.raise_for_status()
+                # response.raise_for_status()
                 json_data = response.json()
                 if not isinstance(json_data, dict):
                     raise ValueError(
@@ -40,6 +40,12 @@ class BaseBitrixClient:
         except ValueError as e:
             logger.error(f"Invalid JSON response: {e}")
             raise BitrixAuthError("Invalid response format from Bitrix24")
+        except Exception as e:
+            logger.error(f"Unexpected error: {e}")
+            raise BitrixApiError(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                error_description="Unexpected error",
+            )
 
     async def _post(self, url: str, payload: dict[str, Any]) -> JsonResponse:
         try:
@@ -49,12 +55,13 @@ class BaseBitrixClient:
                     json=payload,
                     headers={"Content-Type": "application/json"},
                 )
-                response.raise_for_status()
+                # response.raise_for_status()
                 json_data = response.json()
                 if not isinstance(json_data, dict):
                     raise ValueError(
                         f"Expected JSON object, got {type(json_data).__name__}"
                     )
+                json_data["status_code"] = response.status_code
                 return cast(JsonResponse, json_data)
         except httpx.HTTPStatusError as e:
             logger.error(
@@ -75,4 +82,10 @@ class BaseBitrixClient:
             raise BitrixApiError(
                 status_code=status.HTTP_502_BAD_GATEWAY,
                 error_description="Invalid response from Bitrix24",
+            )
+        except Exception as e:
+            logger.error(f"Unexpected error: {e}")
+            raise BitrixApiError(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                error_description="Unexpected error",
             )

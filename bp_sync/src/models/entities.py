@@ -54,6 +54,10 @@ class User(NameIntIdEntity):
 
     __tablename__ = "users"
 
+    @property
+    def entity_type(self) -> EntityType:
+        return EntityType.USER
+
     assigned_deals: Mapped[list["Deal"]] = relationship(
         "Deal", back_populates="assigned_user"
     )
@@ -73,7 +77,7 @@ class User(NameIntIdEntity):
         "Deal", back_populates="defect_expert"
     )
     assigned_leads: Mapped[list["Lead"]] = relationship(
-        "Lead", ba1ck_populates="assigned_user"
+        "Lead", back_populates="assigned_user"
     )
     created_leads: Mapped[list["Lead"]] = relationship(
         "Lead", back_populates="created_user"

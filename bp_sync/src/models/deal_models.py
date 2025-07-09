@@ -5,9 +5,9 @@ from sqlalchemy import CheckConstraint, DateTime, ForeignKey
 from sqlalchemy.dialects.postgresql import ENUM as PgEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from .bases import IntIdEntity, UserRelationsMixin
+from .bases import EntityType, IntIdEntity
 from .deal_documents import Billing
-from .entities import Company, Contact
+from .entities import Company, Contact, User
 from .enums import (
     ProcessingStatusEnum,
     StageSemanticEnum,
@@ -31,7 +31,7 @@ from .references import (
 )
 
 
-class Deal(IntIdEntity, UserRelationsMixin):
+class Deal(IntIdEntity):
     """Сделки"""
 
     __tablename__ = "deals"
@@ -43,10 +43,11 @@ class Deal(IntIdEntity, UserRelationsMixin):
         ),
         CheckConstraint("external_id > 0", name="external_id_positive"),
     )
-    # Идентификаторы и основные данные
-    # external_id: Mapped[int] = mapped_column(
-    #    unique=True, comment="Внешний ID сделки"
-    # )  # ID : ид
+
+    @property
+    def entity_type(self) -> EntityType:
+        return EntityType.DEAL
+
     title: Mapped[str] = mapped_column(
         comment="Название сделки"
     )  # TITLE : Название
@@ -278,6 +279,52 @@ class Deal(IntIdEntity, UserRelationsMixin):
     )  # UF_CRM_652940014E9A5 : Ид причины провала
     deal_failure_reason: Mapped["DealFailureReason"] = relationship(
         "DealFailureReason", back_populates="deals"
+    )
+
+    # Пользователи
+    assigned_by_id: Mapped[int] = mapped_column(
+        ForeignKey("users.external_id"),
+        comment="ID ответственного",
+    )  # ASSIGNED_BY_ID : Ид пользователя
+    assigned_user: Mapped["User"] = relationship(
+        "User", foreign_keys=[assigned_by_id], back_populates="assigned_deals"
+    )
+    created_by_id: Mapped[int] = mapped_column(
+        ForeignKey("users.external_id"),
+        comment="ID создателя",
+    )  # CREATED_BY_ID : Ид пользователя
+    created_user: Mapped["User"] = relationship(
+        "User", foreign_keys=[created_by_id], back_populates="created_deals"
+    )
+    modify_by_id: Mapped[int] = mapped_column(
+        ForeignKey("users.external_id"),
+        comment="ID изменившего",
+    )  # MODIFY_BY_ID : Ид пользователя
+    modify_user: Mapped["User"] = relationship(
+        "User", foreign_keys=[modify_by_id], back_populates="modify_deals"
+    )
+    moved_by_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.external_id"),
+        comment="ID переместившего",
+    )  # MOVED_BY_ID : Ид автора, который переместил элемент на текущую стадию
+    moved_user: Mapped["User"] = relationship(
+        "User", foreign_keys=[moved_by_id], back_populates="moved_deals"
+    )
+    last_activity_by: Mapped[int | None] = mapped_column(
+        ForeignKey("users.external_id"),
+        comment="ID последней активности",
+    )  # LAST_ACTIVITY_BY : Ид пользователя сделавшего крайнюю за активность
+    last_activity_user: Mapped["User"] = relationship(
+        "User",
+        foreign_keys=[last_activity_by],
+        back_populates="last_activity_deals",
+    )
+    defect_expert_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.external_id"),
+        comment="ID эксперта по дефектам",
+    )  # UF_CRM_1655618547 : Ид эксперта по дефектам
+    defect_expert: Mapped["User"] = relationship(
+        "User", foreign_keys=[defect_expert_id], back_populates="defect_deals"
     )
 
     # Поля сервисных сделок

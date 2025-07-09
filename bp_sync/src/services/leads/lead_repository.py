@@ -31,19 +31,17 @@ class LeadRepository(
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def create_lead(self, lead_schema: LeadCreate) -> LeadDB:
+    async def create_entity(self, data: LeadCreate) -> LeadDB:
         """Создает новый лид с проверкой связанных объектов"""
-        await self._check_related_objects(lead_schema)
-        await self._create_or_update_related(lead_schema)
-        return await self.create(data=lead_schema)
+        await self._check_related_objects(data)
+        await self._create_or_update_related(data)
+        return await self.create(data=data)
 
-    async def update_lead(
-        self, lead_schema: LeadUpdate | LeadCreate
-    ) -> LeadDB:
+    async def update_entity(self, data: LeadUpdate | LeadCreate) -> LeadDB:
         """Обновляет существующий лид"""
-        await self._check_related_objects(lead_schema)
-        await self._create_or_update_related(lead_schema)
-        return await self.update(data=lead_schema)
+        await self._check_related_objects(data)
+        await self._create_or_update_related(data)
+        return await self.update(data=data)
 
     async def _check_related_objects(
         self, lead_schema: LeadCreate | LeadUpdate
