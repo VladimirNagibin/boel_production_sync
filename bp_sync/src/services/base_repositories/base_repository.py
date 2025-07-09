@@ -134,7 +134,7 @@ class BaseRepository(Generic[ModelType, SchemaTypeCreate, SchemaTypeUpdate]):
 
     async def update(
         self,
-        data: SchemaTypeUpdate,
+        data: SchemaTypeUpdate | SchemaTypeCreate,
         pre_commit_hook: Optional[Callable[..., Awaitable[None]]] = None,
         post_commit_hook: Optional[Callable[..., Awaitable[None]]] = None,
     ) -> ModelType:

@@ -17,16 +17,16 @@ class LeadClient:
         self.lead_bitrix_client = lead_bitrix_client
         self.lead_repo = lead_repo
 
-    async def create_lead(self, lead_id: int) -> LeadDB:
+    async def create_lead_from_bitrix_to_bd(self, lead_id: int) -> LeadDB:
         """Получение сделки по ID"""
         lead_create = await self.lead_bitrix_client.get(lead_id)
         lead_db = await self.lead_repo.create_lead(lead_create)
         return lead_db
 
-    async def update_lead(self, lead_id: int) -> LeadDB:
+    async def update_lead_from_bitrix_to_bd(self, lead_id: int) -> LeadDB:
         """Получение сделки по ID"""
         lead_create = await self.lead_bitrix_client.get(lead_id)
-        lead_db = await self.lead_repo.update_lead_by_external_id(lead_create)
+        lead_db = await self.lead_repo.update_lead(lead_create)
         return lead_db
 
 
