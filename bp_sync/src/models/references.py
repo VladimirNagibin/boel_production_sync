@@ -7,6 +7,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .bases import NameIntIdEntity, NameStrIdEntity
 
 if TYPE_CHECKING:
+    from .contact_models import Contact
     from .deal_models import Deal
     from .lead_models import Lead
 
@@ -37,27 +38,33 @@ class Currency(NameStrIdEntity):
 class MainActivity(NameIntIdEntity):
     """
     Основная деятельность клиента:
-    deal: lead
-    147: 45: Дистрибьютор
-    149: 47: Домашний пивовар
-    151: 49: Завод
-    153: 51: Крафт
-    155: 53: Наш дилер
-    157: 55: Розница
-    159: 57: Сети
-    161: 59: Торговая компания
-    163: 61: Хорека
+    deal: lead: contact
+    147: 45: 75: Дистрибьютор
+    149: 47: 77: Домашний пивовар
+    151: 49: 79: Завод
+    153: 51: 81: Крафт
+    155: 53: 83: Наш дилер
+    157: 55: 85: Розница
+    159: 57: 87: Сети
+    161: 59: 89: Торговая компания
+    163: 61: 91: Хорека
     """
 
     __tablename__ = "main_activites"
     ext_alt_id: Mapped[int] = mapped_column(
         unique=True, comment="id для связи с лидом"
     )
+    ext_alt2_id: Mapped[int] = mapped_column(
+        unique=True, comment="id для связи с контактом"
+    )
     deals: Mapped[list["Deal"]] = relationship(
         "Deal", back_populates="main_activity"
     )
     leads: Mapped[list["Lead"]] = relationship(
         "Lead", back_populates="main_activity"
+    )
+    contacts: Mapped[list["Contact"]] = relationship(
+        "Contact", back_populates="main_activity"
     )
 
 
@@ -78,6 +85,9 @@ class DealType(NameStrIdEntity):
     __tablename__ = "deal_types"
     deals: Mapped[list["Deal"]] = relationship("Deal", back_populates="type")
     leads: Mapped[list["Lead"]] = relationship("Lead", back_populates="type")
+    contacts: Mapped[list["Contact"]] = relationship(
+        "Contact", back_populates="deal_type"
+    )
 
 
 class DealStage(NameStrIdEntity):
@@ -233,23 +243,29 @@ class DefectType(NameIntIdEntity):
 class DealFailureReason(NameIntIdEntity):
     """
     Причины провала
-    deal:lead
-    685:665: Нецелевой
-    687:667: Не проходим по ценам
-    689:669: Нет в наличии
-    691:671: Клиент не отвечает
-    693:673: Другое
+    deal:lead:contact
+    685:665:715: Нецелевой
+    687:667:717: Не проходим по ценам
+    689:669:719: Нет в наличии
+    691:671:721: Клиент не отвечает
+    693:673:723: Другое
     """
 
     __tablename__ = "deal_failure_reasons"
     ext_alt_id: Mapped[int] = mapped_column(
         unique=True, comment="id для связи с лидом"
     )
+    ext_alt2_id: Mapped[int] = mapped_column(
+        unique=True, comment="id для связи с контактом"
+    )
     deals: Mapped[list["Deal"]] = relationship(
         "Deal", back_populates="deal_failure_reason"
     )
     leads: Mapped[list["Lead"]] = relationship(
         "Lead", back_populates="deal_failure_reason"
+    )
+    contacts: Mapped[list["Contact"]] = relationship(
+        "Contact", back_populates="deal_failure_reason"
     )
 
 
@@ -269,4 +285,20 @@ class LeadStatus(NameStrIdEntity):
     order: Mapped[int] = mapped_column(unique=True, comment="Порядковый номер")
     leads: Mapped[list["Deal"]] = relationship(
         "Lead", back_populates="lead_status"
+    )
+
+
+class ContactType(NameStrIdEntity):
+    """
+    Типы сделок:
+    CLIENT: Клиенты
+    SUPPLIER: Поставщики
+    PARTNER: Партнёры
+    OTHER: Другое
+    1: Не целевой
+    """
+
+    __tablename__ = "contact_types"
+    contacts: Mapped[list["Contact"]] = relationship(
+        "Contact", back_populates="type"
     )

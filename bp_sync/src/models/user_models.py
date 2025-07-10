@@ -2,34 +2,11 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy.orm import Mapped, relationship
 
-from .bases import CommunicationIntIdEntity, EntityType, NameIntIdEntity
+from .bases import EntityType, NameIntIdEntity
 
 if TYPE_CHECKING:
-    from .contact_models import Contact
     from .deal_models import Deal
     from .lead_models import Lead
-
-
-class Company(CommunicationIntIdEntity):
-    """
-    Компании
-    """
-
-    __tablename__ = "companies"
-
-    @property
-    def entity_type(self) -> EntityType:
-        return EntityType.COMPANY
-
-    deals: Mapped[list["Deal"]] = relationship(
-        "Deal", back_populates="company"
-    )
-    leads: Mapped[list["Lead"]] = relationship(
-        "Lead", back_populates="company"
-    )
-    contacts: Mapped[list["Contact"]] = relationship(
-        "Contact", back_populates="company"
-    )
 
 
 class User(NameIntIdEntity):
