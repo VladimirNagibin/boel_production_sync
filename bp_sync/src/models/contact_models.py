@@ -6,7 +6,6 @@ from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .bases import CommunicationIntIdEntity, EntityType
-from .entities import Company
 from .references import (
     AdditionalResponsible,
     ContactType,
@@ -17,6 +16,7 @@ from .references import (
 )
 
 if TYPE_CHECKING:
+    from .company_models import Company
     from .deal_models import Deal
     from .lead_models import Lead
 
@@ -58,7 +58,7 @@ class Contact(CommunicationIntIdEntity):
 
     # Статусы и флаги
     export: Mapped[bool] = mapped_column(
-        default=False, comment="Ручной ввод суммы"
+        default=False, comment="Участвует в экспорте контактов"
     )  # EXPORT : Участвует в экспорте контактов
     is_shipment_approved: Mapped[bool | None] = mapped_column(
         comment="Разрешение на отгрузку"
@@ -75,6 +75,9 @@ class Contact(CommunicationIntIdEntity):
     )
     leads: Mapped[list["Lead"]] = relationship(
         "Lead", back_populates="contact"
+    )
+    companies: Mapped[list["Company"]] = relationship(
+        "Company", back_populates="contact"
     )
     type_id: Mapped[str | None] = mapped_column(
         ForeignKey("contact_types.external_id")
@@ -94,7 +97,7 @@ class Contact(CommunicationIntIdEntity):
     lead: Mapped["Lead"] = relationship("Lead", back_populates="contacts")
     source_id: Mapped[str | None] = mapped_column(
         ForeignKey("sources.external_id")
-    )  # SOURCE_ID : Идентификатор источника (сводно)
+    )  # SOURCE_ID : Идентификатор источника
     source: Mapped["Source"] = relationship(
         "Source", back_populates="contacts"
     )
@@ -112,7 +115,7 @@ class Contact(CommunicationIntIdEntity):
     )
     deal_type_id: Mapped[str | None] = mapped_column(
         ForeignKey("deal_types.external_id")
-    )  # UF_CRM_61236340EA7AC : Тип контакта
+    )  # UF_CRM_61236340EA7AC : Тип лида
     deal_type: Mapped["DealType"] = relationship(
         "DealType", back_populates="contacts"
     )
@@ -130,7 +133,7 @@ class Contact(CommunicationIntIdEntity):
             viewonly=True,
             lazy="selectin",
             overlaps="communications",
-        )  # UF_CRM_1629106625* : Доп ответственныt
+        )  # UF_CRM_1629106625* : Доп ответственные
 
     """ remaining fields:
     "HONORIFIC": str, Вид обращения. Статус из справочника.

@@ -6,9 +6,9 @@ from sqlalchemy.dialects.postgresql import ENUM as PgEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .bases import EntityType, IntIdEntity
+from .company_models import Company
 from .contact_models import Contact
 from .deal_documents import Billing
-from .entities import Company
 from .enums import (
     ProcessingStatusEnum,
     StageSemanticEnum,
