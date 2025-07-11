@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import Any, Generic, Optional, TypeVar
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -10,6 +11,10 @@ class BaseCreateSchema(BaseModel):  # type: ignore[misc]
     """Базовая схема для создания сущностей"""
 
     external_id: int = Field(..., alias="ID")
+    id: Optional[UUID] = Field(None)
+    created_at: Optional[datetime] = Field(None)
+    updated_at: Optional[datetime] = Field(None)
+    is_deleted_in_bitrix: Optional[bool] = Field(None)
 
     model_config = ConfigDict(
         use_enum_values=True,
@@ -22,6 +27,10 @@ class BaseUpdateSchema(BaseModel):  # type: ignore[misc]
     """Базовая схема для обновления сущностей"""
 
     external_id: Optional[int] = Field(None, alias="ID")
+    id: Optional[UUID] = Field(None)
+    created_at: Optional[datetime] = Field(None)
+    updated_at: Optional[datetime] = Field(None)
+    is_deleted_in_bitrix: Optional[bool] = Field(None)
 
     model_config = ConfigDict(
         use_enum_values=True,

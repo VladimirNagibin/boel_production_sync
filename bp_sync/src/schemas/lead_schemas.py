@@ -1,6 +1,6 @@
 from datetime import datetime
 from enum import Enum
-from typing import Any, Optional, Type, TypeVar
+from typing import Any, Optional, Type, TypeVar, cast
 
 from pydantic import (
     BaseModel,
@@ -183,12 +183,12 @@ class LeadCreate(BaseCreateSchema):
         """Преобразует пустые строки в None для всех полей"""
         if not isinstance(data, dict):
             return data
-
-        for field in list(data.keys()):
-            value = data[field]
+        processed_data: dict[str, Any] = cast(dict[str, Any], data)
+        for field in list(processed_data.keys()):
+            value = processed_data[field]
             if isinstance(value, str) and value.strip() == "":
-                data[field] = None
-        return data
+                processed_data[field] = None
+        return processed_data
 
     # Валидаторы для преобразования значений
     @field_validator(
@@ -495,12 +495,12 @@ class LeadUpdate(BaseUpdateSchema):
         """Преобразует пустые строки в None для всех полей"""
         if not isinstance(data, dict):
             return data
-
-        for field in list(data.keys()):
-            value = data[field]
+        processed_data: dict[str, Any] = cast(dict[str, Any], data)
+        for field in list(processed_data.keys()):
+            value = processed_data[field]
             if isinstance(value, str) and value.strip() == "":
-                data[field] = None
-        return data
+                processed_data[field] = None
+        return processed_data
 
     # Валидаторы для преобразования значений
     @field_validator(

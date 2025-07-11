@@ -5,9 +5,10 @@ from sqlalchemy import CheckConstraint, DateTime, ForeignKey
 from sqlalchemy.dialects.postgresql import ENUM as PgEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from .bases import IntIdEntity, UserRelationsMixin
+from .bases import EntityType, IntIdEntity
+from .contact_models import Contact
 from .deal_documents import Billing
-from .entities import Company, Contact
+from .entities import Company
 from .enums import (
     ProcessingStatusEnum,
     StageSemanticEnum,
@@ -29,9 +30,10 @@ from .references import (
     Source,
     Warehouse,
 )
+from .user_models import User
 
 
-class Deal(IntIdEntity, UserRelationsMixin):
+class Deal(IntIdEntity):
     """Сделки"""
 
     __tablename__ = "deals"
@@ -43,16 +45,18 @@ class Deal(IntIdEntity, UserRelationsMixin):
         ),
         CheckConstraint("external_id > 0", name="external_id_positive"),
     )
-    # Идентификаторы и основные данные
-    # external_id: Mapped[int] = mapped_column(
-    #    unique=True, comment="Внешний ID сделки"
-    # )  # ID : ид
+
+    @property
+    def entity_type(self) -> EntityType:
+        return EntityType.DEAL
+
+    @property
+    def tablename(self) -> str:
+        return self.__tablename__
+
     title: Mapped[str] = mapped_column(
         comment="Название сделки"
     )  # TITLE : Название
-    comments: Mapped[str | None] = mapped_column(
-        comment="Комментарии"
-    )  # COMMENTS : Коментарии
     additional_info: Mapped[str | None] = mapped_column(
         comment="Дополнительная информация"
     )  # ADDITIONAL_INFO : Дополнительная информация
@@ -64,9 +68,6 @@ class Deal(IntIdEntity, UserRelationsMixin):
     is_manual_opportunity: Mapped[bool] = mapped_column(
         default=False, comment="Ручной ввод суммы"
     )  # IS_MANUAL_OPPORTUNITY : Сумма заполнена вручную
-    opened: Mapped[bool] = mapped_column(
-        default=True, comment="Доступна для всех"
-    )  # OPENED : Доступен для всех (Y/N)
     closed: Mapped[bool] = mapped_column(
         default=False, comment="Завершена"
     )  # CLOSET : Завершена ли сделка (Y/N)
@@ -107,41 +108,14 @@ class Deal(IntIdEntity, UserRelationsMixin):
     closedate: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), comment="Дата завершения"
     )  # CLOSEDATE : Дата завершения
-    date_create: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), comment="Дата создания"
-    )  # DATE_CREATE : Дата создания
-    date_modify: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), comment="Дата изменения"
-    )  # DATE_MODIFY : Дата изменения
     moved_time: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), comment="Время перемещения"
     )  # MOVED_TIME : Дата перемещения элемента на текущую стадию
-    last_activity_time: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), comment="Время последней активности"
-    )  # LAST_ACTIVITY_TIME : Время последней активности
-    last_communication_time: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=False), comment="Время последней коммуникации"
-    )  # LAST_COMMUNICATION_TIME : Дата 02.02.2024  15:21:08
     payment_deadline: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), comment="Срок оплаты"
     )  # UF_CRM_1632738230 :  Срок оплаты счёта
 
     # География и источники
-    city: Mapped[str | None] = mapped_column(
-        comment="Город (населённый пункт)"
-    )  # UF_CRM_DCT_CITY : Город (населённый пункт)
-    source_description: Mapped[str | None] = mapped_column(
-        comment="Дополнительно об источнике"
-    )  # SOURCE_DESCRIPTION : Дополнительно об источнике
-    source_external: Mapped[str | None] = mapped_column(
-        comment="Внешний источник"
-    )  # UF_CRM_DCT_SOURCE : Источник внешний
-    originator_id: Mapped[str | None] = mapped_column(
-        comment="ID источника данных"
-    )  # ORIGINATOR_ID : Идентификатор источника данных
-    origin_id: Mapped[str | None] = mapped_column(
-        comment="ID элемента в источнике"
-    )  # ORIGIN_ID : Идентификатор элемента в источнике данных
     printed_form_id: Mapped[str | None] = mapped_column(
         comment="ID печатной формы"
     )  # UF_CRM_1656227383 : Ид печатной формы(доставка)
@@ -280,6 +254,22 @@ class Deal(IntIdEntity, UserRelationsMixin):
         "DealFailureReason", back_populates="deals"
     )
 
+    # Пользователи
+    moved_by_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.external_id"),
+        comment="ID переместившего",
+    )  # MOVED_BY_ID : Ид автора, который переместил элемент на текущую стадию
+    moved_user: Mapped["User"] = relationship(
+        "User", foreign_keys=[moved_by_id], back_populates="moved_deals"
+    )
+    defect_expert_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.external_id"),
+        comment="ID эксперта по дефектам",
+    )  # UF_CRM_1655618547 : Ид эксперта по дефектам
+    defect_expert: Mapped["User"] = relationship(
+        "User", foreign_keys=[defect_expert_id], back_populates="defect_deals"
+    )
+
     # Поля сервисных сделок
     defects: Mapped["DefectType"] = relationship(
         "DefectType", back_populates="deal"
@@ -303,73 +293,10 @@ class Deal(IntIdEntity, UserRelationsMixin):
     )  # Отношение к родительской сделке
 
     # Маркетинговые метки
-    utm_source: Mapped[str | None] = mapped_column(
-        comment="Рекламная система"
-    )  # UTM_SOURCE : Рекламная система (Yandex-Direct, Google-Adwords и др)
-    utm_medium: Mapped[str | None] = mapped_column(
-        comment="Тип трафика"
-    )  # UTM_MEDIUM : Тип трафика: CPC (объявления), CPM (баннеры)
-    utm_campaign: Mapped[str | None] = mapped_column(
-        comment="Обозначение рекламной кампании"
-    )  # UTM_CAMPAIGN : Обозначение рекламной кампании
-    utm_content: Mapped[str | None] = mapped_column(
-        comment="Содержание кампании"
-    )  # UTM_CONTENT : Содержание кампании. Например, для контекстных
-    # объявлений
-    utm_term: Mapped[str | None] = mapped_column(
-        comment="Тип трафика"
-    )  # UTM_TERM : Условие поиска кампании. Например, ключевые слова
-    # контекстной рекламы
-    mgo_cc_entry_id: Mapped[str | None] = mapped_column(
-        comment="ID звонка"
-    )  # UF_CRM_MGO_CC_ENTRY_ID : ID звонка
-    mgo_cc_channel_type: Mapped[str | None] = mapped_column(
-        comment="Канал обращения"
-    )  # UF_CRM_MGO_CC_CHANNEL_TYPE : Канал обращения
-    mgo_cc_result: Mapped[str | None] = mapped_column(
-        comment="Результат обращения"
-    )  # UF_CRM_MGO_CC_RESULT : Результат обращения
-    mgo_cc_entry_point: Mapped[str | None] = mapped_column(
-        comment="Точка входа обращения"
-    )  # UF_CRM_MGO_CC_ENTRY_POINT : Точка входа обращения
-    mgo_cc_create: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), comment="Дата/время создания обращения"
-    )  # UF_CRM_MGO_CC_CREATE : Дата/время создания обращения
-    mgo_cc_end: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), comment="Дата/время завершения обращения"
-    )  # UF_CRM_MGO_CC_END : Дата/время завершения обращения
-    mgo_cc_tag_id: Mapped[str | None] = mapped_column(
-        comment="Тематики обращения"
-    )  # UF_CRM_MGO_CC_TAG_ID : Тематики обращения
-    calltouch_site_id: Mapped[str | None] = mapped_column(
-        comment="ID сайта в Calltouch"
-    )  # UF_CRM_665F0885515AE : ID сайта в Calltouch
-    calltouch_call_id: Mapped[str | None] = mapped_column(
-        comment="ID звонка в Calltouch"
-    )  # UF_CRM_665F08858FCF0 : ID звонка в Calltouch
-    calltouch_request_id: Mapped[str | None] = mapped_column(
-        comment="ID заявки в Calltouch"
-    )  # UF_CRM_665F0885BB4E2 : ID заявки в Calltouch
     yaclientid: Mapped[str | None] = mapped_column(
         comment="yaclientid"
     )  # UF_CRM_1739185983784 : yaclientid
 
-    # Социальные профили
-    wz_instagram: Mapped[str | None] = mapped_column(
-        comment="Instagram"
-    )  # UF_CRM_63A031829F8E2 : Instagram
-    wz_vc: Mapped[str | None] = mapped_column(
-        comment="VC"
-    )  # UF_CRM_63A03182BF864 : VC
-    wz_telegram_username: Mapped[str | None] = mapped_column(
-        comment="Telegram username"
-    )  # UF_CRM_63A03182D063B : Telegram username
-    wz_telegram_id: Mapped[str | None] = mapped_column(
-        comment="Telegram Id"
-    )  # UF_CRM_63A03182DFB0F : Telegram Id
-    wz_avito: Mapped[str | None] = mapped_column(
-        comment="Avito"
-    )  # UF_CRM_63ABEBD42730D : Avito
     """ remaining fields:
     "TAX_VALUE": double, Ставка налога
     "QUOTE_ID": int, Идентификатор квоты

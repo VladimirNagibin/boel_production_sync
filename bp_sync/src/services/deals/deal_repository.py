@@ -33,17 +33,17 @@ class DealRepository(BaseRepository[DealDB, DealCreate, DealUpdate]):
         super().__init__(session)
         self.lead_client = lead_client
 
-    async def create_deal(self, deal_schema: DealCreate) -> DealDB:
+    async def create_entity(self, data: DealCreate) -> DealDB:
         """Создает новую сделку с проверкой связанных объектов"""
-        await self._check_related_objects(deal_schema)
-        await self._create_or_update_related(deal_schema)
-        return await self.create(data=deal_schema)
+        await self._check_related_objects(data)
+        await self._create_or_update_related(data)
+        return await self.create(data=data)
 
-    async def update_deal(self, deal_schema: DealUpdate) -> DealDB:
+    async def update_entity(self, data: DealUpdate | DealCreate) -> DealDB:
         """Обновляет существующую сделку"""
-        await self._check_related_objects(deal_schema)
-        await self._create_or_update_related(deal_schema)
-        return await self.update(data=deal_schema)
+        await self._check_related_objects(data)
+        await self._create_or_update_related(data)
+        return await self.update(data=data)
 
     async def _check_related_objects(
         self, deal_schema: DealCreate | DealUpdate
@@ -192,9 +192,9 @@ class DealRepository(BaseRepository[DealDB, DealCreate, DealUpdate]):
                 if not await self._check_object_exists(
                     LeadDB, external_id=lead_id
                 ):
-                    await self.lead_client.create_lead(lead_id)
+                    await self.lead_client.import_from_bitrix(lead_id)
                 else:
-                    await self.lead_client.update_lead(lead_id)
+                    await self.lead_client.refresh_from_bitrix(lead_id)
             except Exception as e:
                 errors.append(
                     f"Lead with id={lead_id:} not found and can't created "

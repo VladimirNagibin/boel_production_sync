@@ -11,6 +11,10 @@ from services.deals.deal_bitrix_services import (
     DealBitrixClient,
     get_deal_bitrix_client,
 )
+from services.deals.deal_services import (
+    DealClient,
+    get_deal_client,
+)
 from services.dependencies import (  # , get_bitrix_client
     get_oauth_client,
 )
@@ -34,10 +38,11 @@ b24_router = APIRouter()
 )  # type: ignore
 async def check(
     deal_bitrix_client: DealBitrixClient = Depends(get_deal_bitrix_client),
+    deal_client: DealClient = Depends(get_deal_client),
     lead_bitrix_client: LeadBitrixClient = Depends(get_lead_bitrix_client),
     token_storage: TokenStorage = Depends(get_token_storage),
 ) -> JSONResponse:
-    # res = await deal_bitrix_client.get(51463)
+    res = await deal_client.refresh_from_bitrix(518989463)
     # lead = await lead_bitrix_client.get(59773)
     # res2 = DealUpdate(**res.model_dump(by_alias=True, exclude_unset=True))
     # lead2 = LeadUpdate(**lead.model_dump(by_alias=True, exclude_unset=True))
@@ -49,24 +54,24 @@ async def check(
     # res2 = LeadUpdate(title="QWERTY")
     # res3 = await lead_bitrix_client.update(lead2)
     # print(res2.title)
-    res3 = await deal_bitrix_client.list(
-        filter_entity={"ID": 51463},
-        select=["ID", "TITLE", "OPPORTUNITY"],
-        start=0,
-    )
-    print(res3)
+    # res3 = await deal_bitrix_client.list(
+    #    filter_entity={"ID": 51463},
+    #    select=["ID", "TITLE", "OPPORTUNITY"],
+    #    start=0,
+    # )
+    print(res)
     # await token_storage.delete_token("access_token")
-    if res3:
-        #  deal_create = DealCreate(**res)
-        # print(res.model_dump())
-        return JSONResponse(
-            status_code=status.HTTP_200_OK,
-            content={
-                "status": "success",
-                "bool": [str(type(res)) for res in res3],
-                # "result": res.to_bitrix_dict(),
-            },
-        )
+    # if res3:
+    #     deal_create = DealCreate(**res)
+    #     print(res.model_dump())
+    #    return JSONResponse(
+    #        status_code=status.HTTP_200_OK,
+    #        content={
+    #            "status": "success",
+    #            "bool": [str(type(res)) for res in res3],
+    #            # "result": res.to_bitrix_dict(),
+    #        },
+    #    )
     return JSONResponse(
         status_code=status.HTTP_404_NOT_FOUND,
         content={
@@ -126,7 +131,7 @@ async def handle_auth_callback(
         )
 
     except Exception as e:
-        logger.exception("Unexpected error during token exchange")
+        logger.exception(f"Unexpected error during token exchange: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Internal server error during authentication: {str(e)}",
