@@ -2,11 +2,13 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, ForeignKey
+from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .bases import CommunicationIntIdEntity, EntityType
 from .entities import Company
 from .references import (
+    AdditionalResponsible,
     ContactType,
     DealFailureReason,
     DealType,
@@ -115,14 +117,32 @@ class Contact(CommunicationIntIdEntity):
         "DealType", back_populates="contacts"
     )
 
+    @declared_attr  # type: ignore[misc]
+    def additional_responsables(cls) -> Mapped[list["AdditionalResponsible"]]:
+        return relationship(
+            "AdditionalResponsible",
+            primaryjoin=(
+                "and_("
+                "foreign(AdditionalResponsible.entity_type) == "
+                "cls.entity_type,"
+                "foreign(AdditionalResponsible.entity_id) == cls.external_id)"
+            ),
+            viewonly=True,
+            lazy="selectin",
+            overlaps="communications",
+        )  # UF_CRM_1629106625* : Доп ответственныt
+
     """ remaining fields:
     "HONORIFIC": str, Вид обращения. Статус из справочника.
+    "PHOTO": file, Фотография
+    "FACE_ID": int, Привязка к лицам из модуля faceid
+    "COMPANY_IDS": Привязка контакта к компаниям. Множественное.
 
-    "UF_CRM_1598882341": str, Промывочная жидкость клиента
-    "UF_CRM_1598882312": list, Пеногасители клиента
+    "UF_CRM_1598883046": str, Промывочная жидкость клиента
+    "UF_CRM_1598883025": list, Пеногасители клиента
 
-    "UF_CRM_ZOOM_MEET_LINK": str, Ссылка на Zoom
-    "UF_CRM_ZOOM_MEET_TZ": str, Дата/время Zoom
+    "UF_CRM_607CEFDD36007": str, Ссылка на Zoom
+    "UF_CRM_607CEFDD44BA8": str, Дата/время Zoom
 
     "UF_CRM_DCT_UID": ДКТ: client_id
     "UF_CRM_DCT_CID": ДКТ: client_cid
@@ -138,6 +158,7 @@ class Contact(CommunicationIntIdEntity):
     "UF_CRM_DCT_WID_NAME": ДКТ: Имя виджета
     "UF_CRM_DCT_TYPE": ДКТ: Тип заявки
     "UF_CRM_DCT_SID": ДКТ: client_sid
+    "UF_CRM_6197548E9DD6D": ДКТ: Город (дубль)
 
     "UF_CRM_ROISTAT": riostat
     """

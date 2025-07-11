@@ -1,10 +1,10 @@
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from sqlalchemy import ForeignKey
+from sqlalchemy import ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from .bases import NameIntIdEntity, NameStrIdEntity
+from .bases import EntityType, NameIntIdEntity, NameStrIdEntity
 
 if TYPE_CHECKING:
     from .contact_models import Contact
@@ -301,4 +301,20 @@ class ContactType(NameStrIdEntity):
     __tablename__ = "contact_types"
     contacts: Mapped[list["Contact"]] = relationship(
         "Contact", back_populates="type"
+    )
+
+
+class AdditionalResponsible:
+    __tablename__ = "additional_responsibles"
+    entity_type: Mapped[EntityType] = mapped_column(
+        String(20),
+        comment="Тип сущности",
+        index=True,
+    )  # contact, company
+    entity_id: Mapped[int] = mapped_column(
+        comment="Внешний ID соответствующей сущности"
+    )  # Внешний ID соответствующей сущности
+    responsible_by_id: Mapped[int] = mapped_column(
+        ForeignKey("users.external_id"),
+        comment="ID дополнительного ответственного",
     )
