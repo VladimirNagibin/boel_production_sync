@@ -7,7 +7,9 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .bases import EntityType, NameIntIdEntity, NameStrIdEntity
 
 if TYPE_CHECKING:
+    from .company_models import Company
     from .contact_models import Contact
+    from .deal_documents import Contract
     from .deal_models import Deal
     from .lead_models import Lead
 
@@ -38,16 +40,16 @@ class Currency(NameStrIdEntity):
 class MainActivity(NameIntIdEntity):
     """
     Основная деятельность клиента:
-    deal: lead: contact
-    147: 45: 75: Дистрибьютор
-    149: 47: 77: Домашний пивовар
-    151: 49: 79: Завод
-    153: 51: 81: Крафт
-    155: 53: 83: Наш дилер
-    157: 55: 85: Розница
-    159: 57: 87: Сети
-    161: 59: 89: Торговая компания
-    163: 61: 91: Хорека
+    deal: lead: contact: company
+    147: 45: 75: 93: Дистрибьютор
+    149: 47: 77: 95: Домашний пивовар
+    151: 49: 79: 97: Завод
+    153: 51: 81: 99: Крафт
+    155: 53: 83: 101: Наш дилер
+    157: 55: 85: 103: Розница
+    159: 57: 87: 105: Сети
+    161: 59: 89: 107: Торговая компания
+    163: 61: 91: 109: Хорека
     """
 
     __tablename__ = "main_activites"
@@ -56,6 +58,9 @@ class MainActivity(NameIntIdEntity):
     )
     ext_alt2_id: Mapped[int] = mapped_column(
         unique=True, comment="id для связи с контактом"
+    )
+    ext_alt3_id: Mapped[int] = mapped_column(
+        unique=True, comment="id для связи с компанией"
     )
     deals: Mapped[list["Deal"]] = relationship(
         "Deal", back_populates="main_activity"
@@ -194,18 +199,27 @@ class InvoiceStage(NameStrIdEntity):
 class ShippingCompany(NameIntIdEntity):
     """
     Фирмы отгрузки
-    439: Системы
-    441: Элемент
-    443: Торговый дом СР
-    445: ТехТорг
-    447: ИП Гузиков М.Г.
-    773: ИП Воробьев Д.В.
-    777: Эксперты розлива
+    439: 8923: Системы
+    441: 5385: Элемент
+    443: 5383: Торговый дом СР
+    445: 5381: ТехТорг
+    447: 22145: ИП Гузиков М.Г.
+    773: 23217: ИП Воробьев Д.В.
+    777: 8897: Эксперты розлива
     """
 
     __tablename__ = "shipping_companies"
+    ext_alt_id: Mapped[int] = mapped_column(
+        unique=True, comment="id для связи с компанией"
+    )
     deals: Mapped[list["Deal"]] = relationship(
         "Deal", back_populates="shipping_company"
+    )
+    contracts: Mapped[list["Contract"]] = relationship(
+        "Contract", back_populates="shipping_company"
+    )
+    companies: Mapped[list["Company"]] = relationship(
+        "Company", back_populates="shipping_company"
     )
 
 
@@ -243,12 +257,12 @@ class DefectType(NameIntIdEntity):
 class DealFailureReason(NameIntIdEntity):
     """
     Причины провала
-    deal:lead:contact
-    685:665:715: Нецелевой
-    687:667:717: Не проходим по ценам
-    689:669:719: Нет в наличии
-    691:671:721: Клиент не отвечает
-    693:673:723: Другое
+    deal:lead:contact:company
+    685:665:715:735: Нецелевой
+    687:667:717:737: Не проходим по ценам
+    689:669:719:739: Нет в наличии
+    691:671:721:741: Клиент не отвечает
+    693:673:723:743: Другое
     """
 
     __tablename__ = "deal_failure_reasons"
@@ -257,6 +271,9 @@ class DealFailureReason(NameIntIdEntity):
     )
     ext_alt2_id: Mapped[int] = mapped_column(
         unique=True, comment="id для связи с контактом"
+    )
+    ext_alt3_id: Mapped[int] = mapped_column(
+        unique=True, comment="id для связи с компанией"
     )
     deals: Mapped[list["Deal"]] = relationship(
         "Deal", back_populates="deal_failure_reason"
@@ -291,16 +308,21 @@ class LeadStatus(NameStrIdEntity):
 class ContactType(NameStrIdEntity):
     """
     Типы сделок:
-    CLIENT: Клиенты
+    CLIENT: Клиенты(Contact)
+    CUSTOMER: Клиент(Company)
+    COMPETITOR: Конкурент(Company)
     SUPPLIER: Поставщики
     PARTNER: Партнёры
     OTHER: Другое
-    1: Не целевой
+    1: Не целевой(Contact)
     """
 
     __tablename__ = "contact_types"
     contacts: Mapped[list["Contact"]] = relationship(
         "Contact", back_populates="type"
+    )
+    companies: Mapped[list["Company"]] = relationship(
+        "Company", back_populates="company_type"
     )
 
 
@@ -317,4 +339,42 @@ class AdditionalResponsible:
     responsible_by_id: Mapped[int] = mapped_column(
         ForeignKey("users.external_id"),
         comment="ID дополнительного ответственного",
+    )
+
+
+class Industry(NameStrIdEntity):
+    """
+    Сфера деятельности:
+    IT:	Информационные технологии
+    TELECOM: Телекоммуникации и связь
+    MANUFACTURING: Производство
+    BANKING: Банковские услуги
+    CONSULTING: Консалтинг
+    FINANCE: Финансы
+    GOVERNMENT: Правительство
+    DELIVERY: Доставка
+    ENTERTAINMENT: Развлечения
+    NOTPROFIT: Не для получения прибыли
+    OTHER: Другое
+    1: Торговля
+    """
+
+    __tablename__ = "industries"
+    companies: Mapped[list["Company"]] = relationship(
+        "Company", back_populates="industry"
+    )
+
+
+class Emploees(NameStrIdEntity):
+    """
+    Сфера деятельности:
+    EMPLOYEES_1: менее 50
+    EMPLOYEES_2: 50-250
+    EMPLOYEES_3: 250-500
+    EMPLOYEES_4: более 500
+    """
+
+    __tablename__ = "employees"
+    companies: Mapped[list["Company"]] = relationship(
+        "Company", back_populates="employees"
     )

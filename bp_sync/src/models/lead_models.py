@@ -6,7 +6,6 @@ from sqlalchemy.dialects.postgresql import ENUM as PgEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .bases import CommunicationIntIdEntity, EntityType
-from .entities import Company
 from .enums import StageSemanticEnum
 from .references import (
     Currency,
@@ -19,6 +18,7 @@ from .references import (
 from .user_models import User
 
 if TYPE_CHECKING:
+    from .company_models import Company
     from .contact_models import Contact
     from .deal_models import Deal
 
