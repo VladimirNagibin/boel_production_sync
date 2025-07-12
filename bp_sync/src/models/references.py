@@ -199,13 +199,6 @@ class InvoiceStage(NameStrIdEntity):
 class ShippingCompany(NameIntIdEntity):
     """
     Фирмы отгрузки
-    439: 8923: Системы
-    441: 5385: Элемент
-    443: 5383: Торговый дом СР
-    445: 5381: ТехТорг
-    447: 22145: ИП Гузиков М.Г.
-    773: 23217: ИП Воробьев Д.В.
-    777: 8897: Эксперты розлива
     """
 
     __tablename__ = "shipping_companies"
