@@ -360,7 +360,7 @@ class Industry(NameStrIdEntity):
 
 class Emploees(NameStrIdEntity):
     """
-    Сфера деятельности:
+    Количесиво сотрудников:
     EMPLOYEES_1: менее 50
     EMPLOYEES_2: 50-250
     EMPLOYEES_3: 250-500
