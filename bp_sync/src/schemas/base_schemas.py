@@ -137,11 +137,11 @@ class HasCommunicationUpdateMixin:
 
 
 class BaseCreateSchema(
-    BaseModel,  # type: ignore[misc]
     BaseFieldMixin,
     TimestampsCreateMixin,
     UserRelationsCreateMixin,
     MarketingMixin,
+    BaseModel,  # type: ignore[misc]
 ):
     """Базовая схема для создания сущностей"""
 
@@ -152,15 +152,16 @@ class BaseCreateSchema(
         use_enum_values=True,
         populate_by_name=True,
         arbitrary_types_allowed=True,
+        extra="ignore",
     )
 
 
 class BaseUpdateSchema(
-    BaseModel,  # type: ignore[misc]
     BaseFieldMixin,
     TimestampsUpdateMixin,
     UserRelationsUpdateMixin,
     MarketingMixin,
+    BaseModel,  # type: ignore[misc]
 ):
     """Базовая схема для обновления сущностей"""
 

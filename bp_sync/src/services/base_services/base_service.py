@@ -97,6 +97,13 @@ class BaseEntityClient(ABC, Generic[T, R, C]):
         )
         try:
             entity_data = await self.bitrix_client.get(entity_id)
+            from schemas.lead_schemas import LeadUpdate
+
+            # print(entity_data)
+            res2 = LeadUpdate(
+                **entity_data.model_dump(by_alias=True, exclude_unset=True)
+            )
+            print(res2.to_bitrix_dict())
         except BitrixApiError as e:
             if e.is_not_found_error():
                 await self.set_deleted_in_bitrix(entity_id)

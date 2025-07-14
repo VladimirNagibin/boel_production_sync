@@ -147,6 +147,7 @@ class BaseDeal:
         "defect_expert_id",
         "parent_deal_id",
         mode="before",
+        check_fields=False,
     )(BitrixValidators.normalize_int)
 
     _validate_datetime = field_validator(
@@ -217,10 +218,10 @@ class DealCreate(BaseCreateSchema, BaseDeal):
         mode="before",
     )(BitrixValidators.convert_to_bool)
 
-    _validate_int_extra = field_validator(
-        "category_id",
-        mode="before",
-    )(BitrixValidators.normalize_int)
+    # _validate_int_extra = field_validator(
+    #    "category_id",
+    #    mode="before",
+    # )(BitrixValidators.normalize_int)
 
     _validate_datetime_extra = field_validator(
         "begindate",

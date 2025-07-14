@@ -23,6 +23,9 @@ from services.leads.lead_bitrix_services import (
     LeadBitrixClient,
     get_lead_bitrix_client,
 )
+from services.leads.lead_services import (  # LeadClient,
+    get_lead_client,
+)
 from services.token_services.token_storage import (
     TokenStorage,
     get_token_storage,
@@ -39,10 +42,11 @@ b24_router = APIRouter()
 async def check(
     deal_bitrix_client: DealBitrixClient = Depends(get_deal_bitrix_client),
     deal_client: DealClient = Depends(get_deal_client),
+    lead_client: DealClient = Depends(get_lead_client),
     lead_bitrix_client: LeadBitrixClient = Depends(get_lead_bitrix_client),
     token_storage: TokenStorage = Depends(get_token_storage),
 ) -> JSONResponse:
-    res = await deal_client.refresh_from_bitrix(518989463)
+    res = await lead_client.refresh_from_bitrix(60131)
     # lead = await lead_bitrix_client.get(59773)
     # res2 = DealUpdate(**res.model_dump(by_alias=True, exclude_unset=True))
     # lead2 = LeadUpdate(**lead.model_dump(by_alias=True, exclude_unset=True))

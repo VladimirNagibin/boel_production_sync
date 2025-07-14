@@ -8,7 +8,7 @@ from models.communications import (
     CommunicationChannel,
     CommunicationChannelType,
 )
-from schemas.lead_schemas import CommunicationChannel as CommSchema
+from schemas.base_schemas import CommunicationChannel as CommSchema
 
 
 class CommunicationService:

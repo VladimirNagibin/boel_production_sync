@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from core.logger import logger
 from db.postgres import get_session
 from models.bases import EntityType
-from models.entities import Company
+from models.company_models import Company
 from models.lead_models import Lead as LeadDB
 from models.references import (
     Currency,
