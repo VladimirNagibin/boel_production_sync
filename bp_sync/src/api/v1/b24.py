@@ -4,13 +4,32 @@ from fastapi.responses import JSONResponse
 from core.logger import logger
 
 # from services.bitrix_api_client import BitrixAPIClient
-from services.bitrix_clients import BitrixAPIClient1, get_bitrix_client1
-from services.bitrix_dependencies import (  # , get_bitrix_client
+# from schemas.deal_schemas import DealUpdate
+# from schemas.lead_schemas import LeadUpdate
+from services.bitrix_services.bitrix_oauth_client import BitrixOAuthClient
+from services.deals.deal_bitrix_services import (
+    DealBitrixClient,
+    get_deal_bitrix_client,
+)
+from services.deals.deal_services import (
+    DealClient,
+    get_deal_client,
+)
+from services.dependencies import (  # , get_bitrix_client
     get_oauth_client,
 )
-from services.bitrix_oauth_client import BitrixOAuthClient
 from services.exceptions import BitrixAuthError
-from services.token_storage import TokenStorage, get_token_storage
+from services.leads.lead_bitrix_services import (
+    LeadBitrixClient,
+    get_lead_bitrix_client,
+)
+from services.leads.lead_services import (  # LeadClient,
+    get_lead_client,
+)
+from services.token_services.token_storage import (
+    TokenStorage,
+    get_token_storage,
+)
 
 b24_router = APIRouter()
 
@@ -21,19 +40,42 @@ b24_router = APIRouter()
     description="Information about persistency redis.",
 )  # type: ignore
 async def check(
-    bitrix_client: BitrixAPIClient1 = Depends(get_bitrix_client1),
+    deal_bitrix_client: DealBitrixClient = Depends(get_deal_bitrix_client),
+    deal_client: DealClient = Depends(get_deal_client),
+    lead_client: DealClient = Depends(get_lead_client),
+    lead_bitrix_client: LeadBitrixClient = Depends(get_lead_bitrix_client),
     token_storage: TokenStorage = Depends(get_token_storage),
 ) -> JSONResponse:
-    res = await bitrix_client.get_deal(50301)
+    res = await lead_client.refresh_from_bitrix(60131)
+    # lead = await lead_bitrix_client.get(59773)
+    # res2 = DealUpdate(**res.model_dump(by_alias=True, exclude_unset=True))
+    # lead2 = LeadUpdate(**lead.model_dump(by_alias=True, exclude_unset=True))
+
+    # lead2.title = "NEW TEST 2"
+    # lead2.phone[0].value_type = "MOBILE"
+    # lead2.phone[1].value = "777777777777"
+    # res2.shipping_type = 517
+    # res2 = LeadUpdate(title="QWERTY")
+    # res3 = await lead_bitrix_client.update(lead2)
+    # print(res2.title)
+    # res3 = await deal_bitrix_client.list(
+    #    filter_entity={"ID": 51463},
+    #    select=["ID", "TITLE", "OPPORTUNITY"],
+    #    start=0,
+    # )
+    print(res)
     # await token_storage.delete_token("access_token")
-    if res:
-        return JSONResponse(
-            status_code=status.HTTP_200_OK,
-            content={
-                "status": "success",
-                "result": res,
-            },
-        )
+    # if res3:
+    #     deal_create = DealCreate(**res)
+    #     print(res.model_dump())
+    #    return JSONResponse(
+    #        status_code=status.HTTP_200_OK,
+    #        content={
+    #            "status": "success",
+    #            "bool": [str(type(res)) for res in res3],
+    #            # "result": res.to_bitrix_dict(),
+    #        },
+    #    )
     return JSONResponse(
         status_code=status.HTTP_404_NOT_FOUND,
         content={
@@ -93,7 +135,7 @@ async def handle_auth_callback(
         )
 
     except Exception as e:
-        logger.exception("Unexpected error during token exchange")
+        logger.exception(f"Unexpected error during token exchange: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Internal server error during authentication: {str(e)}",

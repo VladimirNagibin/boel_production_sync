@@ -1,6 +1,6 @@
 from typing import Any
 
-from fastapi import HTTPException
+from fastapi import HTTPException, status
 
 
 class BitrixAuthError(Exception):
@@ -19,10 +19,26 @@ class BitrixApiError(HTTPException):  # type: ignore[misc]
 
     def __init__(
         self,
-        status_code: int = 500,
+        status_code: int = status.HTTP_500_INTERNAL_SERVER_ERROR,
+        error: str = "Unknown error",
         error_description: str = "Unknown Bitrix API error",
     ):
         super().__init__(
             status_code=status_code,
-            detail=f"Bitrix API error: {error_description}",
+            detail={"error": error, "error_description": error_description},
+        )
+        self.detail: dict[str, str] = {
+            "error": error,
+            "error_description": error_description,
+        }
+
+    def is_bitrix_error(self, expected_error: str) -> bool:
+        """Проверяет, является ли ошибка заданного типа"""
+        return bool(self.detail.get("error_description") == expected_error)
+
+    def is_not_found_error(self) -> bool:
+        """Проверяет, является ли ошибка ошибкой 'Not Found'"""
+        return (
+            self.status_code == status.HTTP_400_BAD_REQUEST
+            and self.is_bitrix_error("Not found")
         )

@@ -73,7 +73,7 @@ LOGGING: dict[str, Any] = {  # noqa: WPS407
 }
 
 config.dictConfig(LOGGING)
-logger = log.getLogger("mark")
+logger = log.getLogger("sync")
 
 logger.setLevel(settings.LOG_LEVEL)
 formatter = log.Formatter(fmt=LOG_FORMAT)

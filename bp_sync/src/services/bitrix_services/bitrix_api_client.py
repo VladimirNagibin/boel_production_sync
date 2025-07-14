@@ -1,13 +1,13 @@
-from typing import Any, cast
+from typing import Any
 from urllib.parse import urljoin
 
 from fastapi import status
 
 from core.logger import logger
 
+from ..exceptions import BitrixApiError, BitrixAuthError
 from .base_bitrix_client import DEFAULT_TIMEOUT, BaseBitrixClient
 from .bitrix_oauth_client import BitrixOAuthClient
-from .exceptions import BitrixApiError, BitrixAuthError
 
 MAX_RETRIES = 2
 REST_API_BASE = "/rest/"
@@ -51,24 +51,20 @@ class BitrixAPIClient(BaseBitrixClient):
                 response = await self._post(url, payload)
                 if "error" in response:
                     self._handle_api_error(response, attempt)
-                result = response.get("result", response)
 
-                # Гарантируем, что возвращаем словарь
-                if isinstance(result, dict):
-                    return cast(dict[str, Any], result)
-                logger.warning(
-                    "API response result is not a dictionary: "
-                    f"{type(result).__name__}"
+                if response.get("result"):
+                    return response
+                logger.error(f"Response has no result. {method}: {params}")
+                raise BitrixApiError(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    error_description="Response has no result.",
                 )
-                # Оборачиваем не-dict результат в словарь
-                return {"result": result}
-
-                # return result.get("result", result)
             except BitrixAuthError as e:
                 logger.error(f"Authentication error: {str(e)}")
                 if attempt > self.max_retries:
                     raise
                 continue
+        logger.error(f"Token refresh failed after retries. {method}: {params}")
         raise BitrixAuthError("Token refresh failed after retries")
 
     def _handle_api_error(
@@ -88,8 +84,11 @@ class BitrixAPIClient(BaseBitrixClient):
             raise BitrixAuthError("Token invalid or expired")
         logger.error(f"Bitrix API error [{error_code}]: {error_desc}")
         raise BitrixApiError(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            error_description=f"Bitrix API error: {error_desc} ({error_code})",
+            status_code=response.get(
+                "status_code", status.HTTP_400_BAD_REQUEST
+            ),
+            error=error_code,
+            error_description=error_desc,
         )
 
     def _invalidate_current_token(self) -> None:

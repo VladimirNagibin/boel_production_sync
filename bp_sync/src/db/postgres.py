@@ -10,20 +10,27 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine,
 )
-from sqlalchemy.orm import (
+from sqlalchemy.orm import (  # declared_attr,
     DeclarativeBase,
     Mapped,
-    declared_attr,
     mapped_column,
 )
 
 from core.settings import settings
 
 engine = create_async_engine(
-    settings.dsn, echo=settings.POSTGRES_DB_ECHO, future=True
+    settings.dsn,
+    echo=settings.POSTGRES_DB_ECHO,
+    future=True,
+    pool_pre_ping=True,
+    pool_size=20,
+    max_overflow=10,
 )
 async_session = async_sessionmaker(
-    engine, class_=AsyncSession, expire_on_commit=False
+    engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
+    autoflush=False,
 )
 
 
@@ -36,16 +43,25 @@ class Base(AsyncAttrs, DeclarativeBase):  # type: ignore[misc]
         primary_key=True,
         default=uuid.uuid4,
         server_default=func.gen_random_uuid(),
+        comment="Уникальный идентификатор",
     )
-    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        server_default=func.now(),
+        comment="Дата и время создания",
+    )
     updated_at: Mapped[datetime] = mapped_column(
-        server_default=func.now(), onupdate=func.now()
+        server_default=func.now(),
+        onupdate=func.now(),
+        comment="Дата и время последнего обновления",
+    )
+    is_deleted_in_bitrix: Mapped[bool] = mapped_column(
+        default=False, comment="Удалён в Битрикс"
     )
 
-    @declared_attr.directive  # type: ignore
-    def __tablename__(cls) -> str:
-        cls_name = cls.__name__.lower()
-        return f"{cls_name}s"
+    # @declared_attr.directive  # type: ignore
+    # def __tablename__(cls) -> str:
+    #    cls_name = cls.__name__.lower()
+    #    return f"{cls_name}s"
 
 
 async def create_database() -> None:
