@@ -89,6 +89,26 @@ class BaseLead:
     im: list[CommunicationChannel] | None = Field(None, alias="IM")
     link: list[CommunicationChannel] | None = Field(None, alias="LINK")
 
+    # Основные поля с алиасами (все необязательные)
+    title: str | None = Field(None, alias="TITLE")
+
+    # Статусы и флаги
+    is_manual_opportunity: bool | None = Field(
+        None, alias="IS_MANUAL_OPPORTUNITY"
+    )
+    is_return_customer: bool | None = Field(None, alias="IS_RETURN_CUSTOMER")
+
+    # Финансовые данные
+    opportunity: float | None = Field(None, alias="OPPORTUNITY")
+
+    # Перечисляемые типы
+    status_semantic_id: StageSemanticEnum | None = Field(
+        None, alias="STATUS_SEMANTIC_ID"
+    )
+
+    # Связи с другими сущностями
+    status_id: str | None = Field(None, alias="STATUS_ID")
+
     # Валидаторы
     _validate_bool = field_validator(
         "has_phone",
@@ -96,6 +116,8 @@ class BaseLead:
         "has_imol",
         "opened",
         "is_shipment_approved",
+        "is_return_customer",
+        "is_manual_opportunity",
         mode="before",
     )(BitrixValidators.convert_to_bool)
 
@@ -135,6 +157,17 @@ class BaseLead:
         mode="before",
     )(BitrixValidators.normalize_list)
 
+    _validate_float = field_validator("opportunity", mode="before")(
+        BitrixValidators.normalize_float
+    )
+
+    @field_validator("status_semantic_id", mode="before")  # type: ignore[misc]
+    @classmethod
+    def convert_status_semantic_id(cls, v: Any) -> StageSemanticEnum:
+        return BitrixValidators.convert_enum(
+            v, StageSemanticEnum, StageSemanticEnum.PROSPECTIVE
+        )
+
 
 class LeadCreate(
     BaseCreateSchema, BaseLead, AddressMixin, HasCommunicationCreateMixin
@@ -159,64 +192,10 @@ class LeadCreate(
     # Связи с другими сущностями
     status_id: str = Field(..., alias="STATUS_ID")
 
-    # Валидаторы
-    _validate_bool_extra = field_validator(
-        "is_return_customer",
-        "is_manual_opportunity",
-        mode="before",
-    )(BitrixValidators.convert_to_bool)
-
-    _validate_float = field_validator("opportunity", mode="before")(
-        BitrixValidators.normalize_float
-    )
-
-    @field_validator("status_semantic_id", mode="before")  # type: ignore[misc]
-    @classmethod
-    def convert_status_semantic_id(cls, v: Any) -> StageSemanticEnum:
-        return BitrixValidators.convert_enum(
-            v, StageSemanticEnum, StageSemanticEnum.PROSPECTIVE
-        )
-
 
 class LeadUpdate(
     BaseUpdateSchema, BaseLead, AddressMixin, HasCommunicationUpdateMixin
 ):
     """Модель для частичного обновления лидов"""
 
-    # Основные поля с алиасами (все необязательные)
-    title: str | None = Field(None, alias="TITLE")
-
-    # Статусы и флаги
-    is_manual_opportunity: bool | None = Field(
-        None, alias="IS_MANUAL_OPPORTUNITY"
-    )
-    is_return_customer: bool | None = Field(None, alias="IS_RETURN_CUSTOMER")
-
-    # Финансовые данные
-    opportunity: float | None = Field(None, alias="OPPORTUNITY")
-
-    # Перечисляемые типы
-    status_semantic_id: StageSemanticEnum | None = Field(
-        None, alias="STATUS_SEMANTIC_ID"
-    )
-
-    # Связи с другими сущностями
-    status_id: str | None = Field(None, alias="STATUS_ID")
-
-    # Валидаторы
-    _validate_bool_extra = field_validator(
-        "is_return_customer",
-        "is_manual_opportunity",
-        mode="before",
-    )(BitrixValidators.convert_to_bool)
-
-    _validate_float = field_validator("opportunity", mode="before")(
-        BitrixValidators.normalize_float
-    )
-
-    @field_validator("status_semantic_id", mode="before")  # type: ignore[misc]
-    @classmethod
-    def convert_status_semantic_id(cls, v: Any) -> StageSemanticEnum:
-        return BitrixValidators.convert_enum(
-            v, StageSemanticEnum, StageSemanticEnum.PROSPECTIVE
-        )
+    ...
