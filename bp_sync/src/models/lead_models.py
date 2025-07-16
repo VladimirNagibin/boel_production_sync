@@ -78,13 +78,13 @@ class Lead(CommunicationIntIdEntity):
     )  # OPPORTUNITY : Сумма
 
     # Временные метки
-    birthdate: Mapped[datetime] = mapped_column(
+    birthdate: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), comment="Дата рождения"
     )  # BIRTHDATE : Дата рождения (2025-06-18T03:00:00+03:00)
     moved_time: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), comment="Время перемещения"
     )  # MOVED_TIME : Дата перемещения элемента на текущую стадию
-    date_closed: Mapped[datetime] = mapped_column(
+    date_closed: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), comment="Дата закрытия"
     )  # DATE_CLOSED : Дата закрытия
 

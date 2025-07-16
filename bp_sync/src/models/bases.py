@@ -117,7 +117,7 @@ class UserRelationsMixin:
     def assigned_user(cls) -> Mapped["User"]:
         return relationship(
             "User",
-            foreign_keys=f"{cls.entity_type.value}.assigned_by_id",
+            foreign_keys=f"{cls.entity_type}.assigned_by_id",
             back_populates=f"assigned_{cls.tablename}",
         )
 
@@ -125,7 +125,7 @@ class UserRelationsMixin:
     def created_user(cls) -> Mapped["User"]:
         return relationship(
             "User",
-            foreign_keys=f"{cls.entity_type.value}.created_by_id",
+            foreign_keys=f"{cls.entity_type}.created_by_id",
             back_populates=f"created_{cls.tablename}",
         )
 
@@ -133,7 +133,7 @@ class UserRelationsMixin:
     def modify_user(cls) -> Mapped["User"]:
         return relationship(
             "User",
-            foreign_keys=f"{cls.entity_type.value}.modify_by_id",
+            foreign_keys=f"{cls.entity_type}.modify_by_id",
             back_populates=f"modify_{cls.tablename}",
         )
 
@@ -141,7 +141,7 @@ class UserRelationsMixin:
     def last_activity_user(cls) -> Mapped["User"]:
         return relationship(
             "User",
-            foreign_keys=f"{cls.entity_type.value}.last_activity_by",
+            foreign_keys=f"{cls.entity_type}.last_activity_by",
             back_populates=f"last_activity_{cls.tablename}",
         )
 

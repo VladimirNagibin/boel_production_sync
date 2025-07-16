@@ -236,7 +236,7 @@ class BaseRepository(Generic[ModelType, SchemaTypeCreate, SchemaTypeUpdate]):
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none() is not None
 
-    async def set_deleted_in_bitrix(
+    async def set_deleted_in_bitrix(  # Добавить запись None в ссылках
         self, external_id: int, is_deleted: bool = True
     ) -> bool:
         """

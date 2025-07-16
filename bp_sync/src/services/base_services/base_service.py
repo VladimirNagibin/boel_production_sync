@@ -36,7 +36,7 @@ class RepositoryProtocol(Protocol):
 
     @abstractmethod
     async def set_deleted_in_bitrix(
-        self, external_id: int, is_deleted: bool
+        self, external_id: int, is_deleted: bool = True
     ) -> bool:
         """Помечает сущность как удаленную в Bitrix"""
         ...
@@ -97,6 +97,15 @@ class BaseEntityClient(ABC, Generic[T, R, C]):
         )
         try:
             entity_data = await self.bitrix_client.get(entity_id)
+            # test
+            # from schemas.lead_schemas import LeadUpdate
+            # from schemas.deal_schemas import DealUpdate
+            # print(entity_data)
+            # res2 = LeadUpdate(
+            #    **entity_data.model_dump(by_alias=True, exclude_unset=True)
+            # )
+            # print(res2.to_bitrix_dict())
+            # test //
         except BitrixApiError as e:
             if e.is_not_found_error():
                 await self.set_deleted_in_bitrix(entity_id)

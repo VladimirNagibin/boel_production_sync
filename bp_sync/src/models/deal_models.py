@@ -1,11 +1,10 @@
 from datetime import datetime
-from uuid import UUID
 
 from sqlalchemy import CheckConstraint, DateTime, ForeignKey
 from sqlalchemy.dialects.postgresql import ENUM as PgEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from .bases import EntityType, IntIdEntity
+from .bases import BusinessEntity, EntityType
 from .company_models import Company
 from .contact_models import Contact
 from .deal_documents import Billing
@@ -33,7 +32,7 @@ from .references import (
 from .user_models import User
 
 
-class Deal(IntIdEntity):
+class Deal(BusinessEntity):
     """Сделки"""
 
     __tablename__ = "deals"
@@ -279,8 +278,8 @@ class Deal(IntIdEntity):
     )  # UF_CRM_1655618110493 : Итоговое заключение
 
     # Связанные сделки (доставка)
-    parent_deal_id: Mapped[UUID | None] = mapped_column(
-        ForeignKey("deals.id"), nullable=True
+    parent_deal_id: Mapped[int | None] = mapped_column(
+        ForeignKey("deals.external_id"), nullable=True
     )  # UF_CRM_1655891443 : Родительская сделка
     related_deals: Mapped[list["Deal"]] = relationship(
         "Deal", back_populates="parent_deal", remote_side="[parent_deal_id]"
