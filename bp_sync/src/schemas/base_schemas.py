@@ -7,9 +7,10 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
-    field_validator,
     model_validator,
 )
+
+from .fields import FIELDS_BY_TYPE
 
 EnumT = TypeVar("EnumT", bound=Enum)
 T = TypeVar("T")
@@ -26,11 +27,6 @@ class BaseFieldMixin:
     originator_id: Optional[str] = Field(None, alias="ORIGINATOR_ID")
     origin_id: Optional[str] = Field(None, alias="ORIGIN_ID")
 
-    @model_validator(mode="before")  # type: ignore[misc]
-    @classmethod
-    def preprocess_data(cls, data: Any) -> Any:
-        return BitrixValidators.normalize_empty_values(data)
-
 
 class TimestampsCreateMixin:
     """Миксин для временных меток"""
@@ -44,14 +40,6 @@ class TimestampsCreateMixin:
         None, alias="LAST_COMMUNICATION_TIME"
     )
 
-    @field_validator(
-        "last_communication_time",
-        mode="before",
-    )  # type: ignore[misc]
-    @classmethod
-    def validate_datetime_format(cls, v: Any) -> Optional[datetime]:
-        return BitrixValidators.parse_datetime(v)
-
 
 class TimestampsUpdateMixin:
     """Миксин для временных меток"""
@@ -64,14 +52,6 @@ class TimestampsUpdateMixin:
     last_communication_time: Optional[datetime] = Field(
         None, alias="LAST_COMMUNICATION_TIME"
     )
-
-    @field_validator(
-        "last_communication_time",
-        mode="before",
-    )  # type: ignore[misc]
-    @classmethod
-    def validate_datetime_format(cls, v: Any) -> Optional[datetime]:
-        return BitrixValidators.parse_datetime(v)
 
 
 class UserRelationsCreateMixin:
@@ -155,6 +135,11 @@ class BaseCreateSchema(
         extra="ignore",
     )
 
+    @model_validator(mode="before")  # type: ignore[misc]
+    @classmethod
+    def preprocess_data(cls, data: Any) -> Any:
+        return BitrixValidators.normalize_empty_values(data)
+
 
 class BaseUpdateSchema(
     BaseFieldMixin,
@@ -208,10 +193,14 @@ class BaseUpdateSchema(
                     if iso_format and iso_format[-5] in ("+", "-"):
                         iso_format = f"{iso_format[:-2]}:{iso_format[-2:]}"
                     result[alias] = iso_format
+            elif alias in (
+                FIELDS_BY_TYPE["int_none"] + FIELDS_BY_TYPE["enums"]
+            ):
+                result[alias] = "" if value == 0 else value
             elif alias == "ID":
                 continue
             else:
-                # Остальные значения без изменений
+                # Остальные значения без изменений (проверка ссылочных полей)
                 result[alias] = value
         return result
 
@@ -255,59 +244,38 @@ class BitrixValidators:
         """Преобразует пустые строки в None для всех полей"""
         if not isinstance(data, dict):
             return data
-
         processed_data: dict[str, Any] = cast(dict[str, Any], data)
-
         for field in list(processed_data.keys()):
             value = processed_data[field]
-            if isinstance(value, str) and value.strip() == "":
-                processed_data[field] = None
+            if field in FIELDS_BY_TYPE["str_none"] and not value:
+                processed_data[field] = ""
+            elif field in FIELDS_BY_TYPE["int_none"] and not value:
+                processed_data[field] = 0
+            elif field in FIELDS_BY_TYPE["bool"] + FIELDS_BY_TYPE["bool_none"]:
+                processed_data[field] = bool(value in ("Y", "1", True))
+            elif field in (
+                FIELDS_BY_TYPE["datetime"] + FIELDS_BY_TYPE["datetime_none"]
+            ):
+                processed_data[field] = BitrixValidators.parse_datetime(value)
+            elif field in FIELDS_BY_TYPE["float"]:
+                processed_data[field] = BitrixValidators.normalize_float(value)
+            elif field in FIELDS_BY_TYPE["list"]:
+                processed_data[field] = BitrixValidators.normalize_list(value)
         return processed_data
 
     @staticmethod
-    def convert_to_bool(v: Any) -> bool:
-        """Преобразует различные форматы в булевы значения"""
-        if v is None:
-            return False
-        if isinstance(v, bool):
-            return v
-        if isinstance(v, str):
-            return v.upper() in ("Y", "1", "TRUE", "T", "YES")
-        if isinstance(v, int):
-            return bool(v)
-        return False
-
-    @staticmethod
-    def normalize_int(v: Any) -> Optional[int]:
-        """Обрабатывает числовые поля: пустые значения → None, строки → int"""
-        if v in (None, "", "0"):
-            return None
-        try:
-            # v = ''.join(v.split())
-            return int(v)
-        except (ValueError, TypeError):
-            return None
-
-    @staticmethod
     def normalize_float(v: Any) -> Optional[float]:
-        """Обрабатывает числовые поля: пустые значения → None, строки → int"""
+        "Обрабатывает числовые поля: пустые значения → None, строки → int"
         if v in (None, ""):
-            return None
+            return 0
         try:
             # v = ''.join(v.split())
             return float(v)
         except (ValueError, TypeError):
-            return None
+            return 0
 
     @staticmethod
-    def normalize_datetime_fields(v: Any) -> Optional[datetime]:
-        """Обрабатывает пустые значения для полей даты/времени"""
-        if v is None or v == "":
-            return None
-        return v  # type: ignore[no-any-return]
-
-    @staticmethod
-    def parse_datetime(v: Any) -> Optional[datetime]:
+    def parse_datetime(v: Any) -> datetime | None:
         """Парсит строковые даты в формате 'dd.mm.YYYY HH:MM:SS'"""
         if not v:
             return None

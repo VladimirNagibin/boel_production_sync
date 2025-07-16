@@ -65,7 +65,7 @@ class Contact(CommunicationIntIdEntity):
     )  # UF_CRM_60D97EF75E465 : Разрешение на отгрузку (1/0)
 
     # Временные метки
-    birthdate: Mapped[datetime] = mapped_column(
+    birthdate: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), comment="Дата рождения"
     )  # BIRTHDATE : Дата рождения (2025-06-18T03:00:00+03:00)
 

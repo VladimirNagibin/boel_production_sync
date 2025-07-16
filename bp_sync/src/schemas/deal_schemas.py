@@ -80,7 +80,7 @@ class BaseDeal:
 
     # Связанные сделки (доставка)
     parent_deal_id: Optional[int] = Field(None, alias="UF_CRM_1655891443")
-    chaild_deal_ids: list[int] | None = Field(None, alias="UF_CRM_1658467259")
+    related_deals: list[int] | None = Field(None, alias="UF_CRM_1658467259")
 
     # Маркетинговые метки
     mgo_cc_entry_id: Optional[str] = Field(
@@ -117,55 +117,6 @@ class BaseDeal:
     )
     wz_telegram_id: Optional[str] = Field(None, alias="UF_CRM_63A03182DFB0F")
     wz_avito: Optional[str] = Field(None, alias="UF_CRM_63ABEBD42730D")
-
-    # Валидаторы
-    _validate_bool = field_validator(
-        "opened",
-        "is_shipment_approved",
-        "is_shipment_approved_invoice",
-        mode="before",
-    )(BitrixValidators.convert_to_bool)
-
-    _validate_int = field_validator(
-        "external_id",
-        "assigned_by_id",
-        "created_by_id",
-        "modify_by_id",
-        "last_activity_by",
-        "address_loc_addr_id",
-        "probability",
-        "payment_grace_period",
-        "lead_id",
-        "company_id",
-        "contact_id",
-        "main_activity_id",
-        "shipping_company_id",
-        "creation_source_id",
-        "warehouse_id",
-        "deal_failure_reason_id",
-        "moved_by_id",
-        "defect_expert_id",
-        "parent_deal_id",
-        mode="before",
-        check_fields=False,
-    )(BitrixValidators.normalize_int)
-
-    _validate_datetime = field_validator(
-        "date_create",
-        "date_modify",
-        "last_activity_time",
-        "moved_time",
-        "payment_deadline",
-        "mgo_cc_create",
-        "mgo_cc_end",
-        mode="before",
-    )(BitrixValidators.normalize_datetime_fields)
-
-    _validate_list = field_validator(
-        "defects",
-        "chaild_deal_ids",
-        mode="before",
-    )(BitrixValidators.normalize_list)
 
 
 class DealCreate(BaseCreateSchema, BaseDeal):
@@ -206,32 +157,6 @@ class DealCreate(BaseCreateSchema, BaseDeal):
     # Связи с другими сущностями
     stage_id: str = Field(..., alias="STAGE_ID")
     category_id: int = Field(..., alias="CATEGORY_ID")
-
-    # Валидаторы
-    _validate_bool_extra = field_validator(
-        "is_manual_opportunity",
-        "closed",
-        "is_new",
-        "is_recurring",
-        "is_return_customer",
-        "is_repeated_approach",
-        mode="before",
-    )(BitrixValidators.convert_to_bool)
-
-    # _validate_int_extra = field_validator(
-    #    "category_id",
-    #    mode="before",
-    # )(BitrixValidators.normalize_int)
-
-    _validate_datetime_extra = field_validator(
-        "begindate",
-        "closedate",
-        mode="before",
-    )(BitrixValidators.normalize_datetime_fields)
-
-    _validate_float = field_validator("opportunity", mode="before")(
-        BitrixValidators.normalize_float
-    )
 
     @field_validator("stage_semantic_id", mode="before")  # type: ignore[misc]
     @classmethod
@@ -306,32 +231,6 @@ class DealUpdate(BaseUpdateSchema, BaseDeal):
     # Связи с другими сущностями
     stage_id: Optional[str] = Field(None, alias="STAGE_ID")
     category_id: Optional[int] = Field(None, alias="CATEGORY_ID")
-
-    # Валидаторы
-    _validate_bool_extra = field_validator(
-        "is_manual_opportunity",
-        "closed",
-        "is_new",
-        "is_recurring",
-        "is_return_customer",
-        "is_repeated_approach",
-        mode="before",
-    )(BitrixValidators.convert_to_bool)
-
-    _validate_int_extra = field_validator(
-        "category_id",
-        mode="before",
-    )(BitrixValidators.normalize_int)
-
-    _validate_datetime_extra = field_validator(
-        "begindate",
-        "closedate",
-        mode="before",
-    )(BitrixValidators.normalize_datetime_fields)
-
-    _validate_float = field_validator("opportunity", mode="before")(
-        BitrixValidators.normalize_float
-    )
 
     @field_validator("stage_semantic_id", mode="before")  # type: ignore[misc]
     @classmethod

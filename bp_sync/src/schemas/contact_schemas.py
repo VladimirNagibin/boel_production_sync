@@ -1,12 +1,11 @@
 from datetime import datetime
 
-from pydantic import Field, field_validator
+from pydantic import Field
 
 from .base_schemas import (
     AddressMixin,
     BaseCreateSchema,
     BaseUpdateSchema,
-    BitrixValidators,
     CommunicationChannel,
     HasCommunicationCreateMixin,
     HasCommunicationUpdateMixin,
@@ -84,55 +83,6 @@ class BaseContact:
     additional_responsible: list[int] | None = Field(
         None, alias="UF_CRM_1629106625"
     )
-
-    # Валидаторы
-    _validate_bool = field_validator(
-        "opened",
-        "is_shipment_approved",
-        "has_phone",
-        "has_email",
-        "has_imol",
-        "export",
-        mode="before",
-    )(BitrixValidators.convert_to_bool)
-
-    _validate_int = field_validator(
-        "external_id",
-        "assigned_by_id",
-        "created_by_id",
-        "modify_by_id",
-        "last_activity_by",
-        "address_loc_addr_id",
-        "company_id",
-        "lead_id",
-        "main_activity_id",
-        "deal_failure_reason_id",
-        mode="before",
-    )(BitrixValidators.normalize_int)
-
-    # _validate_float = field_validator("revenue", mode="before")(
-    #    BitrixValidators.normalize_float
-    # )
-
-    _validate_datetime = field_validator(
-        "date_create",
-        "date_modify",
-        "last_activity_time",
-        "birthdate",
-        "mgo_cc_create",
-        "mgo_cc_end",
-        mode="before",
-    )(BitrixValidators.normalize_datetime_fields)
-
-    _validate_list = field_validator(
-        "phone",
-        "email",
-        "web",
-        "im",
-        "link",
-        "additional_responsible",
-        mode="before",
-    )(BitrixValidators.normalize_list)
 
 
 class ContactCreate(

@@ -5,7 +5,7 @@ from core.logger import logger
 
 # from services.bitrix_api_client import BitrixAPIClient
 # from schemas.deal_schemas import DealUpdate
-# from schemas.lead_schemas import LeadUpdate
+from schemas.lead_schemas import LeadUpdate
 from services.bitrix_services.bitrix_oauth_client import BitrixOAuthClient
 from services.deals.deal_bitrix_services import (
     DealBitrixClient,
@@ -46,7 +46,11 @@ async def check(
     lead_bitrix_client: LeadBitrixClient = Depends(get_lead_bitrix_client),
     token_storage: TokenStorage = Depends(get_token_storage),
 ) -> JSONResponse:
-    res = await lead_client.refresh_from_bitrix(60131)
+    res = await lead_bitrix_client.get(44769)
+    res2 = LeadUpdate(**res.model_dump(by_alias=True, exclude_unset=True))
+    # print(du.to_bitrix_dict())
+    res3 = await lead_bitrix_client.update(res2)  # 60131)
+    # res = await deal_client.refresh_from_bitrix(51975)  # 60131)
     # lead = await lead_bitrix_client.get(59773)
     # res2 = DealUpdate(**res.model_dump(by_alias=True, exclude_unset=True))
     # lead2 = LeadUpdate(**lead.model_dump(by_alias=True, exclude_unset=True))
@@ -63,7 +67,7 @@ async def check(
     #    select=["ID", "TITLE", "OPPORTUNITY"],
     #    start=0,
     # )
-    print(res)
+    print(res3)
     # await token_storage.delete_token("access_token")
     # if res3:
     #     deal_create = DealCreate(**res)
