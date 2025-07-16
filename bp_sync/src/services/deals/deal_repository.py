@@ -1,8 +1,10 @@
+from typing import Type
+
 from fastapi import Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.logger import logger
-from db.postgres import get_session
+from db.postgres import Base, get_session
 from models.deal_models import Deal as DealDB
 from models.lead_models import Lead as LeadDB
 from models.references import (
@@ -45,138 +47,25 @@ class DealRepository(BaseRepository[DealDB, DealCreate, DealUpdate]):
         await self._create_or_update_related(data)
         return await self.update(data=data)
 
-    async def _check_related_objects(
-        self, deal_schema: DealCreate | DealUpdate
-    ) -> None:
-        """Проверяет существование всех связанных объектов в БД"""
-        errors: list[str] = []
-
-        # Проверка DealType
-        if type_id := deal_schema.type_id:
-            if not await self._check_object_exists(
-                DealType, external_id=type_id
-            ):
-                errors.append(f"DealType with type_id={type_id} not found")
-
-        # Проверка DealStage
-        if stage_id := deal_schema.stage_id:
-            if not await self._check_object_exists(
-                DealStage, external_id=stage_id
-            ):
-                errors.append(f"DealStage with stage_id={stage_id} not found")
-
-        # Проверка Currency
-        if currency_id := deal_schema.currency_id:
-            if not await self._check_object_exists(
-                Currency, external_id=currency_id
-            ):
-                errors.append(
-                    f"Currency with currency_id={currency_id} not found"
-                )
-
-        # Проверка Category
-        if category_id := deal_schema.category_id:
-            if not await self._check_object_exists(
-                Category, external_id=category_id
-            ):
-                errors.append(
-                    f"Category with category_id={category_id} not found"
-                )
-
-        # Проверка Source
-        if source_id := deal_schema.source_id:
-            if not await self._check_object_exists(
-                Source, external_id=source_id
-            ):
-                errors.append(f"Source with source_id={source_id} not found")
-
-        # Проверка MainActivity
-        if main_activity_id := deal_schema.main_activity_id:
-            if not await self._check_object_exists(
-                MainActivity, external_id=main_activity_id
-            ):
-                errors.append(
-                    f"MainActivity with id={main_activity_id} not found"
-                )
-
-        # Проверка DealType (lead)
-        if lead_type_id := deal_schema.lead_type_id:
-            if not await self._check_object_exists(
-                DealType, external_id=lead_type_id
-            ):
-                errors.append(
-                    f"DealType (lead) with type_id={lead_type_id} not found"
-                )
-
-        # Проверка ShippingCompany
-        if shipping_company_id := deal_schema.shipping_company_id:
-            if not await self._check_object_exists(
-                ShippingCompany, external_id=shipping_company_id
-            ):
-                errors.append(
-                    f"ShippingCompany with id={shipping_company_id} not found"
-                )
-
-        # Проверка Warehouse
-        if warehouse_id := deal_schema.warehouse_id:
-            if not await self._check_object_exists(
-                Warehouse, external_id=warehouse_id
-            ):
-                errors.append(f"Warehouse with id={warehouse_id} not found")
-
-        # Проверка CreationSource
-        if creation_source_id := deal_schema.creation_source_id:
-            if not await self._check_object_exists(
-                CreationSource, external_id=creation_source_id
-            ):
-                errors.append(
-                    f"CreationSource with id={creation_source_id} not found"
-                )
-
-        # Проверка InvoiceStage
-        if invoice_stage_id := deal_schema.invoice_stage_id:
-            if not await self._check_object_exists(
-                InvoiceStage, external_id=invoice_stage_id
-            ):
-                errors.append(
-                    f"InvoiceStage with id={invoice_stage_id} not found"
-                )
-
-        # Проверка DealStage (current)
-        if current_stage_id := deal_schema.current_stage_id:
-            if not await self._check_object_exists(
-                DealStage, external_id=current_stage_id
-            ):
-                errors.append(
-                    f"DealStage (current) with type_id={current_stage_id} "
-                    "not found"
-                )
-
-        # Проверка Deal (parent)
-        if parent_deal_id := deal_schema.parent_deal_id:
-            if not await self._check_object_exists(
-                DealDB, external_id=parent_deal_id
-            ):
-                errors.append(
-                    f"Deal (parent) with id={parent_deal_id} not found"
-                )
-
-        # Проверка DealFailureReason
-        if deal_failure_reason_id := deal_schema.deal_failure_reason_id:
-            if not await self._check_object_exists(
-                DealFailureReason, external_id=deal_failure_reason_id
-            ):
-                errors.append(
-                    f"DealFailureReason with id={deal_failure_reason_id} "
-                    "not found"
-                )
-
-        if errors:
-            logger.exception(f"Related objects not found: {errors}")
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Related objects not found: {errors}",
-            )
+    def _get_related_checks(self) -> list[tuple[str, Type[Base], str]]:
+        """Возвращает специфичные для Deal проверки"""
+        return [
+            # (атрибут схемы, модель БД, поле в модели)
+            ("type_id", DealType, "external_id"),
+            ("stage_id", DealStage, "external_id"),
+            ("currency_id", Currency, "external_id"),
+            ("category_id", Category, "external_id"),
+            ("source_id", Source, "external_id"),
+            ("main_activity_id", MainActivity, "external_id"),
+            ("lead_type_id", DealType, "external_id"),
+            ("shipping_company_id", ShippingCompany, "external_id"),
+            ("warehouse_id", Warehouse, "external_id"),
+            ("creation_source_id", CreationSource, "external_id"),
+            ("invoice_stage_id", InvoiceStage, "external_id"),
+            ("current_stage_id", DealStage, "external_id"),
+            ("parent_deal_id", DealDB, "external_id"),
+            ("deal_failure_reason_id", DealFailureReason, "external_id"),
+        ]
 
     async def _create_or_update_related(
         self, deal_schema: DealCreate | DealUpdate

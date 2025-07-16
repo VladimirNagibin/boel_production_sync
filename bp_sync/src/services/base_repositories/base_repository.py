@@ -24,6 +24,11 @@ class BaseRepository(Generic[ModelType, SchemaTypeCreate, SchemaTypeUpdate]):
     """Базовый репозиторий для CRUD операций"""
 
     model: Type[ModelType]
+    _default_related_checks: list[tuple[str, Type[Base], str]] = []
+    """
+    Список проверок по умолчанию в формате:
+    (атрибут_схемы, модель_бд, поле_модели)
+    """
 
     def __init__(self, session: AsyncSession):
         self.session = session
@@ -292,3 +297,37 @@ class BaseRepository(Generic[ModelType, SchemaTypeCreate, SchemaTypeUpdate]):
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Database operation failed",
             ) from e
+
+    def _get_related_checks(self) -> list[tuple[str, Type[Base], str]]:
+        """Возвращает кастомные проверки для дочерних классов"""
+        return self._default_related_checks
+
+    async def _check_related_objects(
+        self,
+        data: BaseCreateSchema | BaseUpdateSchema,
+        additional_checks: Optional[list[tuple[str, Type[Base], str]]] = None,
+    ) -> None:
+        """Проверяет существование связанных объектов"""
+        errors: list[str] = []
+        checks = self._get_related_checks()
+
+        if additional_checks:
+            checks.extend(additional_checks)
+
+        for attr_name, model, filter_field in checks:
+            value = getattr(data, attr_name, None)
+            if value is not None:
+                if not await self._check_object_exists(
+                    model, **{filter_field: value}
+                ):
+                    errors.append(
+                        f"{model.__name__} with {filter_field}={value} "
+                        "not found"
+                    )
+
+        if errors:
+            logger.exception(f"Related objects not found: {errors}")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Related objects not found: {errors}",
+            )

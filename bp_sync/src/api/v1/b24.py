@@ -4,9 +4,15 @@ from fastapi.responses import JSONResponse
 from core.logger import logger
 
 # from services.bitrix_api_client import BitrixAPIClient
+from schemas.contact_schemas import ContactUpdate
+
 # from schemas.deal_schemas import DealUpdate
-from schemas.lead_schemas import LeadUpdate
+# from schemas.lead_schemas import LeadUpdate
 from services.bitrix_services.bitrix_oauth_client import BitrixOAuthClient
+from services.contacts.contact_bitrix_services import (
+    ContactBitrixClient,
+    get_contact_bitrix_client,
+)
 from services.deals.deal_bitrix_services import (
     DealBitrixClient,
     get_deal_bitrix_client,
@@ -44,12 +50,15 @@ async def check(
     deal_client: DealClient = Depends(get_deal_client),
     lead_client: DealClient = Depends(get_lead_client),
     lead_bitrix_client: LeadBitrixClient = Depends(get_lead_bitrix_client),
+    contact_bitrix_client: ContactBitrixClient = Depends(
+        get_contact_bitrix_client
+    ),
     token_storage: TokenStorage = Depends(get_token_storage),
 ) -> JSONResponse:
-    res = await lead_bitrix_client.get(44769)
-    res2 = LeadUpdate(**res.model_dump(by_alias=True, exclude_unset=True))
+    res = await contact_bitrix_client.get(13493)
+    res2 = ContactUpdate(**res.model_dump(by_alias=True, exclude_unset=True))
     # print(du.to_bitrix_dict())
-    res3 = await lead_bitrix_client.update(res2)  # 60131)
+    res3 = await contact_bitrix_client.update(res2)  # 60131)
     # res = await deal_client.refresh_from_bitrix(51975)  # 60131)
     # lead = await lead_bitrix_client.get(59773)
     # res2 = DealUpdate(**res.model_dump(by_alias=True, exclude_unset=True))
