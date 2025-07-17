@@ -10,7 +10,7 @@ from ..dependencies import get_bitrix_client
 class CompanyBitrixClient(
     BaseBitrixEntityClient[CompanyCreate, CompanyUpdate]
 ):
-    entity_name = "contact"
+    entity_name = "company"
     create_schema = CompanyCreate
     update_schema = CompanyUpdate
 

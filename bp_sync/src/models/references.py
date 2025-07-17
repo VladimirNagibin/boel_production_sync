@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from .deal_documents import Contract
     from .deal_models import Deal
     from .lead_models import Lead
+    from .user_models import User
 
 
 class Currency(NameStrIdEntity):
@@ -370,4 +371,16 @@ class Emploees(NameStrIdEntity):
     __tablename__ = "employees"
     companies: Mapped[list["Company"]] = relationship(
         "Company", back_populates="employees"
+    )
+
+
+class Department(NameIntIdEntity):
+    """
+    Отделы:
+    (предзаполнить)
+    """
+
+    __tablename__ = "departments"
+    users: Mapped[list["User"]] = relationship(
+        "User", back_populates="departments"
     )
