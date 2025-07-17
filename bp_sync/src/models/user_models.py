@@ -83,7 +83,7 @@ class User(IntIdEntity):
         comment="Город проживания"
     )  # PERSONAL_CITY : Город проживания
 
-    # Контакты
+    # Коммуникации
     email: Mapped[str | None] = mapped_column(
         comment="E-Mail"
     )  # EMAIL : E-Mail

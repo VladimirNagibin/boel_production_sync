@@ -9,14 +9,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from core.logger import logger
 from db.postgres import Base
 from models.bases import IntIdEntity
-from schemas.base_schemas import (
-    BaseCreateSchema,
-    BaseUpdateSchema,
+from schemas.base_schemas import (  # BaseCreateSchema,; BaseUpdateSchema,
+    CommonFieldMixin,
 )
 
 # Дженерик для схем
-SchemaTypeCreate = TypeVar("SchemaTypeCreate", bound=BaseCreateSchema)
-SchemaTypeUpdate = TypeVar("SchemaTypeUpdate", bound=BaseUpdateSchema)
+SchemaTypeCreate = TypeVar("SchemaTypeCreate", bound=CommonFieldMixin)
+SchemaTypeUpdate = TypeVar("SchemaTypeUpdate", bound=CommonFieldMixin)
+# SchemaTypeCreate = TypeVar("SchemaTypeCreate", bound=BaseCreateSchema)
+# SchemaTypeUpdate = TypeVar("SchemaTypeUpdate", bound=BaseUpdateSchema)
 ModelType = TypeVar("ModelType", bound=IntIdEntity)
 
 
@@ -71,6 +72,9 @@ class BaseRepository(Generic[ModelType, SchemaTypeCreate, SchemaTypeUpdate]):
         post_commit_hook: Optional[Callable[..., Awaitable[None]]] = None,
     ) -> ModelType:
         """Создает новую сделку с проверкой на дубликаты"""
+        if not data.external_id:
+            logger.error("Update failed: Missing ID")
+            raise ValueError("ID is required for update")
         external_id = data.external_id
         if await self._exists(external_id):
             logger.warning(
@@ -304,7 +308,7 @@ class BaseRepository(Generic[ModelType, SchemaTypeCreate, SchemaTypeUpdate]):
 
     async def _check_related_objects(
         self,
-        data: BaseCreateSchema | BaseUpdateSchema,
+        data: SchemaTypeCreate | SchemaTypeUpdate,
         additional_checks: Optional[list[tuple[str, Type[Base], str]]] = None,
     ) -> None:
         """Проверяет существование связанных объектов"""

@@ -63,7 +63,7 @@ class BaseBitrixEntityClient(Generic[SchemaTypeCreate, SchemaTypeUpdate]):
                 f"{self.entity_name.capitalize()} not found: ID={entity_id}"
             )
             raise HTTPException(
-                status_code=404,
+                status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"{self.entity_name.capitalize()} not found",
             )
         return self.create_schema(**entity_data)

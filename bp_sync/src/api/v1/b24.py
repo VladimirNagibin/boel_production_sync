@@ -38,6 +38,10 @@ from services.token_services.token_storage import (
     TokenStorage,
     get_token_storage,
 )
+from services.users.user_bitrix_services import (
+    UserBitrixClient,
+    get_user_bitrix_client,
+)
 
 b24_router = APIRouter()
 
@@ -50,6 +54,7 @@ b24_router = APIRouter()
 async def check(
     bitrix_client: BitrixAPIClient = Depends(get_bitrix_client),
     deal_bitrix_client: DealBitrixClient = Depends(get_deal_bitrix_client),
+    user_bitrix_client: UserBitrixClient = Depends(get_user_bitrix_client),
     deal_client: DealClient = Depends(get_deal_client),
     lead_client: DealClient = Depends(get_lead_client),
     lead_bitrix_client: LeadBitrixClient = Depends(get_lead_bitrix_client),
@@ -58,9 +63,8 @@ async def check(
     ),
     token_storage: TokenStorage = Depends(get_token_storage),
 ) -> JSONResponse:
-    method = "user.get"
-    params = {"id": 1865}
-    res3 = await bitrix_client.call_api(method, params)
+
+    res3 = await user_bitrix_client.get(121)
 
     # res = await contact_bitrix_client.get(13493)
     # res2 = ContactUpdate(**res.model_dump(by_alias=True, exclude_unset=True))
