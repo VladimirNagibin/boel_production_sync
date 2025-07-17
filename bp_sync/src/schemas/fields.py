@@ -81,6 +81,39 @@ FIELDS_BY_TYPE: dict[str, Any] = {
         "UF_CRM_CALLTOUCHWWLX",  # "calltouch_site_id",
         "UF_CRM_CALLTOUCHZLRD",  # "calltouch_call_id",
         "UF_CRM_CALLTOUCHZGWC",  # "calltouch_request_id",
+        # company
+        "BANKING_DETAILS",  # "banking_details",
+        "ADDRESS_LEGAL",  # "address_legal",
+        "UF_CRM_1596031539",  # "address_company",
+        "UF_CRM_1596031556",  # "province_company",
+        "UF_CRM_607968CE029D8",  # "city",
+        "UF_CRM_607968CE0F3A4",  # "source_external",
+        "COMPANY_TYPE",  # "company_type_id",
+        "UF_CRM_1637554945",  # "source_id",
+        "UF_CRM_61974C16F0F71",  # "deal_type_id",
+        "INDUSTRY",  # "industry_id",
+        "EMPLOYEES",  # "employees_id",
+        "UF_CRM_63F2F6E58EE14",  # "mgo_cc_entry_id",
+        "UF_CRM_63F2F6E5A6DE8",  # "mgo_cc_channel_type",
+        "UF_CRM_63F2F6E5BEAEE",  # "mgo_cc_result",
+        "UF_CRM_63F2F6E5D8B28",  # "mgo_cc_entry_point",
+        "UF_CRM_63F2F6E630D9C",  # "mgo_cc_tag_id",
+        "UF_CRM_66618114BF72A",  # "calltouch_site_id",
+        "UF_CRM_66618115024C3",  # "calltouch_call_id",
+        "UF_CRM_66618115280F4",  # "calltouch_request_id",
+        "UF_CRM_63F2F6E50BBDC",  # "wz_instagram",
+        "UF_CRM_63F2F6E52BC88",  # "wz_vc",
+        "UF_CRM_63F2F6E544CDC",  # "wz_telegram_username",
+        "UF_CRM_63F2F6E5602C1",  # "wz_telegram_id",
+        "UF_CRM_63F2F6E5766C6",  # "wz_avito",
+        "UF_CRM_1630507939",  # "position_head",
+        "UF_CRM_1630508048",  # "basis_operates",
+        "UF_CRM_1632315102",  # "position_head_genitive",
+        "UF_CRM_1632315157",  # "basis_operates_genitive",
+        "UF_CRM_1632315337",  # "payment_delay_genitive",
+        "UF_CRM_1633583719",  # "full_name_genitive",
+        "UF_CRM_1623915176",  # "current_contract",
+        "UF_CRM_1654683828",  # "current_number_contract",
     ],
     "int": [
         # deal
@@ -113,6 +146,12 @@ FIELDS_BY_TYPE: dict[str, Any] = {
         # contact
         "UF_CRM_1598882745",  # "main_activity_id",
         "UF_CRM_6539DA9518373",  # "deal_failure_reason_id",
+        # company
+        "UF_CRM_1598882910",  # "main_activity_id",
+        "UF_CRM_65A8D8C72059A",  # "deal_failure_reason_id",
+        "UF_CRM_1631941968",  # "shipping_company_id",
+        "UF_CRM_1631903199",  # "shipping_company ???",
+        "UF_CRM_1623833602",  # "parent_company_id",
     ],
     "bool": [  # Y / N
         # deal
@@ -129,6 +168,8 @@ FIELDS_BY_TYPE: dict[str, Any] = {
         "HAS_IMOL",  # "has_imol"
         # contact
         "EXPORT",  # "export",
+        # company
+        "IS_MY_COMPANY",  # "is_my_company",
     ],
     "bool_none": [  # 1 / 0
         # deal
@@ -138,6 +179,8 @@ FIELDS_BY_TYPE: dict[str, Any] = {
         "UF_CRM_1623830089",  # "is_shipment_approved"
         # contact
         "UF_CRM_60D97EF75E465",  # "is_shipment_approved"
+        # company
+        "UF_CRM_61974C16DBFBF",  # "is_shipment_approved"
     ],
     "datetime": [
         # deal
@@ -160,10 +203,16 @@ FIELDS_BY_TYPE: dict[str, Any] = {
         # contact
         "UF_CRM_63E1D6D4EC444",  # "mgo_cc_create",
         "UF_CRM_63E1D6D5051DE",  # "mgo_cc_end",
+        # company
+        "UF_CRM_63F2F6E5F1691",  # "mgo_cc_create",
+        "UF_CRM_63F2F6E6181EE",  # "mgo_cc_end",
+        "UF_CRM_1623835088",  # "date_last_shipment",
     ],
     "float": [
         # deal
-        "OPPORTUNITY",  # "opportunity"
+        "OPPORTUNITY",  # "opportunity",
+        # company
+        "REVENUE",  # "revenue",
     ],
     "enums": [
         # deal
@@ -186,5 +235,8 @@ FIELDS_BY_TYPE: dict[str, Any] = {
         "LINK",  # "link",
         # contact
         "UF_CRM_1629106625",  # "additional_responsables",
+        # company
+        "UF_CRM_1629106458",  # "additional_responsables",
+        "UF_CRM_1623833623",  # "contracts"
     ],
 }

@@ -7,40 +7,41 @@ from core.logger import logger
 from db.postgres import Base, get_session
 from models.bases import EntityType
 from models.company_models import Company
-from models.lead_models import Lead as LeadDB
+from models.contact_models import Contact as ContactDB
 from models.references import (
-    Currency,
+    ContactType,
     DealFailureReason,
     DealType,
-    LeadStatus,
     MainActivity,
     Source,
 )
-from schemas.lead_schemas import LeadCreate, LeadUpdate
+from schemas.contact_schemas import ContactCreate, ContactUpdate
 
 from ..base_repositories.base_communication_repo import (
     EntityWithCommunicationsRepository,
 )
 
 
-class LeadRepository(
-    EntityWithCommunicationsRepository[LeadDB, LeadCreate, LeadUpdate]
+class ContactRepository(
+    EntityWithCommunicationsRepository[ContactDB, ContactCreate, ContactUpdate]
 ):
 
-    model = LeadDB
-    entity_type = EntityType.LEAD
+    model = ContactDB
+    entity_type = EntityType.CONTACT
 
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def create_entity(self, data: LeadCreate) -> LeadDB:
-        """Создает новый лид с проверкой связанных объектов"""
+    async def create_entity(self, data: ContactCreate) -> ContactDB:
+        """Создает новый контакт с проверкой связанных объектов"""
         await self._check_related_objects(data)
         await self._create_or_update_related(data)
         return await self.create(data=data)
 
-    async def update_entity(self, data: LeadUpdate | LeadCreate) -> LeadDB:
-        """Обновляет существующий лид"""
+    async def update_entity(
+        self, data: ContactCreate | ContactUpdate
+    ) -> ContactDB:
+        """Обновляет существующий контакт"""
         await self._check_related_objects(data)
         await self._create_or_update_related(data)
         return await self.update(data=data)
@@ -49,16 +50,15 @@ class LeadRepository(
         """Возвращает специфичные для Deal проверки"""
         return [
             # (атрибут схемы, модель БД, поле в модели)
-            ("type_id", DealType, "external_id"),
-            ("status_id", LeadStatus, "external_id"),
-            ("currency_id", Currency, "external_id"),
+            ("type_id", ContactType, "external_id"),
             ("source_id", Source, "external_id"),
-            ("main_activity_id", MainActivity, "ext_alt_id"),  # Особое поле
-            ("deal_failure_reason_id", DealFailureReason, "ext_alt_id"),
+            ("main_activity_id", MainActivity, "ext_alt2_id"),
+            ("deal_failure_reason_id", DealFailureReason, "ext_alt2_id"),
+            ("deal_type_id", DealType, "external_id"),
         ]
 
     async def _create_or_update_related(
-        self, lead_schema: LeadCreate | LeadUpdate
+        self, lead_schema: ContactCreate | ContactUpdate
     ) -> None:
         """
         Проверяет существование всех связанных объектов в БД и
@@ -130,7 +130,7 @@ class LeadRepository(
             )
 
 
-def get_lead_repository(
+def get_contact_repository(
     session: AsyncSession = Depends(get_session),
-) -> LeadRepository:
-    return LeadRepository(session)
+) -> ContactRepository:
+    return ContactRepository(session)
