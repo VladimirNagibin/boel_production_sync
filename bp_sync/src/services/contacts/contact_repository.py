@@ -1,13 +1,13 @@
-from typing import Type
+from typing import Any, Type
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.logger import logger
 from db.postgres import Base, get_session
 from models.bases import EntityType
-from models.company_models import Company
+from models.company_models import Company as CompanyDB
 from models.contact_models import Contact as ContactDB
+from models.lead_models import Lead as LeadDB
 from models.references import (
     ContactType,
     DealFailureReason,
@@ -15,11 +15,15 @@ from models.references import (
     MainActivity,
     Source,
 )
+from models.user_models import User as UserDB
 from schemas.contact_schemas import ContactCreate, ContactUpdate
 
 from ..base_repositories.base_communication_repo import (
     EntityWithCommunicationsRepository,
 )
+from ..companies.company_services import CompanyClient, get_company_client
+from ..leads.lead_services import LeadClient, get_lead_client
+from ..users.user_services import UserClient, get_user_client
 
 
 class ContactRepository(
@@ -29,8 +33,17 @@ class ContactRepository(
     model = ContactDB
     entity_type = EntityType.CONTACT
 
-    def __init__(self, session: AsyncSession):
-        self.session = session
+    def __init__(
+        self,
+        session: AsyncSession,
+        company_client: CompanyClient,
+        lead_client: LeadClient,
+        user_client: UserClient,
+    ):
+        super().__init__(session)
+        self.company_client = company_client
+        self.lead_client = lead_client
+        self.user_client = user_client
 
     async def create_entity(self, data: ContactCreate) -> ContactDB:
         """Создает новый контакт с проверкой связанных объектов"""
@@ -57,80 +70,27 @@ class ContactRepository(
             ("deal_type_id", DealType, "external_id"),
         ]
 
-    async def _create_or_update_related(
-        self, lead_schema: ContactCreate | ContactUpdate
-    ) -> None:
-        """
-        Проверяет существование всех связанных объектов в БД и
-        создаёт при отсутствии
-        """
-        errors: list[str] = []
-
-        # Проверка company
-        if company_id := lead_schema.company_id:
-            if not await self._check_object_exists(
-                Company, external_id=company_id
-            ):
-                errors.append(f"Company with id={company_id:} not found")
-
-        """
-        # Проверка Contact
-        if not await check_object_exists(
-            db, Company, company_id=deal_data["company_id"]
-        ):
-            errors.append(
-                f"Company with company_id={deal_data['company_id']} not found"
-            )
-
-        # Проверка User для assigned_by_id
-        if not await check_object_exists(
-            db, User, user_id=deal_data["assigned_by_id"]
-        ):
-            errors.append(
-                f"User with user_id={deal_data['assigned_by_id']} not found"
-            )
-
-        # Проверка User для created_by_id
-        if not await check_object_exists(
-            db, User, user_id=deal_data["created_by_id"]
-        ):
-            errors.append(
-                f"User with user_id={deal_data['created_by_id']} not found"
-            )
-
-        # Проверка User для modify_by_id
-        if not await check_object_exists(
-            db, User, user_id=deal_data["modify_by_id"]
-        ):
-            errors.append(
-                f"User with user_id={deal_data['modify_by_id']} not found"
-            )
-
-        # Проверка User для moved_by_id
-        if not await check_object_exists(
-            db, User, user_id=deal_data["moved_by_id"]
-        ):
-            errors.append(
-                f"User with user_id={deal_data['moved_by_id']} not found"
-            )
-
-        # Проверка User для last_activity_by
-        if not await check_object_exists(
-            db, User, user_id=deal_data["last_activity_by"]
-        ):
-            errors.append(
-                f"User with user_id={deal_data['last_activity_by']} not found"
-            )
-        """
-        if errors:
-            logger.exception(f"Failed to create related objects: {errors}")
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Failed to create related objects: {errors}",
-            )
+    def _get_related_create(self) -> dict[str, tuple[Any, Any, bool]]:
+        """Возвращает кастомные проверки для дочерних классов"""
+        return {
+            "lead_id": (self.lead_client, LeadDB, False),
+            "company_id": (self.company_client, CompanyDB, False),
+            "assigned_by_id": (self.user_client, UserDB, True),
+            "created_by_id": (self.user_client, UserDB, True),
+            "modify_by_id": (self.user_client, UserDB, False),
+            "last_activity_by": (self.user_client, UserDB, False),
+        }
 
 
 def get_contact_repository(
     session: AsyncSession = Depends(get_session),
+    company_client: CompanyClient = Depends(get_company_client),
+    lead_client: LeadClient = Depends(get_lead_client),
+    user_client: UserClient = Depends(get_user_client),
 ) -> ContactRepository:
-    return ContactRepository(session)
+    return ContactRepository(
+        session=session,
+        company_client=company_client,
+        lead_client=lead_client,
+        user_client=user_client,
+    )

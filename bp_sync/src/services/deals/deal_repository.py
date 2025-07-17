@@ -1,10 +1,12 @@
-from typing import Type
+from typing import Any, Type
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.logger import logger
 from db.postgres import Base, get_session
+from models.bases import EntityType
+from models.company_models import Company as CompanyDB
+from models.contact_models import Contact as ContactDB
 from models.deal_models import Deal as DealDB
 from models.lead_models import Lead as LeadDB
 from models.references import (
@@ -20,20 +22,35 @@ from models.references import (
     Source,
     Warehouse,
 )
+from models.user_models import User as UserDB
 from schemas.deal_schemas import DealCreate, DealUpdate
 
 from ..base_repositories.base_repository import BaseRepository
+from ..companies.company_services import CompanyClient, get_company_client
+from ..contacts.contact_services import ContactClient, get_contact_client
 from ..leads.lead_services import LeadClient, get_lead_client
+from ..users.user_services import UserClient, get_user_client
 
 
 class DealRepository(BaseRepository[DealDB, DealCreate, DealUpdate]):
     """Репозиторий для работы со сделками"""
 
     model = DealDB
+    entity_type = EntityType.DEAL
 
-    def __init__(self, session: AsyncSession, lead_client: LeadClient):
+    def __init__(
+        self,
+        session: AsyncSession,
+        company_client: CompanyClient,
+        contact_client: ContactClient,
+        lead_client: LeadClient,
+        user_client: UserClient,
+    ):
         super().__init__(session)
+        self.company_client = company_client
+        self.contact_client = contact_client
         self.lead_client = lead_client
+        self.user_client = user_client
 
     async def create_entity(self, data: DealCreate) -> DealDB:
         """Создает новую сделку с проверкой связанных объектов"""
@@ -67,12 +84,27 @@ class DealRepository(BaseRepository[DealDB, DealCreate, DealUpdate]):
             ("deal_failure_reason_id", DealFailureReason, "external_id"),
         ]
 
+    def _get_related_create(self) -> dict[str, tuple[Any, Any, bool]]:
+        """Возвращает кастомные проверки для дочерних классов"""
+        return {
+            "lead_id": (self.lead_client, LeadDB, False),
+            "company_id": (self.company_client, CompanyDB, False),
+            "contact_id": (self.contact_client, ContactDB, False),
+            "assigned_by_id": (self.user_client, UserDB, True),
+            "created_by_id": (self.user_client, UserDB, True),
+            "modify_by_id": (self.user_client, UserDB, False),
+            "moved_by_id": (self.user_client, UserDB, False),
+            "last_activity_by": (self.user_client, UserDB, False),
+            "defect_expert_id": (self.user_client, UserDB, False),
+        }
+
+    """
     async def _create_or_update_related(
         self, deal_schema: DealCreate | DealUpdate
     ) -> None:
-        """
+        "
         Проверяет существование связанных объектов в БД и создаёт отсутствующие
-        """
+        "
         errors: list[str] = []
 
         # Проверка Lead
@@ -90,82 +122,147 @@ class DealRepository(BaseRepository[DealDB, DealCreate, DealUpdate]):
                     f"{str(e)}"
                 )
 
-        """
         # Проверка Company
-        if not await check_object_exists(
-            db, Company, company_id=deal_data["company_id"]
-        ):
-            errors.append(
-                f"Company with company_id={deal_data['company_id']} not found"
-            )
+        if company_id := deal_schema.company_id:
+            try:
+                if not await self._check_object_exists(
+                    CompanyDB, external_id=company_id
+                ):
+                    await self.company_client.import_from_bitrix(company_id)
+                else:
+                    await self.company_client.refresh_from_bitrix(company_id)
+            except Exception as e:
+                errors.append(
+                    f"Company with id={company_id:} not found and "
+                    f"can't created {str(e)}"
+                )
 
         # Проверка Contact
-        if not await check_object_exists(
-            db, Company, company_id=deal_data["company_id"]
-        ):
-            errors.append(
-                f"Company with company_id={deal_data['company_id']} not found"
-            )
+        if contact_id := deal_schema.contact_id:
+            try:
+                if not await self._check_object_exists(
+                    ContactDB, external_id=contact_id
+                ):
+                    await self.contact_client.import_from_bitrix(contact_id)
+                else:
+                    await self.contact_client.refresh_from_bitrix(contact_id)
+            except Exception as e:
+                errors.append(
+                    f"Contact with id={contact_id:} not found and "
+                    f"can't created {str(e)}"
+                )
 
         # Проверка User для assigned_by_id
-        if not await check_object_exists(
-            db, User, user_id=deal_data["assigned_by_id"]
-        ):
-            errors.append(
-                f"User with user_id={deal_data['assigned_by_id']} not found"
-            )
+        if user_id := deal_schema.assigned_by_id:
+            try:
+                if not await self._check_object_exists(
+                    UserDB, external_id=user_id
+                ):
+                    await self.user_client.import_from_bitrix(user_id)
+                else:
+                    await self.user_client.refresh_from_bitrix(user_id)
+            except Exception as e:
+                errors.append(
+                    f"User with id={user_id:} not found and "
+                    f"can't created {str(e)}"
+                )
 
         # Проверка User для created_by_id
-        if not await check_object_exists(
-            db, User, user_id=deal_data["created_by_id"]
-        ):
-            errors.append(
-                f"User with user_id={deal_data['created_by_id']} not found"
-            )
+        if user_id := deal_schema.created_by_id:
+            try:
+                if not await self._check_object_exists(
+                    UserDB, external_id=user_id
+                ):
+                    await self.user_client.import_from_bitrix(user_id)
+                else:
+                    await self.user_client.refresh_from_bitrix(user_id)
+            except Exception as e:
+                errors.append(
+                    f"User with id={user_id:} not found and "
+                    f"can't created {str(e)}"
+                )
 
         # Проверка User для modify_by_id
-        if not await check_object_exists(
-            db, User, user_id=deal_data["modify_by_id"]
-        ):
-            errors.append(
-                f"User with user_id={deal_data['modify_by_id']} not found"
-            )
+        if user_id := deal_schema.modify_by_id:
+            try:
+                if not await self._check_object_exists(
+                    UserDB, external_id=user_id
+                ):
+                    await self.user_client.import_from_bitrix(user_id)
+                else:
+                    await self.user_client.refresh_from_bitrix(user_id)
+            except Exception as e:
+                errors.append(
+                    f"User with id={user_id:} not found and "
+                    f"can't created {str(e)}"
+                )
+
 
         # Проверка User для moved_by_id
-        if not await check_object_exists(
-            db, User, user_id=deal_data["moved_by_id"]
-        ):
-            errors.append(
-                f"User with user_id={deal_data['moved_by_id']} not found"
-            )
+        if user_id := deal_schema.moved_by_id:
+            try:
+                if not await self._check_object_exists(
+                    UserDB, external_id=user_id
+                ):
+                    await self.user_client.import_from_bitrix(user_id)
+                else:
+                    await self.user_client.refresh_from_bitrix(user_id)
+            except Exception as e:
+                errors.append(
+                    f"User with id={user_id:} not found and "
+                    f"can't created {str(e)}"
+                )
 
         # Проверка User для last_activity_by
-        if not await check_object_exists(
-            db, User, user_id=deal_data["last_activity_by"]
-        ):
-            errors.append(
-                f"User with user_id={deal_data['last_activity_by']} not found"
-            )
+        if user_id := deal_schema.last_activity_by:
+            try:
+                if not await self._check_object_exists(
+                    UserDB, external_id=user_id
+                ):
+                    await self.user_client.import_from_bitrix(user_id)
+                else:
+                    await self.user_client.refresh_from_bitrix(user_id)
+            except Exception as e:
+                errors.append(
+                    f"User with id={user_id:} not found and "
+                    f"can't created {str(e)}"
+                )
 
         # Проверка User для defect_expert_id
-        if deal_data.get("defect_expert_id") and not await check_object_exists(
-            db, User, user_id=deal_data["defect_expert_id"]
-        ):
-            errors.append(
-                "User (defect expert) with"
-                f"id={deal_data['defect_expert_id']} not found"
-            )
-        """
+        if user_id := deal_schema.defect_expert_id:
+            try:
+                if not await self._check_object_exists(
+                    UserDB, external_id=user_id
+                ):
+                    await self.user_client.import_from_bitrix(user_id)
+                else:
+                    await self.user_client.refresh_from_bitrix(user_id)
+            except Exception as e:
+                errors.append(
+                    f"User with id={user_id:} not found and "
+                    f"can't created {str(e)}"
+                )
+
         if errors:
             logger.exception(f"Failed to create related objects: {errors}")
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Failed to create related objects: {errors}",
             )
+        """
 
 
 def get_deal_repository(
     session: AsyncSession = Depends(get_session),
+    company_client: CompanyClient = Depends(get_company_client),
+    contact_client: ContactClient = Depends(get_contact_client),
     lead_client: LeadClient = Depends(get_lead_client),
+    user_client: UserClient = Depends(get_user_client),
 ) -> DealRepository:
-    return DealRepository(session, lead_client)
+    return DealRepository(
+        session=session,
+        company_client=company_client,
+        contact_client=contact_client,
+        lead_client=lead_client,
+        user_client=user_client,
+    )
