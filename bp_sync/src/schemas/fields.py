@@ -237,6 +237,38 @@ FIELDS_BY_TYPE: dict[str, Any] = {
         "UF_CRM_1629106625",  # "additional_responsables",
         # company
         "UF_CRM_1629106458",  # "additional_responsables",
-        "UF_CRM_1623833623",  # "contracts"
+        "UF_CRM_1623833623",  # "contracts",
+    ],
+}
+
+FIELDS_USER: dict[str, Any] = {
+    "str_none": [
+        "NAME",  # "name",
+        "SECOND_NAME",  # "second_name",
+        "LAST_NAME",  # "last_name",
+        "XML_ID",  # "xml_id",
+        "PERSONAL_GENDER",  # "personal_gender",
+        "WORK_POSITION",  # "work_position",
+        "USER_TYPE",  # "user_type",
+        "TIME_ZONE",  # "time_zone",
+        "PERSONAL_CITY",  # "personal_city",
+        "EMAIL",  # "email",
+        "PERSONAL_MOBILE",  # "personal_mobile",
+        "WORK_PHONE",  # "work_phone",
+        "PERSONAL_WWW",  # "personal_www",
+    ],
+    "datetime_none": [
+        "LAST_LOGIN",  # "last_login",
+        "DATE_REGISTER",  # "date_register",
+        "PERSONAL_BIRTHDAY",  # "personal_birthday",
+        "UF_EMPLOYMENT_DATE",  # "employment_date",
+        "UF_USR_1699347879988",  # "date_new",
+    ],
+    "bool": [  # Y / N
+        "ACTIVE",  # "active",
+        "IS_ONLINE",  # "is_online",
+    ],
+    "list_in_int": [
+        "UF_DEPARTMENT",  # "department_id",
     ],
 }

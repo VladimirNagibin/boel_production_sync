@@ -1,6 +1,6 @@
 from datetime import datetime
 from enum import Enum
-from typing import Any, Generic, Optional, Type, TypeVar, cast
+from typing import Any, ClassVar, Generic, Optional, Type, TypeVar, cast
 from uuid import UUID
 
 from pydantic import (
@@ -16,12 +16,16 @@ EnumT = TypeVar("EnumT", bound=Enum)
 T = TypeVar("T")
 
 
-class BaseFieldMixin:
+class CommonFieldMixin(BaseModel):  # type: ignore[misc]
     id: Optional[UUID] = Field(None)
     created_at: Optional[datetime] = Field(None)
     updated_at: Optional[datetime] = Field(None)
     is_deleted_in_bitrix: Optional[bool] = Field(None)
 
+    external_id: Optional[int] = Field(None, alias="ID")
+
+
+class BaseFieldMixin:
     comments: Optional[str] = Field(None, alias="COMMENTS")
     source_description: Optional[str] = Field(None, alias="SOURCE_DESCRIPTION")
     originator_id: Optional[str] = Field(None, alias="ORIGINATOR_ID")
@@ -116,16 +120,28 @@ class HasCommunicationUpdateMixin:
     has_imol: Optional[bool] = Field(None, alias="HAS_IMOL")
 
 
+class EntityAwareSchema(BaseModel):  # type: ignore[misc]
+    FIELDS_BY_TYPE: ClassVar[dict[str, Any]] = FIELDS_BY_TYPE
+
+    @model_validator(mode="before")  # type: ignore[misc]
+    @classmethod
+    def preprocess_data(cls, data: Any) -> Any:
+        return BitrixValidators.normalize_empty_values(
+            data, fields=cls.FIELDS_BY_TYPE
+        )
+
+
 class BaseCreateSchema(
+    CommonFieldMixin,
     BaseFieldMixin,
     TimestampsCreateMixin,
     UserRelationsCreateMixin,
     MarketingMixin,
-    BaseModel,  # type: ignore[misc]
+    EntityAwareSchema,
 ):
     """Базовая схема для создания сущностей"""
 
-    external_id: int = Field(..., alias="ID")
+    # external_id: int = Field(..., alias="ID")
     opened: bool = Field(True, alias="OPENED")
 
     model_config = ConfigDict(
@@ -135,13 +151,9 @@ class BaseCreateSchema(
         extra="ignore",
     )
 
-    @model_validator(mode="before")  # type: ignore[misc]
-    @classmethod
-    def preprocess_data(cls, data: Any) -> Any:
-        return BitrixValidators.normalize_empty_values(data)
-
 
 class BaseUpdateSchema(
+    CommonFieldMixin,
     BaseFieldMixin,
     TimestampsUpdateMixin,
     UserRelationsUpdateMixin,
@@ -150,7 +162,7 @@ class BaseUpdateSchema(
 ):
     """Базовая схема для обновления сущностей"""
 
-    external_id: Optional[int] = Field(None, alias="ID")
+    # external_id: Optional[int] = Field(None, alias="ID")
     opened: Optional[bool] = Field(None, alias="OPENED")
 
     model_config = ConfigDict(
@@ -240,27 +252,31 @@ class BitrixValidators:
     """Класс с общими валидаторами для Bitrix схем"""
 
     @staticmethod
-    def normalize_empty_values(data: Any) -> Any:
+    def normalize_empty_values(data: Any, fields: dict[str, Any]) -> Any:
         """Преобразует пустые строки в None для всех полей"""
         if not isinstance(data, dict):
             return data
         processed_data: dict[str, Any] = cast(dict[str, Any], data)
         for field in list(processed_data.keys()):
             value = processed_data[field]
-            if field in FIELDS_BY_TYPE["str_none"] and not value:
+            if field in fields.get("str_none", []) and not value:
                 processed_data[field] = ""
-            elif field in FIELDS_BY_TYPE["int_none"] and not value:
+            elif field in fields.get("int_none", []) and not value:
                 processed_data[field] = 0
-            elif field in FIELDS_BY_TYPE["bool"] + FIELDS_BY_TYPE["bool_none"]:
+            elif field in (
+                fields.get("bool", []) + fields.get("bool_none", [])
+            ):
                 processed_data[field] = bool(value in ("Y", "1", True))
             elif field in (
-                FIELDS_BY_TYPE["datetime"] + FIELDS_BY_TYPE["datetime_none"]
+                fields.get("datetime", []) + fields.get("datetime_none", [])
             ):
                 processed_data[field] = BitrixValidators.parse_datetime(value)
-            elif field in FIELDS_BY_TYPE["float"]:
+            elif field in fields.get("float", []):
                 processed_data[field] = BitrixValidators.normalize_float(value)
-            elif field in FIELDS_BY_TYPE["list"]:
+            elif field in fields.get("list", []):
                 processed_data[field] = BitrixValidators.normalize_list(value)
+            elif field in fields.get("list_in_int", []):
+                processed_data[field] = BitrixValidators.list_in_int(value)
         return processed_data
 
     @staticmethod
@@ -328,3 +344,13 @@ class BitrixValidators:
         if isinstance(v, list):
             return v
         return []
+
+    @staticmethod
+    def list_in_int(v: Any) -> int:
+        """Первое значение из списка"""
+        if v is None:
+            return 0
+        # Если значение уже является list
+        if isinstance(v, list) and v:
+            return int(v[0])
+        return 0
