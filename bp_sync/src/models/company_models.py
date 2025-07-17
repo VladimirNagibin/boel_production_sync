@@ -1,12 +1,12 @@
 from datetime import datetime
 from typing import TYPE_CHECKING
-from uuid import UUID
 
 from sqlalchemy import DateTime, ForeignKey
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .bases import CommunicationIntIdEntity, EntityType
+from .deal_documents import Contract
 from .references import (
     AdditionalResponsible,
     ContactType,
@@ -91,8 +91,8 @@ class Company(CommunicationIntIdEntity):
     leads: Mapped[list["Lead"]] = relationship(
         "Lead", back_populates="company"
     )
-    contacts: Mapped[list["Contact"]] = relationship(
-        "Contact", back_populates="company"
+    contracts: Mapped[list["Contract"]] = relationship(
+        "Contract", back_populates="company"
     )  # UF_CRM_1623833623*
 
     currency_id: Mapped[str | None] = mapped_column(
@@ -160,8 +160,8 @@ class Company(CommunicationIntIdEntity):
         "Employees", back_populates="companies"
     )
 
-    parent_company_id: Mapped[UUID | None] = mapped_column(
-        ForeignKey("companies.id"), nullable=True
+    parent_company_id: Mapped[int | None] = mapped_column(
+        ForeignKey("companies.external_id"), nullable=True
     )  # UF_CRM_1623833602 : Головная компания
     related_companies: Mapped[list["Company"]] = relationship(
         "Company",
@@ -171,7 +171,7 @@ class Company(CommunicationIntIdEntity):
     parent_company: Mapped["Company | None"] = relationship(
         "Company",
         back_populates="related_companies",
-        remote_side="[Company.id]",
+        remote_side="[Company.external_id]",
         # foreign_keys="[Company.parent_company_id]",
     )  # Отношение к головной компании
 
@@ -230,7 +230,6 @@ class Company(CommunicationIntIdEntity):
     "REG_ADDRESS_COUNTRY"
     "REG_ADDRESS_COUNTRY_CODE"
     "REG_ADDRESS_LOC_ADDR_ID"
-
 
     "UF_CRM_1598883049": str, Промывочная жидкость клиента
     "UF_CRM_1598883027": list, Пеногасители клиента
