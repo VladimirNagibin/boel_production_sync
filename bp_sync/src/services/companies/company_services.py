@@ -10,7 +10,7 @@ from .company_bitrix_services import (
 from .company_repository import CompanyRepository, get_company_repository
 
 
-class ContactClient(
+class CompanyClient(
     BaseEntityClient[
         CompanyDB,
         CompanyRepository,
@@ -43,5 +43,5 @@ def get_company_client(
         get_company_bitrix_client
     ),
     company_repo: CompanyRepository = Depends(get_company_repository),
-) -> ContactClient:
-    return ContactClient(company_bitrix_client, company_repo)
+) -> CompanyClient:
+    return CompanyClient(company_bitrix_client, company_repo)

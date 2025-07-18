@@ -30,6 +30,11 @@ class BaseRepository(Generic[ModelType, SchemaTypeCreate, SchemaTypeUpdate]):
     Список проверок по умолчанию в формате:
     (атрибут_схемы, модель_бд, поле_модели)
     """
+    _default_related_create: dict[str, tuple[Any, Any, bool]] = {}
+    """
+    Словарь проверок с созданием сущности по умолчанию в формате:
+    {атрибут_схемы: (клиент, модель_бд, проверка обязательна )}
+    """
 
     def __init__(self, session: AsyncSession):
         self.session = session
@@ -334,4 +339,46 @@ class BaseRepository(Generic[ModelType, SchemaTypeCreate, SchemaTypeUpdate]):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Related objects not found: {errors}",
+            )
+
+    def _get_related_create(self) -> dict[str, tuple[Any, Any, bool]]:
+        """Возвращает кастомные проверки для дочерних классов"""
+        return self._default_related_create
+
+    async def _create_or_update_related(
+        self,
+        data: SchemaTypeCreate | SchemaTypeUpdate,
+        additional_checks: Optional[dict[str, tuple[Any, Any, bool]]] = None,
+    ) -> None:
+        errors: list[str] = []
+        checks = self._get_related_create()
+
+        if additional_checks:
+            checks.update(additional_checks)
+
+        for field_name, (client, model, required) in checks.items():
+            value = getattr(data, field_name, None)
+
+            if not value:
+                if required:
+                    errors.append(f"Missing required field: {field_name}")
+                continue
+
+            try:
+                if not await self._check_object_exists(
+                    model, external_id=value
+                ):
+                    await client.import_from_bitrix(value)
+                else:
+                    await client.refresh_from_bitrix(value)
+            except Exception as e:
+                errors.append(
+                    f"{model.__name__} with id={value} failed: {str(e)}"
+                )
+
+        if errors:
+            logger.exception(f"Related objects processing failed: {errors}")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=", ".join(errors),
             )

@@ -41,16 +41,16 @@ class Currency(NameStrIdEntity):
 class MainActivity(NameIntIdEntity):
     """
     Основная деятельность клиента:
-    deal: lead: contact: company
-    147: 45: 75: 93: Дистрибьютор
-    149: 47: 77: 95: Домашний пивовар
-    151: 49: 79: 97: Завод
-    153: 51: 81: 99: Крафт
-    155: 53: 83: 101: Наш дилер
-    157: 55: 85: 103: Розница
-    159: 57: 87: 105: Сети
-    161: 59: 89: 107: Торговая компания
-    163: 61: 91: 109: Хорека
+    deal: lead: contact: company: invoice
+    147: 45: 75: 93: 411: Дистрибьютор
+    149: 47: 77: 95: 413: Домашний пивовар
+    151: 49: 79: 97: 415: Завод
+    153: 51: 81: 99: 417: Крафт
+    155: 53: 83: 101: 419: Наш дилер
+    157: 55: 85: 103: 421: Розница
+    159: 57: 87: 105: 423: Сети
+    161: 59: 89: 107: 425: Торговая компания
+    163: 61: 91: 109: 427: Хорека
     """
 
     __tablename__ = "main_activites"
@@ -62,6 +62,9 @@ class MainActivity(NameIntIdEntity):
     )
     ext_alt3_id: Mapped[int] = mapped_column(
         unique=True, comment="id для связи с компанией"
+    )
+    ext_alt4_id: Mapped[int] = mapped_column(
+        unique=True, comment="id для связи со счётом"
     )
     deals: Mapped[list["Deal"]] = relationship(
         "Deal", back_populates="main_activity"
@@ -167,14 +170,18 @@ class Source(NameStrIdEntity):
 class CreationSource(NameIntIdEntity):
     """
     Источники создания сделок:
-    499: Существующий клиент
-    501: Новый клиент
-    503: Шоурум
-    505: Интернет
+    deal: invoice
+    499: 535: Существующий клиент
+    501: 537: Новый клиент
+    503: 539: Шоурум
+    505: 541: Интернет
     # Ручная / Автоматическая
     """
 
     __tablename__ = "creation_sources"
+    ext_alt_id: Mapped[int] = mapped_column(
+        unique=True, comment="id для связи со счётом"
+    )
     deals: Mapped[list["Deal"]] = relationship(
         "Deal", back_populates="creation_source"
     )
@@ -183,11 +190,11 @@ class CreationSource(NameIntIdEntity):
 class InvoiceStage(NameStrIdEntity):
     """
     Стадии счетов:
-    1. N: новый
-    2. S: отправлен
-    3. 1: выгружен в 1С
-    4. P: успешный
-    5. D: не оплачен
+    1. DT31_1:N: новый
+    2. DT31_1:S: отправлен
+    # 3. 1: выгружен в 1С
+    3. DT31_1:P: успешный
+    4. DT31_1:D: не оплачен
     """
 
     __tablename__ = "invoice_stages"
@@ -220,13 +227,17 @@ class ShippingCompany(NameIntIdEntity):
 class Warehouse(NameIntIdEntity):
     """
     Склады
-    597: Нск
-    599: Спб
-    601: Кдр
-    603: Мск
+    deal: invoice
+    597: 481: Нск
+    599: 483: Спб
+    601: 485: Кдр
+    603: 487: Мск
     """
 
     __tablename__ = "warehouses"
+    ext_alt_id: Mapped[int] = mapped_column(
+        unique=True, comment="id для связи со счётом"
+    )
     deals: Mapped[list["Deal"]] = relationship(
         "Deal", back_populates="warehouse"
     )
@@ -251,12 +262,12 @@ class DefectType(NameIntIdEntity):
 class DealFailureReason(NameIntIdEntity):
     """
     Причины провала
-    deal:lead:contact:company
-    685:665:715:735: Нецелевой
-    687:667:717:737: Не проходим по ценам
-    689:669:719:739: Нет в наличии
-    691:671:721:741: Клиент не отвечает
-    693:673:723:743: Другое
+    deal:lead:contact:company: invoice
+    685:665:715:735: 763: Нецелевой
+    687:667:717:737: 765: Не проходим по ценам
+    689:669:719:739: 767: Нет в наличии
+    691:671:721:741: 769: Клиент не отвечает
+    693:673:723:743: 771: Другое
     """
 
     __tablename__ = "deal_failure_reasons"
@@ -268,6 +279,9 @@ class DealFailureReason(NameIntIdEntity):
     )
     ext_alt3_id: Mapped[int] = mapped_column(
         unique=True, comment="id для связи с компанией"
+    )
+    ext_alt4_id: Mapped[int] = mapped_column(
+        unique=True, comment="id для связи со счётом"
     )
     deals: Mapped[list["Deal"]] = relationship(
         "Deal", back_populates="deal_failure_reason"

@@ -18,6 +18,7 @@ from .references import (
 if TYPE_CHECKING:
     from .company_models import Company
     from .deal_models import Deal
+    from .invoice_models import Invoice
     from .lead_models import Lead
 
 
@@ -79,6 +80,10 @@ class Contact(CommunicationIntIdEntity):
     companies: Mapped[list["Company"]] = relationship(
         "Company", back_populates="contact"
     )
+    invoices: Mapped[list["Invoice"]] = relationship(
+        "Invoice", back_populates="contact"
+    )
+
     type_id: Mapped[str | None] = mapped_column(
         ForeignKey("contact_types.external_id")
     )  # TYPE_ID : Тип контакта
