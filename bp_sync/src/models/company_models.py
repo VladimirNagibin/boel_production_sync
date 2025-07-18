@@ -23,6 +23,7 @@ from .references import (
 if TYPE_CHECKING:
     from .contact_models import Contact
     from .deal_models import Deal
+    from .invoice_models import Invoice
     from .lead_models import Lead
 
 
@@ -94,6 +95,9 @@ class Company(CommunicationIntIdEntity):
     contracts: Mapped[list["Contract"]] = relationship(
         "Contract", back_populates="company"
     )  # UF_CRM_1623833623*
+    invoices: Mapped[list["Invoice"]] = relationship(
+        "Invoice", back_populates="company"
+    )
 
     currency_id: Mapped[str | None] = mapped_column(
         ForeignKey("currencies.external_id")
@@ -142,7 +146,7 @@ class Company(CommunicationIntIdEntity):
         "DealType", back_populates="companies"
     )
     shipping_company_id: Mapped[int | None] = mapped_column(
-        ForeignKey("shipping_companies.ext_alt_id")
+        ForeignKey("shipping_companies.external_id")
     )  # UF_CRM_1631941968 : Ид текущей фирмы отгрузки
     shipping_company: Mapped["ShippingCompany"] = relationship(
         "ShippingCompany", back_populates="companies"

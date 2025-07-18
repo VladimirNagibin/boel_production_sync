@@ -73,7 +73,7 @@ class CompanyRepository(
             ("main_activity_id", MainActivity, "ext_alt3_id"),
             ("deal_failure_reason_id", DealFailureReason, "ext_alt3_id"),
             ("deal_type_id", DealType, "external_id"),
-            ("shipping_company_id", ShippingCompany, "ext_alt_id"),
+            ("shipping_company_id", ShippingCompany, "external_id"),
             ("industry_id", Industry, "external_id"),
             ("employees_id", Emploees, "external_id"),
         ]

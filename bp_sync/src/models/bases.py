@@ -19,6 +19,7 @@ class EntityType(StrEnum):
     LEAD = "Lead"
     DEAL = "Deal"
     USER = "User"
+    INVOICE = "Invoice"
 
 
 class CommunicationType(StrEnum):
@@ -146,7 +147,7 @@ class UserRelationsMixin:
         )
 
 
-class MarketingMixin:
+class MarketingMixinUTM:
     utm_source: Mapped[str | None] = mapped_column(
         comment="Рекламная система"
     )  # UTM_SOURCE : Рекламная система (Yandex-Direct, Google-Adwords и др)
@@ -164,6 +165,9 @@ class MarketingMixin:
         comment="Тип трафика"
     )  # UTM_TERM : Условие поиска кампании. Например, ключевые слова
     # контекстной рекламы
+
+
+class MarketingMixin:
     mgo_cc_entry_id: Mapped[str | None] = mapped_column(
         comment="ID звонка"
     )  # UF_CRM_MGO_CC_ENTRY_ID : ID звонка
@@ -347,7 +351,7 @@ class AddressMixin:
     )  # ADDRESS_LOC_ADDR_ID : Идентификатор адреса из модуля местоположений
 
 
-class BusinessEntity(
+class BusinessEntityCore(
     IntIdEntity,
     TimestampsMixin,
     UserRelationsMixin,
@@ -365,18 +369,26 @@ class BusinessEntity(
     source_external: Mapped[str | None] = mapped_column(
         comment="Внешний источник"
     )  # UF_CRM_DCT_SOURCE : Источник внешний
-    originator_id: Mapped[str | None] = mapped_column(
-        comment="ID источника данных"
-    )  # ORIGINATOR_ID : Идентификатор источника данных
-    origin_id: Mapped[str | None] = mapped_column(
-        comment="ID элемента в источнике"
-    )  # ORIGIN_ID : Идентификатор элемента в источнике данных
     city: Mapped[str | None] = mapped_column(
         comment="Город"
     )  # UF_CRM_DCT_CITY : Город (населённый пункт)
     opened: Mapped[bool] = mapped_column(
         default=True, comment="Доступна для всех"
     )  # OPENED : Доступен для всех (Y/N)
+
+
+class BusinessEntity(
+    BusinessEntityCore,
+    MarketingMixinUTM,
+):
+    __abstract__ = True
+
+    originator_id: Mapped[str | None] = mapped_column(
+        comment="ID источника данных"
+    )  # ORIGINATOR_ID : Идентификатор источника данных
+    origin_id: Mapped[str | None] = mapped_column(
+        comment="ID элемента в источнике"
+    )  # ORIGIN_ID : Идентификатор элемента в источнике данных
 
 
 class CommunicationIntIdEntity(

@@ -8,12 +8,15 @@ from .bases import BusinessEntity, EntityType
 from .company_models import Company
 from .contact_models import Contact
 from .deal_documents import Billing
-from .enums import (
+from .enums import (  # TypePaymentEnum,; TypeShipmentEnum,
+    DualTypePayment,
+    DualTypePaymentEnum,
+    DualTypeShipment,
+    DualTypeShipmentEnum,
     ProcessingStatusEnum,
     StageSemanticEnum,
-    TypePaymentEnum,
-    TypeShipmentEnum,
 )
+from .invoice_models import Invoice
 from .lead_models import Lead
 from .references import (
     Category,
@@ -53,6 +56,7 @@ class Deal(BusinessEntity):
     def tablename(self) -> str:
         return self.__tablename__
 
+    # Идентификаторы и основные данные
     title: Mapped[str] = mapped_column(
         comment="Название сделки"
     )  # TITLE : Название
@@ -130,26 +134,34 @@ class Deal(BusinessEntity):
         ),
         comment="Семантика стадии",
     )  # STAGE_SEMANTIC_ID : Статусы стадии сделки
-    payment_type: Mapped[TypePaymentEnum] = mapped_column(
-        PgEnum(
-            TypePaymentEnum,
-            name="type_payment_enum",
-            create_type=False,
-            default=TypePaymentEnum.NOT_DEFINE,
-            server_default=0,
-        ),
+    # payment_type: Mapped[TypePaymentEnum] = mapped_column(
+    #    PgEnum(
+    #        TypePaymentEnum,
+    #        name="type_payment_enum",
+    #        create_type=False,
+    #        default=TypePaymentEnum.NOT_DEFINE,
+    #        server_default=0,
+    #    ),
+    #    comment="Тип оплаты",
+    # )  # UF_CRM_1632738315 : Тип оплаты счёта
+    payment_type: Mapped[DualTypePaymentEnum] = mapped_column(
+        DualTypePayment(value_type="deals"),
         comment="Тип оплаты",
     )  # UF_CRM_1632738315 : Тип оплаты счёта
-    shipping_type: Mapped[TypeShipmentEnum] = mapped_column(
-        PgEnum(
-            TypeShipmentEnum,
-            name="type_shipment_enum",
-            create_type=False,
-            default=TypeShipmentEnum.NOT_DEFINE,
-            server_default=0,
-        ),
-        comment="Тип отгрузки",
-    )  # UF_CRM_1655141630 : Тип отгрузки
+
+    # shipping_type: Mapped[TypeShipmentEnum] = mapped_column(
+    #    PgEnum(
+    #        TypeShipmentEnum,
+    #        name="type_shipment_enum",
+    #        create_type=False,
+    #        default=TypeShipmentEnum.NOT_DEFINE,
+    #        server_default=0,
+    #    ),
+    #    comment="Тип отгрузки",
+    # )  # UF_CRM_1655141630 : Тип отгрузки
+    shipment_type: Mapped[DualTypeShipmentEnum] = mapped_column(
+        DualTypeShipment(value_type="deals"), comment="Тип отгрузки для сделок"
+    )
     processing_status: Mapped[ProcessingStatusEnum] = mapped_column(
         PgEnum(
             ProcessingStatusEnum,
@@ -162,6 +174,9 @@ class Deal(BusinessEntity):
     )  # UF_CRM_1750571370 : Статус обработки
 
     # Связи с другими сущностями
+    invoices: Mapped[list["Invoice"]] = relationship(
+        "Invoice", back_populates="deal"
+    )
     currency_id: Mapped[str | None] = mapped_column(
         ForeignKey("currencies.external_id")
     )  # CURRENCY_ID : Ид валюты
@@ -229,7 +244,7 @@ class Deal(BusinessEntity):
         "DealStage", back_populates="current_deals"
     )
     shipping_company_id: Mapped[int | None] = mapped_column(
-        ForeignKey("shipping_companies.external_id")
+        ForeignKey("shipping_companies.ext_alt_id")
     )  # UF_CRM_1650617036 : Ид фирмы отгрузки
     shipping_company: Mapped["ShippingCompany"] = relationship(
         "ShippingCompany", back_populates="deals"

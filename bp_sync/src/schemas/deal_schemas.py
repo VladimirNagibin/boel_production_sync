@@ -4,11 +4,11 @@ from typing import Any, Optional, TypeVar
 
 from pydantic import Field, field_validator
 
-from models.enums import (
+from models.enums import (  # DualTypePayment,; DualTypeShipment,
+    DualTypePaymentEnum,
+    DualTypeShipmentEnum,
     ProcessingStatusEnum,
     StageSemanticEnum,
-    TypePaymentEnum,
-    TypeShipmentEnum,
 )
 
 from .base_schemas import BaseCreateSchema, BaseUpdateSchema, BitrixValidators
@@ -144,11 +144,11 @@ class DealCreate(BaseCreateSchema, BaseDeal):
     stage_semantic_id: StageSemanticEnum = Field(
         StageSemanticEnum.PROSPECTIVE, alias="STAGE_SEMANTIC_ID"
     )
-    payment_type: TypePaymentEnum = Field(
-        TypePaymentEnum.NOT_DEFINE, alias="UF_CRM_1632738315"
+    payment_type: DualTypePaymentEnum = Field(
+        DualTypePaymentEnum.NOT_DEFINE, alias="UF_CRM_1632738315"
     )
-    shipping_type: TypeShipmentEnum = Field(
-        TypeShipmentEnum.NOT_DEFINE, alias="UF_CRM_1655141630"
+    shipping_type: DualTypeShipmentEnum = Field(
+        DualTypeShipmentEnum.NOT_DEFINE, alias="UF_CRM_1655141630"
     )
     processing_status: ProcessingStatusEnum = Field(
         ProcessingStatusEnum.NOT_DEFINE, alias="UF_CRM_1750571370"
@@ -165,6 +165,7 @@ class DealCreate(BaseCreateSchema, BaseDeal):
             v, StageSemanticEnum, StageSemanticEnum.PROSPECTIVE
         )
 
+    """
     @field_validator("payment_type", mode="before")  # type: ignore[misc]
     @classmethod
     def convert_payment_type(cls, v: Any) -> TypePaymentEnum:
@@ -178,6 +179,7 @@ class DealCreate(BaseCreateSchema, BaseDeal):
         return BitrixValidators.convert_enum(
             v, TypeShipmentEnum, TypeShipmentEnum.NOT_DEFINE
         )
+    """
 
     @field_validator("processing_status", mode="before")  # type: ignore[misc]
     @classmethod
@@ -218,10 +220,10 @@ class DealUpdate(BaseUpdateSchema, BaseDeal):
     stage_semantic_id: StageSemanticEnum | None = Field(
         None, alias="STAGE_SEMANTIC_ID"
     )
-    payment_type: TypePaymentEnum | None = Field(
+    payment_type: DualTypePaymentEnum | None = Field(
         None, alias="UF_CRM_1632738315"
     )
-    shipping_type: TypeShipmentEnum | None = Field(
+    shipping_type: DualTypeShipmentEnum | None = Field(
         None, alias="UF_CRM_1655141630"
     )
     processing_status: ProcessingStatusEnum | None = Field(
@@ -239,6 +241,7 @@ class DealUpdate(BaseUpdateSchema, BaseDeal):
             v, StageSemanticEnum, StageSemanticEnum.PROSPECTIVE
         )
 
+    """
     @field_validator("payment_type", mode="before")  # type: ignore[misc]
     @classmethod
     def convert_payment_type(cls, v: Any) -> TypePaymentEnum:
@@ -252,6 +255,7 @@ class DealUpdate(BaseUpdateSchema, BaseDeal):
         return BitrixValidators.convert_enum(
             v, TypeShipmentEnum, TypeShipmentEnum.NOT_DEFINE
         )
+    """
 
     @field_validator("processing_status", mode="before")  # type: ignore[misc]
     @classmethod

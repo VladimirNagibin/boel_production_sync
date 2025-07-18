@@ -75,7 +75,7 @@ class DealRepository(BaseRepository[DealDB, DealCreate, DealUpdate]):
             ("source_id", Source, "external_id"),
             ("main_activity_id", MainActivity, "external_id"),
             ("lead_type_id", DealType, "external_id"),
-            ("shipping_company_id", ShippingCompany, "external_id"),
+            ("shipping_company_id", ShippingCompany, "ext_alt_id"),
             ("warehouse_id", Warehouse, "external_id"),
             ("creation_source_id", CreationSource, "external_id"),
             ("invoice_stage_id", InvoiceStage, "external_id"),
