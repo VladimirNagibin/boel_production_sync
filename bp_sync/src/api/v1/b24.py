@@ -64,9 +64,9 @@ async def check(
     token_storage: TokenStorage = Depends(get_token_storage),
 ) -> JSONResponse:
 
-    res3 = await user_bitrix_client.get(121)
+    # res3 = await user_bitrix_client.get(121)
 
-    # res = await contact_bitrix_client.get(13493)
+    res = await deal_bitrix_client.get(51463)
     # res2 = ContactUpdate(**res.model_dump(by_alias=True, exclude_unset=True))
     # print(du.to_bitrix_dict())
     # res3 = await contact_bitrix_client.update(res2)  # 60131)
@@ -87,7 +87,7 @@ async def check(
     #    select=["ID", "TITLE", "OPPORTUNITY"],
     #    start=0,
     # )
-    print(res3)
+    print(res)
     # await token_storage.delete_token("access_token")
     # if res3:
     #     deal_create = DealCreate(**res)

@@ -4,6 +4,7 @@ from typing import Any, ClassVar, Generic, Optional, Type, TypeVar, cast
 from uuid import UUID
 
 from pydantic import (
+    AliasPath,
     BaseModel,
     ConfigDict,
     Field,
@@ -22,7 +23,10 @@ class CommonFieldMixin(BaseModel):  # type: ignore[misc]
     updated_at: Optional[datetime] = Field(None)
     is_deleted_in_bitrix: Optional[bool] = Field(None)
 
-    external_id: Optional[int] = Field(None, alias="ID")
+    external_id: Optional[int] = Field(
+        None,
+        validation_alias=AliasPath("ID", "id"),
+    )
 
 
 class BaseFieldMixin:
@@ -35,43 +39,87 @@ class BaseFieldMixin:
 class TimestampsCreateMixin:
     """Миксин для временных меток"""
 
-    date_create: datetime = Field(..., alias="DATE_CREATE")
-    date_modify: datetime = Field(..., alias="DATE_MODIFY")
+    date_create: datetime = Field(
+        ...,
+        validation_alias=AliasPath("DATE_CREATE", "createdTime"),
+    )
+    date_modify: datetime = Field(
+        ...,
+        validation_alias=AliasPath("DATE_MODIFY", "updatedTime"),
+    )
     last_activity_time: Optional[datetime] = Field(
-        None, alias="LAST_ACTIVITY_TIME"
+        None,
+        validation_alias=AliasPath("LAST_ACTIVITY_TIME", "lastActivityTime"),
     )
     last_communication_time: Optional[datetime] = Field(
-        None, alias="LAST_COMMUNICATION_TIME"
+        None,
+        validation_alias=AliasPath(
+            "LAST_COMMUNICATION_TIME", "lastCommunicationTime"
+        ),
     )
 
 
 class TimestampsUpdateMixin:
     """Миксин для временных меток"""
 
-    date_create: Optional[datetime] = Field(None, alias="DATE_CREATE")
-    date_modify: Optional[datetime] = Field(None, alias="DATE_MODIFY")
+    date_create: Optional[datetime] = Field(
+        None,
+        validation_alias=AliasPath("DATE_CREATE", "createdTime"),
+    )
+    date_modify: Optional[datetime] = Field(
+        None,
+        validation_alias=AliasPath("DATE_MODIFY", "updatedTime"),
+    )
     last_activity_time: Optional[datetime] = Field(
-        None, alias="LAST_ACTIVITY_TIME"
+        None,
+        validation_alias=AliasPath("LAST_ACTIVITY_TIME", "lastActivityTime"),
     )
     last_communication_time: Optional[datetime] = Field(
-        None, alias="LAST_COMMUNICATION_TIME"
+        None,
+        validation_alias=AliasPath(
+            "LAST_COMMUNICATION_TIME", "lastCommunicationTime"
+        ),
     )
 
 
 class UserRelationsCreateMixin:
     """Миксин связанных пользователей"""
 
-    assigned_by_id: int = Field(..., alias="ASSIGNED_BY_ID")
-    created_by_id: int = Field(..., alias="CREATED_BY_ID")
-    modify_by_id: int = Field(..., alias="MODIFY_BY_ID")
-    last_activity_by: Optional[int] = Field(None, alias="LAST_ACTIVITY_BY")
+    assigned_by_id: int = Field(
+        ...,
+        validation_alias=AliasPath("ASSIGNED_BY_ID", "assignedById"),
+    )
+    created_by_id: int = Field(
+        ...,
+        validation_alias=AliasPath("CREATED_BY_ID", "createdBy"),
+    )
+    modify_by_id: int = Field(
+        ...,
+        validation_alias=AliasPath("MODIFY_BY_ID", "updatedBy"),
+    )
+    last_activity_by: Optional[int] = Field(
+        None,
+        validation_alias=AliasPath("LAST_ACTIVITY_BY", "lastActivityBy"),
+    )
 
 
 class UserRelationsUpdateMixin:
-    assigned_by_id: Optional[int] = Field(None, alias="ASSIGNED_BY_ID")
-    created_by_id: Optional[int] = Field(None, alias="CREATED_BY_ID")
-    modify_by_id: Optional[int] = Field(None, alias="MODIFY_BY_ID")
-    last_activity_by: Optional[int] = Field(None, alias="LAST_ACTIVITY_BY")
+    assigned_by_id: Optional[int] = Field(
+        None,
+        validation_alias=AliasPath("ASSIGNED_BY_ID", "assignedById"),
+    )
+    created_by_id: Optional[int] = Field(
+        None,
+        validation_alias=AliasPath("CREATED_BY_ID", "createdBy"),
+    )
+    modify_by_id: Optional[int] = Field(
+        None,
+        validation_alias=AliasPath("MODIFY_BY_ID", "updatedBy"),
+    )
+    last_activity_by: Optional[int] = Field(
+        None,
+        validation_alias=AliasPath("LAST_ACTIVITY_BY", "lastActivityBy"),
+    )
 
 
 class MarketingMixin:
@@ -131,18 +179,13 @@ class EntityAwareSchema(BaseModel):  # type: ignore[misc]
         )
 
 
-class BaseCreateSchema(
+class CoreCreateSchema(
     CommonFieldMixin,
-    BaseFieldMixin,
     TimestampsCreateMixin,
     UserRelationsCreateMixin,
-    MarketingMixin,
     EntityAwareSchema,
 ):
     """Базовая схема для создания сущностей"""
-
-    # external_id: int = Field(..., alias="ID")
-    opened: bool = Field(True, alias="OPENED")
 
     model_config = ConfigDict(
         use_enum_values=True,
@@ -152,18 +195,23 @@ class BaseCreateSchema(
     )
 
 
-class BaseUpdateSchema(
-    CommonFieldMixin,
+class BaseCreateSchema(
+    CoreCreateSchema,
     BaseFieldMixin,
+    MarketingMixin,
+):
+    """Базовая схема для создания сущностей"""
+
+    opened: bool = Field(True, alias="OPENED")
+
+
+class CoreUpdateSchema(
+    CommonFieldMixin,
     TimestampsUpdateMixin,
     UserRelationsUpdateMixin,
-    MarketingMixin,
     BaseModel,  # type: ignore[misc]
 ):
     """Базовая схема для обновления сущностей"""
-
-    # external_id: Optional[int] = Field(None, alias="ID")
-    opened: Optional[bool] = Field(None, alias="OPENED")
 
     model_config = ConfigDict(
         use_enum_values=True,
@@ -192,12 +240,17 @@ class BaseUpdateSchema(
                     "UF_CRM_61974C16DBFBF",
                 ):
                     result[alias] = "1" if value else "0"
+                elif alias == "webformId":
+                    result[alias] = 1 if value else 0
                 else:
                     # Булёвы значения -> "Y"/"N"
                     result[alias] = "Y" if value else "N"
             elif isinstance(value, datetime):
                 # Особый формат для last_communication_time
-                if alias == "LAST_COMMUNICATION_TIME":
+                if alias in (
+                    "LAST_COMMUNICATION_TIME",
+                    "lastCommunicationTime",
+                ):
                     result[alias] = value.strftime("%d.%m.%Y %H:%M:%S")
                 # Стандартный ISO формат для остальных дат
                 else:
@@ -215,6 +268,16 @@ class BaseUpdateSchema(
                 # Остальные значения без изменений (проверка ссылочных полей)
                 result[alias] = value
         return result
+
+
+class BaseUpdateSchema(
+    CoreUpdateSchema,
+    BaseFieldMixin,
+    MarketingMixin,
+):
+    """Базовая схема для обновления сущностей"""
+
+    opened: Optional[bool] = Field(None, alias="OPENED")
 
 
 class ListResponseSchema(BaseModel, Generic[T]):  # type: ignore[misc]
@@ -266,7 +329,7 @@ class BitrixValidators:
             elif field in (
                 fields.get("bool", []) + fields.get("bool_none", [])
             ):
-                processed_data[field] = bool(value in ("Y", "1", True))
+                processed_data[field] = bool(value in ("Y", "1", 1, True))
             elif field in (
                 fields.get("datetime", []) + fields.get("datetime_none", [])
             ):

@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, ForeignKey
 from sqlalchemy.dialects.postgresql import ENUM as PgEnum
@@ -7,7 +8,6 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .bases import BusinessEntityCore, EntityType
 from .company_models import Company
 from .contact_models import Contact
-from .deal_models import Deal
 from .enums import (
     DualTypePayment,
     DualTypePaymentEnum,
@@ -27,6 +27,9 @@ from .references import (
     Warehouse,
 )
 from .user_models import User
+
+if TYPE_CHECKING:
+    from .deal_models import Deal
 
 
 class Invoice(BusinessEntityCore):
@@ -80,14 +83,14 @@ class Invoice(BusinessEntityCore):
     check_repeat: Mapped[bool | None] = mapped_column(
         comment="Счёт проверка на повтор"
     )  # ufCrm_SMART_INVOICE_1651138836085 : Счёт проверка на повтор (Y/N)
-    uploaded: Mapped[bool | None] = mapped_column(
+    is_loaded: Mapped[bool | None] = mapped_column(
         default=False, comment="Выгружено в 1с"
     )  # webformId : Создано CRM-формой (1 - True)
 
     # Финансовые данные
-    opportunity: Mapped[float] = mapped_column(
+    opportunity: Mapped[float | None] = mapped_column(
         default=0.0, comment="Сумма сделки"
-    )  # OPPORTUNITY : Сумма
+    )  # opportunity : Сумма
     payment_grace_period: Mapped[int | None] = mapped_column(
         comment="Отсрочка платежа (дни)"
     )  # ufCrm_SMART_INVOICE_1656584515597 Отсрочка платежа в днях
