@@ -1,4 +1,4 @@
-from typing import Any, Type
+from typing import TYPE_CHECKING, Any, Type
 
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,9 +21,11 @@ from schemas.contact_schemas import ContactCreate, ContactUpdate
 from ..base_repositories.base_communication_repo import (
     EntityWithCommunicationsRepository,
 )
-from ..companies.company_services import CompanyClient, get_company_client
-from ..leads.lead_services import LeadClient, get_lead_client
 from ..users.user_services import UserClient, get_user_client
+
+if TYPE_CHECKING:
+    from ..companies.company_services import CompanyClient
+    from ..leads.lead_services import LeadClient
 
 
 class ContactRepository(
@@ -36,8 +38,8 @@ class ContactRepository(
     def __init__(
         self,
         session: AsyncSession,
-        company_client: CompanyClient,
-        lead_client: LeadClient,
+        company_client: "CompanyClient",
+        lead_client: "LeadClient",
         user_client: UserClient,
     ):
         super().__init__(session)
@@ -84,13 +86,14 @@ class ContactRepository(
 
 def get_contact_repository(
     session: AsyncSession = Depends(get_session),
-    company_client: CompanyClient = Depends(get_company_client),
-    lead_client: LeadClient = Depends(get_lead_client),
     user_client: UserClient = Depends(get_user_client),
 ) -> ContactRepository:
+    from ..companies.company_services import get_company_client
+    from ..leads.lead_services import get_lead_client
+
     return ContactRepository(
         session=session,
-        company_client=company_client,
-        lead_client=lead_client,
+        company_client=Depends(get_company_client),
+        lead_client=Depends(get_lead_client),
         user_client=user_client,
     )

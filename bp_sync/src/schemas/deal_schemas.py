@@ -1,10 +1,9 @@
 from datetime import datetime
-from enum import Enum
-from typing import Any, Optional, TypeVar
+from typing import Any, Optional
 
 from pydantic import Field, field_validator
 
-from models.enums import (  # DualTypePayment,; DualTypeShipment,
+from models.enums import (
     DualTypePaymentEnum,
     DualTypeShipmentEnum,
     ProcessingStatusEnum,
@@ -12,8 +11,6 @@ from models.enums import (  # DualTypePayment,; DualTypeShipment,
 )
 
 from .base_schemas import BaseCreateSchema, BaseUpdateSchema, BitrixValidators
-
-EnumT = TypeVar("EnumT", bound=Enum)
 
 
 class BaseDeal:
@@ -165,21 +162,19 @@ class DealCreate(BaseCreateSchema, BaseDeal):
             v, StageSemanticEnum, StageSemanticEnum.PROSPECTIVE
         )
 
-    """
     @field_validator("payment_type", mode="before")  # type: ignore[misc]
     @classmethod
-    def convert_payment_type(cls, v: Any) -> TypePaymentEnum:
+    def convert_payment_type(cls, v: Any) -> DualTypePaymentEnum:
         return BitrixValidators.convert_enum(
-            v, TypePaymentEnum, TypePaymentEnum.NOT_DEFINE
+            v, DualTypePaymentEnum, DualTypePaymentEnum.NOT_DEFINE
         )
 
     @field_validator("shipping_type", mode="before")  # type: ignore[misc]
     @classmethod
-    def convert_shipping_type(cls, v: Any) -> TypeShipmentEnum:
+    def convert_shipping_type(cls, v: Any) -> DualTypeShipmentEnum:
         return BitrixValidators.convert_enum(
-            v, TypeShipmentEnum, TypeShipmentEnum.NOT_DEFINE
+            v, DualTypeShipmentEnum, DualTypeShipmentEnum.NOT_DEFINE
         )
-    """
 
     @field_validator("processing_status", mode="before")  # type: ignore[misc]
     @classmethod
@@ -241,21 +236,19 @@ class DealUpdate(BaseUpdateSchema, BaseDeal):
             v, StageSemanticEnum, StageSemanticEnum.PROSPECTIVE
         )
 
-    """
     @field_validator("payment_type", mode="before")  # type: ignore[misc]
     @classmethod
-    def convert_payment_type(cls, v: Any) -> TypePaymentEnum:
+    def convert_payment_type(cls, v: Any) -> DualTypePaymentEnum:
         return BitrixValidators.convert_enum(
-            v, TypePaymentEnum, TypePaymentEnum.NOT_DEFINE
+            v, DualTypePaymentEnum, DualTypePaymentEnum.NOT_DEFINE
         )
 
     @field_validator("shipping_type", mode="before")  # type: ignore[misc]
     @classmethod
-    def convert_shipping_type(cls, v: Any) -> TypeShipmentEnum:
+    def convert_shipping_type(cls, v: Any) -> DualTypeShipmentEnum:
         return BitrixValidators.convert_enum(
-            v, TypeShipmentEnum, TypeShipmentEnum.NOT_DEFINE
+            v, DualTypeShipmentEnum, DualTypeShipmentEnum.NOT_DEFINE
         )
-    """
 
     @field_validator("processing_status", mode="before")  # type: ignore[misc]
     @classmethod

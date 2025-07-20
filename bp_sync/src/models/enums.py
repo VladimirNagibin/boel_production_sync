@@ -57,6 +57,14 @@ class DualTypePaymentEnum(Enum):
     def invoice_value(self) -> int:
         return self.value[1]
 
+    @classmethod
+    def _missing_(cls, value: object) -> "DualTypePaymentEnum":
+        if isinstance(value, int):
+            for item in cls:
+                if value == item.deal_value or value == item.invoice_value:
+                    return item
+        return cls.NOT_DEFINE
+
 
 class DualTypePayment(
     TypeDecorator[DualTypePaymentEnum | None]  # type: ignore[misc]
@@ -137,6 +145,14 @@ class DualTypeShipmentEnum(Enum):
     @property
     def invoice_value(self) -> int:
         return self.value[1]
+
+    @classmethod
+    def _missing_(cls, value: object) -> "DualTypeShipmentEnum":
+        if isinstance(value, int):
+            for item in cls:
+                if value == item.deal_value or value == item.invoice_value:
+                    return item
+        return cls.NOT_DEFINE
 
 
 class DualTypeShipment(
