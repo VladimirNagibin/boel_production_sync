@@ -2,33 +2,50 @@ from datetime import date
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from sqlalchemy import Date, ForeignKey
+from sqlalchemy import Date, Float, ForeignKey
+from sqlalchemy.dialects.postgresql import ENUM as PgEnum
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from db.postgres import Base
 
+from .bases import NameStrIdEntity
+from .enums import MethodPaymentEnum
 from .references import ShippingCompany
 
 if TYPE_CHECKING:
     from .company_models import Company
-    from .deal_models import Deal  # Типизация только при проверке типов
+    from .delivery_note_models import DeliveryNote
 
 
-class Billing(Base):
+class Billing(NameStrIdEntity):
     """
     Платежи
     """
 
     __tablename__ = "billings"
-    type_bill: Mapped[str] = mapped_column(comment="Тип платежа: нал/безнал")
-    amount: Mapped[float] = mapped_column(comment="Сумма платежа")
+    payment_method: Mapped[MethodPaymentEnum] = mapped_column(
+        PgEnum(
+            MethodPaymentEnum,
+            name="payment_method_enum",
+            create_type=False,
+            default=MethodPaymentEnum.NOT_DEFINE,
+            server_default=MethodPaymentEnum.NOT_DEFINE.value,
+        ),
+        comment="форма оплаты",
+    )
+    amount: Mapped[float] = mapped_column(Float, comment="Сумма платежа")
     date_payment: Mapped[date] = mapped_column(
         Date,
         comment="Дата платежа",
     )
-    deal_id: Mapped[UUID] = mapped_column(ForeignKey("deals.id"))
-    deal: Mapped["Deal"] = relationship("Deal", back_populates="billings")
+    number: Mapped[str]
+    delivery_note_id: Mapped[str] = mapped_column(
+        ForeignKey("delivery_notes.external_id")
+    )
+    delivery_note: Mapped["DeliveryNote"] = relationship(
+        "DeliveryNote", back_populates="billings"
+    )
 
 
 class Contract(Base):

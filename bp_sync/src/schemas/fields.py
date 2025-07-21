@@ -362,3 +362,7 @@ FIELDS_INVOICE: dict[str, Any] = {
         "ufCrm_62B53CC5A2EDF",  # "shipping_type",
     ],
 }
+
+FIELDS_DELIVERY: dict[str, Any] = {}
+
+FIELDS_BILLING: dict[str, Any] = {}

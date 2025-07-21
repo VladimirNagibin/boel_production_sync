@@ -1,12 +1,12 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import ConfigDict, Field
 
 from .base_schemas import CommonFieldMixin, EntityAwareSchema
 from .fields import FIELDS_USER
 
 
-class BaseUser(CommonFieldMixin, EntityAwareSchema):
+class BaseUser(CommonFieldMixin):
     """
     Общие поля создания и обновления с алиасами для соответствия
     SQLAlchemy модели
@@ -51,7 +51,7 @@ class BaseUser(CommonFieldMixin, EntityAwareSchema):
     )
 
 
-class UserCreate(BaseUser, CommonFieldMixin, EntityAwareSchema):
+class UserCreate(BaseUser, EntityAwareSchema):
     """Модель для создания пользователей"""
 
     # external_id: int = Field(..., alias="ID")
@@ -61,7 +61,7 @@ class UserCreate(BaseUser, CommonFieldMixin, EntityAwareSchema):
     is_online: bool = Field(False, alias="IS_ONLINE")
 
 
-class UserUpdate(BaseUser, CommonFieldMixin, BaseModel):  # type: ignore[misc]
+class UserUpdate(BaseUser):
     """Модель для частичного обновления пользователей"""
 
     # external_id: int | None = Field(None, alias="ID")
