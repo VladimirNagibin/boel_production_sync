@@ -15,7 +15,9 @@ class UserBitrixClient:
         self.bitrix_client = bitrix_client
 
     @handle_bitrix_errors()
-    async def get(self, entity_id: int) -> UserCreate:
+    async def get(
+        self, entity_id: int, entity_type_id: int | None = None
+    ) -> UserCreate:
         """Получение сущности по ID"""
         logger.debug(f"Fetching {self.entity_name} ID={entity_id}")
         response = await self.bitrix_client.call_api(
