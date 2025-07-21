@@ -11,7 +11,9 @@ class BitrixClientProtocol(Protocol):
     """Протокол для клиента Bitrix API"""
 
     @abstractmethod
-    async def get(self, entity_id: int) -> Any:
+    async def get(
+        self, entity_id: int, entity_type_id: int | None = None
+    ) -> Any:
         """Получает сущность по ID из Bitrix"""
         ...
 
@@ -68,13 +70,17 @@ class BaseEntityClient(ABC, Generic[T, R, C]):
         """Репозиторий для работы с базой данных"""
         pass
 
-    async def import_from_bitrix(self, entity_id: int) -> T:
+    async def import_from_bitrix(
+        self, entity_id: int, entity_type_id: int | None = None
+    ) -> T:
         """Импортирует сущность из Bitrix в базу данных"""
         logger.info(
             f"Starting {self.entity_name} import from Bitrix",
             extra={f"{self.entity_name}_id": entity_id},
         )
-        entity_data = await self.bitrix_client.get(entity_id)
+        entity_data = await self.bitrix_client.get(
+            entity_id, entity_type_id=entity_type_id
+        )
         logger.debug(
             f"Retrieved {self.entity_name} data from Bitrix",
             extra={
@@ -89,14 +95,18 @@ class BaseEntityClient(ABC, Generic[T, R, C]):
         )
         return entity_db  # type: ignore[no-any-return]
 
-    async def refresh_from_bitrix(self, entity_id: int) -> T:
+    async def refresh_from_bitrix(
+        self, entity_id: int, entity_type_id: int | None = None
+    ) -> T:
         """Обновляет данные сущности из Bitrix в базе данных"""
         logger.info(
             f"Refreshing {self.entity_name} data from Bitrix",
             extra={f"{self.entity_name}_id": entity_id},
         )
         try:
-            entity_data = await self.bitrix_client.get(entity_id)
+            entity_data = await self.bitrix_client.get(
+                entity_id, entity_type_id=entity_type_id
+            )
             # test
             # from schemas.lead_schemas import LeadUpdate
             # from schemas.deal_schemas import DealUpdate
