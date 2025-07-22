@@ -1,5 +1,4 @@
 from typing import TYPE_CHECKING
-from uuid import UUID
 
 from sqlalchemy import ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -13,6 +12,16 @@ if TYPE_CHECKING:
     from .deal_models import Deal
     from .lead_models import Lead
     from .user_models import User
+
+
+CURRENCY_VALUES = [
+    ("Российский рубль", "RUB", 1.0, 1),
+    ("Доллар США", "USD", 78.4839, 1),
+    ("Евро", "EUR", 89.8380, 1),
+    ("Гривна", "UAH", 8.8277, 10),
+    ("Белорусский рубль", "BYN", 26.3696, 1),
+    ("Тенге", "KZT", 15.1277, 100),
+]
 
 
 class Currency(NameStrIdEntity):
@@ -36,6 +45,19 @@ class Currency(NameStrIdEntity):
     leads: Mapped[list["Lead"]] = relationship(
         "Lead", back_populates="currency"
     )
+
+
+MAIN_ACTIVITY_VALUES = [
+    ("Дистрибьютор", 147, 45, 75, 93, 411),
+    ("Домашний пивовар", 149, 47, 77, 95, 413),
+    ("Завод", 151, 49, 79, 97, 415),
+    ("Крафт", 153, 51, 81, 99, 417),
+    ("Наш дилер", 155, 53, 83, 101, 419),
+    ("Розница", 157, 55, 85, 103, 421),
+    ("Сети", 159, 57, 87, 105, 423),
+    ("Торговая компания", 161, 59, 89, 107, 425),
+    ("Хорека", 163, 61, 91, 109, 427),
+]
 
 
 class MainActivity(NameIntIdEntity):
@@ -77,6 +99,19 @@ class MainActivity(NameIntIdEntity):
     )
 
 
+DEAL_TYPE_VALUES = [
+    ("Продажа BOEL", "1"),
+    ("Продажа Колонны", "3"),
+    ("Интернет продажа", "5"),
+    ("BOEL Engineering", "4"),
+    ("Гарантийное обслуживание", "SALE"),
+    ("Сервис", "6"),
+    ("ВЭД", "7"),
+    ("Входящие", "UC_76MJ0I"),
+    ("Исходящие", "UC_FSOZEI"),
+]
+
+
 class DealType(NameStrIdEntity):
     """
     Типы сделок:
@@ -99,6 +134,19 @@ class DealType(NameStrIdEntity):
     )
 
 
+DEAL_STAGE_VALUES = [
+    ("Не разобрано", "NEW", 1),
+    ("Выявление потребности", "PREPAYMENT_INVOICE", 2),
+    ("Заинтересован", "PREPARATION", 3),
+    ("Согласование условий договор", "EXECUTING", 4),
+    ("Выставление счёта", "FINAL_INVOICE", 5),
+    ("На отгрузку", "1", 6),
+    ("Выиграна", "WON", 7),
+    ("Проиграна", "LOSE", 8),
+    ("Анализ проигрыша", "APOLOGY", 9),
+]
+
+
 class DealStage(NameStrIdEntity):
     """
     Стадии сделок:
@@ -114,13 +162,20 @@ class DealStage(NameStrIdEntity):
     """
 
     __tablename__ = "deal_stages"
-    order: Mapped[int] = mapped_column(
+    sort_order: Mapped[int] = mapped_column(
         unique=True, comment="Порядковый номер стадии"
     )
     deals: Mapped[list["Deal"]] = relationship("Deal", back_populates="stage")
     current_deals: Mapped[list["Deal"]] = relationship(
         "Deal", back_populates="current_stage"
     )
+
+
+CATEGORY_VALUES = [
+    ("общее направление", 0),
+    ("сервис", 1),
+    ("отгрузка со склада", 2),
+]
 
 
 class Category(NameIntIdEntity):
@@ -135,6 +190,30 @@ class Category(NameIntIdEntity):
     deals: Mapped[list["Deal"]] = relationship(
         "Deal", back_populates="category"
     )
+
+
+SOURCE_VALUES = [
+    ("Существующий клиент", "PARTNER"),
+    ("Новый клиент", "19"),
+    ("Звонок", "CALL"),
+    ("Веб-сайт BOELSHOP", "WEB"),
+    ("OZON", "16"),
+    ("WILDBERRIES", "17"),
+    ("ЮЛА", "7"),
+    ("АВИТО", "5"),
+    ("Avito - BOEL SHOP AVITO", "9|AVITO"),
+    ("Интернет-магазин", "STORE"),
+    ("Другое", "UC_7VUX6L"),
+    ("ВКонтакте - Открытая линия", "1|VK"),
+    ("Обратный звонок", "CALLBACK"),
+    ("CRM-форма", "WEBFORM"),
+    ("Алиэкспресс", "12"),
+    ("Генератор продаж", "RC_GENERATOR"),
+    ("Шоп и периферия", "UC_2THEVX"),
+    ("Повторные продажи", "REPEAT_SALE"),
+    # ("Шоурум", "20"),
+    # ("Интернет", "21"),
+]
 
 
 class Source(NameStrIdEntity):
@@ -167,6 +246,14 @@ class Source(NameStrIdEntity):
     leads: Mapped[list["Lead"]] = relationship("lead", back_populates="source")
 
 
+CREATION_SOURCE_VALUES = [
+    ("Существующий клиент", 499, 535),
+    ("Новый клиент", 501, 537),
+    ("Шоурум", 503, 539),
+    ("Интернет", 505, 541),
+]
+
+
 class CreationSource(NameIntIdEntity):
     """
     Источники создания сделок:
@@ -187,6 +274,14 @@ class CreationSource(NameIntIdEntity):
     )
 
 
+INVOICE_STAGE_VALUES = [
+    ("новый", "DT31_1:N", 1),
+    ("отправлен", "DT31_1:S", 2),
+    ("успешный", "DT31_1:P", 3),
+    ("не оплачен", "DT31_1:D", 4),
+]
+
+
 class InvoiceStage(NameStrIdEntity):
     """
     Стадии счетов:
@@ -198,10 +293,17 @@ class InvoiceStage(NameStrIdEntity):
     """
 
     __tablename__ = "invoice_stages"
-    order: Mapped[int] = mapped_column(unique=True, comment="Порядковый номер")
+    sort_order: Mapped[int] = mapped_column(
+        unique=True, comment="Порядковый номер"
+    )
     deals: Mapped[list["Deal"]] = relationship(
         "Deal", back_populates="invoice_stage"
     )
+
+
+SHIPPING_COMPANY_VALUES = [
+    ("Системы", 8923, 439),
+]
 
 
 class ShippingCompany(NameIntIdEntity):
@@ -224,6 +326,14 @@ class ShippingCompany(NameIntIdEntity):
     )
 
 
+WAREHOUSE_VALUES = [
+    ("Нск", 597, 481),
+    ("Спб", 599, 483),
+    ("Кдр", 601, 485),
+    ("Мск", 603, 487),
+]
+
+
 class Warehouse(NameIntIdEntity):
     """
     Склады
@@ -243,6 +353,16 @@ class Warehouse(NameIntIdEntity):
     )
 
 
+DEFECT_TYPE_VALUES = [
+    ("Некомплектная поставка", 527),
+    ("Некачественная сборка/проверка", 529),
+    ("Дефект материала", 553),
+    ("Дефект изготовления комплектующих", 555),
+    ("Транспортное повреждение", 557),
+    ("Негарантийная поломка", 559),
+]
+
+
 class DefectType(NameIntIdEntity):
     """
     Виды неисправностей:
@@ -255,8 +375,17 @@ class DefectType(NameIntIdEntity):
     """
 
     __tablename__ = "defect_types"
-    deal_id: Mapped[UUID] = mapped_column(ForeignKey("deals.id"))
-    deal: Mapped["Deal"] = relationship("Deal", back_populates="defects")
+    # deal_id: Mapped[UUID] = mapped_column(ForeignKey("deals.id"))
+    # deal: Mapped["Deal"] = relationship("Deal", back_populates="defects")
+
+
+DEAL_FAILURE_REASON_VALUES = [
+    ("Нецелевой", 685, 665, 715, 735, 763),
+    ("Не проходим по ценам", 687, 667, 717, 737, 765),
+    ("Нет в наличии", 689, 669, 719, 739, 767),
+    ("Клиент не отвечает", 691, 671, 721, 741, 769),
+    ("Другое", 693, 673, 723, 743, 771),
+]
 
 
 class DealFailureReason(NameIntIdEntity):
@@ -294,6 +423,17 @@ class DealFailureReason(NameIntIdEntity):
     )
 
 
+LEAD_STATUS_VALUES = [
+    ("Входящий лид", "NEW", 1),
+    ("Зависшие лиды", "UC_2N339H", 2),
+    ("Идентификация", "1", 3),
+    ("Квалификация", "IN_PROCESS", 4),
+    ("В разработке", "2", 5),
+    ("Качественный лид", "CONVERTED", 6),
+    ("Некачественный лид", "JUNK", 7),
+]
+
+
 class LeadStatus(NameStrIdEntity):
     """
     Стадии счетов:
@@ -307,10 +447,23 @@ class LeadStatus(NameStrIdEntity):
     """
 
     __tablename__ = "lead_statuses"
-    order: Mapped[int] = mapped_column(unique=True, comment="Порядковый номер")
+    sort_order: Mapped[int] = mapped_column(
+        unique=True, comment="Порядковый номер"
+    )
     leads: Mapped[list["Deal"]] = relationship(
         "Lead", back_populates="lead_status"
     )
+
+
+CONTACT_TYPE_VALUES = [
+    ("Клиенты", "CLIENT"),
+    ("Клиент", "CUSTOMER"),
+    ("Конкурент", "COMPETITOR"),
+    ("Поставщики", "SUPPLIER"),
+    ("Партнёры", "PARTNER"),
+    ("Другое", "OTHER"),
+    ("Не целевой", "1"),
+]
 
 
 class ContactType(NameStrIdEntity):
@@ -350,6 +503,22 @@ class AdditionalResponsible:
     )
 
 
+INDUSTRY_VALUES = [
+    ("Информационные технологии", "IT"),
+    ("Телекоммуникации и связь", "TELECOM"),
+    ("Производство", "MANUFACTURING"),
+    ("Банковские услуги", "BANKING"),
+    ("Консалтинг", "CONSULTING"),
+    ("Финансы", "FINANCE"),
+    ("Правительство", "GOVERNMENT"),
+    ("Доставка", "DELIVERY"),
+    ("Развлечения", "ENTERTAINMENT"),
+    ("Не для получения прибыли", "NOTPROFIT"),
+    ("Другое", "OTHER"),
+    ("Торговля", "1"),
+]
+
+
 class Industry(NameStrIdEntity):
     """
     Сфера деятельности:
@@ -371,6 +540,14 @@ class Industry(NameStrIdEntity):
     companies: Mapped[list["Company"]] = relationship(
         "Company", back_populates="industry"
     )
+
+
+EMPLORRS_VALUES = [
+    ("менее 50", "EMPLOYEES_1"),
+    ("50-250", "EMPLOYEES_2"),
+    ("250-500", "EMPLOYEES_3"),
+    ("более 500", "EMPLOYEES_4"),
+]
 
 
 class Emploees(NameStrIdEntity):

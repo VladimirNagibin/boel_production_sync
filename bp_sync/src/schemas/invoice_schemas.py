@@ -40,7 +40,6 @@ class BaseInvoice:
     )  # Выгружено в 1с (Создано CRM-формой) 1 - True
 
     # Финансовые данные
-    opportunity: float | None = Field(None, alias="opportunity")
     payment_grace_period: int | None = Field(
         None, alias="ufCrm_SMART_INVOICE_1656584515597"
     )
@@ -134,6 +133,9 @@ class InvoiceCreate(BaseInvoice, CoreCreateSchema):
     # Идентификаторы и основные данные
     title: str = Field(..., alias="title")
 
+    # Финансовые данные
+    opportunity: float = Field(0.0, alias="opportunity")
+
     # Статусы и флаги
     is_manual_opportunity: bool = Field(False, alias="isManualOpportunity")
     opened: bool = Field(True, alias="opened")
@@ -177,6 +179,9 @@ class InvoiceUpdate(BaseInvoice, CoreUpdateSchema):
 
     # Идентификаторы и основные данные
     title: str | None = Field(None, alias="title")
+
+    # Финансовые данные
+    opportunity: float | None = Field(None, alias="opportunity")
 
     # Статусы и флаги
     is_manual_opportunity: bool | None = Field(

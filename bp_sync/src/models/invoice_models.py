@@ -8,6 +8,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .bases import BusinessEntityCore, EntityType
 from .company_models import Company
 from .contact_models import Contact
+from .deal_documents import Billing
 from .enums import (
     DualTypePayment,
     DualTypePaymentEnum,
@@ -88,7 +89,7 @@ class Invoice(BusinessEntityCore):
     )  # webformId : Создано CRM-формой (1 - True)
 
     # Финансовые данные
-    opportunity: Mapped[float | None] = mapped_column(
+    opportunity: Mapped[float] = mapped_column(
         default=0.0, comment="Сумма сделки"
     )  # opportunity : Сумма
     payment_grace_period: Mapped[int | None] = mapped_column(
@@ -244,6 +245,51 @@ class Invoice(BusinessEntityCore):
     yaclientid: Mapped[str | None] = mapped_column(
         comment="yaclientid"
     )  # ufCrm_67AC443A81F1C : yaclientid
+
+    billings: Mapped[list["Billing"]] = relationship(
+        "Billing", back_populates="invoice"
+    )  # ufCrm_SMART_INVOICE_1651116689037* : Счет платежи
+
+    @property
+    def total_paid(self) -> float:
+        """Общая сумма оплаченных платежей"""
+        return (
+            sum(billing.amount for billing in self.billings)
+            if self.billings
+            else 0.0
+        )
+
+    @property
+    def paid_status(self) -> str:
+        """Статус оплаты:
+        - 'paid' - полностью оплачена
+        - 'partial' - частично оплачена
+        - 'unpaid' - не оплачена
+        """
+        total_paid = self.total_paid
+
+        if abs(total_paid - self.opportunity) < 0.01:
+            return "paid"
+        elif total_paid > 0:
+            return "partial"
+        else:
+            return "unpaid"
+
+    @property
+    def paid_percentage(self) -> float:
+        """Процент оплаты от общей суммы"""
+        if self.opportunity > 0:
+            return float(
+                min(
+                    100.0, round((self.total_paid / self.opportunity) * 100, 2)
+                )
+            )
+        return 0.0
+
+    @property
+    def payment_diff(self) -> float:
+        """Оставшаяся сумма к оплате"""
+        return float(max(0.0, self.opportunity - self.total_paid))
 
     """ remaining fields:
     contactIds		{8}	list crm_contact_id	Контакты

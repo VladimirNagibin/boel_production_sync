@@ -15,7 +15,7 @@ from .references import ShippingCompany
 
 if TYPE_CHECKING:
     from .company_models import Company
-    from .delivery_note_models import DeliveryNote
+    from .invoice_models import Invoice
 
 
 class Billing(NameStrIdEntity):
@@ -40,11 +40,9 @@ class Billing(NameStrIdEntity):
         comment="Дата платежа",
     )
     number: Mapped[str]
-    delivery_note_id: Mapped[str] = mapped_column(
-        ForeignKey("delivery_notes.external_id")
-    )
-    delivery_note: Mapped["DeliveryNote"] = relationship(
-        "DeliveryNote", back_populates="billings"
+    invoice_id: Mapped[int] = mapped_column(ForeignKey("invoices.external_id"))
+    invoice: Mapped["Invoice"] = relationship(
+        "Invoice", back_populates="billings"
     )
 
 
