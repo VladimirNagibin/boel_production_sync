@@ -70,6 +70,9 @@ class NameStrIdEntity(Base):
     )
     name: Mapped[str]
 
+    def __str__(self) -> str:
+        return str(self.name)
+
 
 class TimestampsMixin:
     date_create: Mapped[datetime] = mapped_column(
@@ -88,6 +91,15 @@ class TimestampsMixin:
 
 class UserRelationsMixin:
     """Миксин для отношений с пользователями"""
+
+    # @property
+    # def tablename1(cls) -> str:
+    #    return "companies"
+
+    @property
+    def entity_type1(cls) -> str:
+        # return "Company"
+        raise NotImplementedError("Должно быть реализовано в дочернем классе")
 
     assigned_by_id: Mapped[int] = mapped_column(
         ForeignKey("users.external_id"),
@@ -118,32 +130,39 @@ class UserRelationsMixin:
     def assigned_user(cls) -> Mapped["User"]:
         return relationship(
             "User",
-            foreign_keys=f"{cls.entity_type}.assigned_by_id",
-            back_populates=f"assigned_{cls.tablename}",
+            foreign_keys=[cls.assigned_by_id],
+            back_populates=(
+                f"assigned_{cls.__tablename__}"  # type: ignore[attr-defined]
+            ),
         )
 
     @declared_attr  # type: ignore[misc]
     def created_user(cls) -> Mapped["User"]:
         return relationship(
             "User",
-            foreign_keys=f"{cls.entity_type}.created_by_id",
-            back_populates=f"created_{cls.tablename}",
+            foreign_keys=[cls.created_by_id],
+            back_populates=(
+                f"created_{cls.__tablename__}"  # type: ignore[attr-defined]
+            ),
         )
 
     @declared_attr  # type: ignore[misc]
     def modify_user(cls) -> Mapped["User"]:
         return relationship(
             "User",
-            foreign_keys=f"{cls.entity_type}.modify_by_id",
-            back_populates=f"modify_{cls.tablename}",
+            foreign_keys=[cls.modify_by_id],
+            back_populates=(
+                f"modify_{cls.__tablename__}"  # type: ignore[attr-defined]
+            ),
         )
 
     @declared_attr  # type: ignore[misc]
     def last_activity_user(cls) -> Mapped["User"]:
+        tablename = cls.__tablename__  # type: ignore[attr-defined]
         return relationship(
             "User",
-            foreign_keys=f"{cls.entity_type}.last_activity_by",
-            back_populates=f"last_activity_{cls.tablename}",
+            foreign_keys=[cls.last_activity_by],
+            back_populates=(f"last_activity_{tablename}"),
         )
 
 
@@ -215,13 +234,17 @@ class CommunicationMixin:
 
     @declared_attr  # type: ignore[misc]
     def communications(cls) -> Mapped[list["CommunicationChannel"]]:
+        condition = (
+            "and_("
+            "foreign(CommunicationChannel.entity_type) == '{}',"
+            "foreign(CommunicationChannel.entity_id) == {}.external_id"
+            ")"
+        ).format(
+            cls.__name__, cls.__name__  # type: ignore[attr-defined]
+        )
         return relationship(
             "CommunicationChannel",
-            primaryjoin=(
-                "and_("
-                "foreign(CommunicationChannel.entity_type) == cls.entity_type,"
-                "foreign(CommunicationChannel.entity_id) == cls.external_id)"
-            ),
+            primaryjoin=condition,
             viewonly=True,
             lazy="selectin",
             overlaps="communications",

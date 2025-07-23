@@ -6,20 +6,18 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.responses import ORJSONResponse
 from redis.asyncio import Redis
+from sqladmin import Admin
 
-# from admin.admin_models import ProductAdmin, ProductHSAdmin
-# from admin.authenticate import BasicAuthBackend
+from admin.admin_models import register_models
+from admin.authenticate import BasicAuthBackend
+
 # from api.v1.health import health_router
 # from api.v1.products import product_router
 from api.v1.b24 import b24_router
 from core.logger import LOGGING, logger
 from core.settings import settings
 from db import redis
-
-# from sqladmin import Admin
-
-
-# from db.postgres import engine
+from db.postgres import engine
 
 # from cryptography.fernet import Fernet
 # new_key = Fernet.generate_key()
@@ -65,10 +63,9 @@ app = FastAPI(
 app.include_router(b24_router, prefix="/api/v1/b24", tags=["b24"])
 # app.include_router(health_router, prefix="/api/v1/health", tags=["health"])
 # app.include_router(producths_router, prefix="/api/v1/hs", tags=["hs"])
-# auth_backend = BasicAuthBackend()
-# admin = Admin(app, engine, authentication_backend=auth_backend)
-# admin.add_view(ProductAdmin)
-# admin.add_view(ProductHSAdmin)
+auth_backend = BasicAuthBackend()
+admin = Admin(app, engine, authentication_backend=auth_backend)
+register_models(admin)
 
 if __name__ == "__main__":
     logger.info("Start bp_sync.")

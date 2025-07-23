@@ -10,6 +10,8 @@ if TYPE_CHECKING:
     from .contact_models import Contact
     from .deal_documents import Contract
     from .deal_models import Deal
+    from .delivery_note_models import DeliveryNote
+    from .invoice_models import Invoice
     from .lead_models import Lead
     from .user_models import User
 
@@ -44,6 +46,12 @@ class Currency(NameStrIdEntity):
     )
     leads: Mapped[list["Lead"]] = relationship(
         "Lead", back_populates="currency"
+    )
+    companies: Mapped[list["Company"]] = relationship(
+        "Company", back_populates="currency"
+    )
+    invoices: Mapped[list["Invoice"]] = relationship(
+        "Invoice", back_populates="currency"
     )
 
 
@@ -97,6 +105,12 @@ class MainActivity(NameIntIdEntity):
     contacts: Mapped[list["Contact"]] = relationship(
         "Contact", back_populates="main_activity"
     )
+    companies: Mapped[list["Company"]] = relationship(
+        "Company", back_populates="main_activity"
+    )
+    invoices: Mapped[list["Invoice"]] = relationship(
+        "Invoice", back_populates="main_activity"
+    )
 
 
 DEAL_TYPE_VALUES = [
@@ -127,10 +141,21 @@ class DealType(NameStrIdEntity):
     """
 
     __tablename__ = "deal_types"
-    deals: Mapped[list["Deal"]] = relationship("Deal", back_populates="type")
+    deals: Mapped[list["Deal"]] = relationship(
+        "Deal", back_populates="type", foreign_keys="[Deal.type_id]"
+    )
+    lead_deals: Mapped[list["Deal"]] = relationship(
+        "Deal", back_populates="lead_type", foreign_keys="[Deal.lead_type_id]"
+    )
     leads: Mapped[list["Lead"]] = relationship("Lead", back_populates="type")
     contacts: Mapped[list["Contact"]] = relationship(
         "Contact", back_populates="deal_type"
+    )
+    companies: Mapped[list["Company"]] = relationship(
+        "Company", back_populates="deal_type"
+    )
+    invoices: Mapped[list["Invoice"]] = relationship(
+        "Invoice", back_populates="type"
     )
 
 
@@ -165,9 +190,13 @@ class DealStage(NameStrIdEntity):
     sort_order: Mapped[int] = mapped_column(
         unique=True, comment="Порядковый номер стадии"
     )
-    deals: Mapped[list["Deal"]] = relationship("Deal", back_populates="stage")
+    deals: Mapped[list["Deal"]] = relationship(
+        "Deal", back_populates="stage", foreign_keys="[Deal.stage_id]"
+    )
     current_deals: Mapped[list["Deal"]] = relationship(
-        "Deal", back_populates="current_stage"
+        "Deal",
+        back_populates="current_stage",
+        foreign_keys="[Deal.current_stage_id]",
     )
 
 
@@ -243,7 +272,16 @@ class Source(NameStrIdEntity):
 
     __tablename__ = "sources"
     deals: Mapped[list["Deal"]] = relationship("Deal", back_populates="source")
-    leads: Mapped[list["Lead"]] = relationship("lead", back_populates="source")
+    leads: Mapped[list["Lead"]] = relationship("Lead", back_populates="source")
+    companies: Mapped[list["Company"]] = relationship(
+        "Company", back_populates="source"
+    )
+    contacts: Mapped[list["Contact"]] = relationship(
+        "Contact", back_populates="source"
+    )
+    invoices: Mapped[list["Invoice"]] = relationship(
+        "Invoice", back_populates="source"
+    )
 
 
 CREATION_SOURCE_VALUES = [
@@ -272,6 +310,9 @@ class CreationSource(NameIntIdEntity):
     deals: Mapped[list["Deal"]] = relationship(
         "Deal", back_populates="creation_source"
     )
+    invoices: Mapped[list["Invoice"]] = relationship(
+        "Invoice", back_populates="creation_source"
+    )
 
 
 INVOICE_STAGE_VALUES = [
@@ -299,6 +340,21 @@ class InvoiceStage(NameStrIdEntity):
     deals: Mapped[list["Deal"]] = relationship(
         "Deal", back_populates="invoice_stage"
     )
+    invoices: Mapped[list["Invoice"]] = relationship(
+        "Invoice",
+        back_populates="invoice_stage",
+        foreign_keys="[Invoice.invoice_stage_id]",
+    )
+    previous_invoices: Mapped[list["Invoice"]] = relationship(
+        "Invoice",
+        back_populates="previous_stage",
+        foreign_keys="[Invoice.previous_stage_id]",
+    )
+    current_invoices: Mapped[list["Invoice"]] = relationship(
+        "Invoice",
+        back_populates="current_stage",
+        foreign_keys="[Invoice.current_stage_id]",
+    )
 
 
 SHIPPING_COMPANY_VALUES = [
@@ -323,6 +379,12 @@ class ShippingCompany(NameIntIdEntity):
     )
     companies: Mapped[list["Company"]] = relationship(
         "Company", back_populates="shipping_company"
+    )
+    invoices: Mapped[list["Invoice"]] = relationship(
+        "Invoice", back_populates="shipping_company"
+    )
+    delivery_notes: Mapped[list["DeliveryNote"]] = relationship(
+        "DeliveryNote", back_populates="shipping_company"
     )
 
 
@@ -350,6 +412,12 @@ class Warehouse(NameIntIdEntity):
     )
     deals: Mapped[list["Deal"]] = relationship(
         "Deal", back_populates="warehouse"
+    )
+    invoices: Mapped[list["Invoice"]] = relationship(
+        "Invoice", back_populates="warehouse"
+    )
+    delivery_notes: Mapped[list["DeliveryNote"]] = relationship(
+        "DeliveryNote", back_populates="warehouse"
     )
 
 
@@ -421,6 +489,12 @@ class DealFailureReason(NameIntIdEntity):
     contacts: Mapped[list["Contact"]] = relationship(
         "Contact", back_populates="deal_failure_reason"
     )
+    companies: Mapped[list["Company"]] = relationship(
+        "Company", back_populates="deal_failure_reason"
+    )
+    invoices: Mapped[list["Invoice"]] = relationship(
+        "Invoice", back_populates="invoice_failure_reason"
+    )
 
 
 LEAD_STATUS_VALUES = [
@@ -450,9 +524,7 @@ class LeadStatus(NameStrIdEntity):
     sort_order: Mapped[int] = mapped_column(
         unique=True, comment="Порядковый номер"
     )
-    leads: Mapped[list["Deal"]] = relationship(
-        "Lead", back_populates="lead_status"
-    )
+    leads: Mapped[list["Lead"]] = relationship("Lead", back_populates="status")
 
 
 CONTACT_TYPE_VALUES = [
@@ -573,5 +645,5 @@ class Department(NameIntIdEntity):
 
     __tablename__ = "departments"
     users: Mapped[list["User"]] = relationship(
-        "User", back_populates="departments"
+        "User", back_populates="department"
     )

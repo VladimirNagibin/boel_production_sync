@@ -11,6 +11,8 @@ if TYPE_CHECKING:
     from .company_models import Company
     from .contact_models import Contact
     from .deal_models import Deal
+    from .delivery_note_models import DeliveryNote
+    from .invoice_models import Invoice
     from .lead_models import Lead
 
 
@@ -24,6 +26,10 @@ class User(IntIdEntity):
     @property
     def entity_type(self) -> EntityType:
         return EntityType.USER
+
+    @property
+    def entity_type1(self) -> str:
+        return "User"
 
     @property
     def tablename(self) -> str:
@@ -104,64 +110,132 @@ class User(IntIdEntity):
     department: Mapped["Department"] = relationship(
         "Department", back_populates="users"
     )
-
     assigned_deals: Mapped[list["Deal"]] = relationship(
-        "Deal", back_populates="assigned_user"
+        "Deal",
+        back_populates="assigned_user",
+        foreign_keys="[Deal.assigned_by_id]",
     )
     created_deals: Mapped[list["Deal"]] = relationship(
-        "Deal", back_populates="created_user"
+        "Deal",
+        back_populates="created_user",
+        foreign_keys="[Deal.created_by_id]",
     )
     modify_deals: Mapped[list["Deal"]] = relationship(
-        "Deal", back_populates="modify_user"
+        "Deal",
+        back_populates="modify_user",
+        foreign_keys="[Deal.modify_by_id]",
     )
     moved_deals: Mapped[list["Deal"]] = relationship(
-        "Deal", back_populates="moved_user"
+        "Deal",
+        back_populates="moved_user",
+        foreign_keys="[Deal.moved_by_id]",
     )
     last_activity_deals: Mapped[list["Deal"]] = relationship(
-        "Deal", back_populates="last_activity_user"
+        "Deal",
+        back_populates="last_activity_user",
+        foreign_keys="[Deal.last_activity_by]",
     )
     defect_deals: Mapped[list["Deal"]] = relationship(
-        "Deal", back_populates="defect_expert"
+        "Deal",
+        back_populates="defect_expert",
+        foreign_keys="[Deal.defect_expert_id]",
     )
 
     assigned_leads: Mapped[list["Lead"]] = relationship(
-        "Lead", back_populates="assigned_user"
+        "Lead",
+        back_populates="assigned_user",
+        foreign_keys="[Lead.assigned_by_id]",
     )
     created_leads: Mapped[list["Lead"]] = relationship(
-        "Lead", back_populates="created_user"
+        "Lead",
+        back_populates="created_user",
+        foreign_keys="[Lead.created_by_id]",
     )
     modify_leads: Mapped[list["Lead"]] = relationship(
-        "Lead", back_populates="modify_user"
+        "Lead",
+        back_populates="modify_user",
+        foreign_keys="[Lead.modify_by_id]",
     )
     moved_leads: Mapped[list["Lead"]] = relationship(
-        "Lead", back_populates="moved_user"
+        "Lead",
+        back_populates="moved_user",
+        foreign_keys="[Lead.moved_by_id]",
     )
     last_activity_leads: Mapped[list["Lead"]] = relationship(
-        "Lead", back_populates="last_activity_user"
+        "Lead",
+        back_populates="last_activity_user",
+        foreign_keys="[Lead.last_activity_by]",
     )
 
     assigned_contacts: Mapped[list["Contact"]] = relationship(
-        "Contact", back_populates="assigned_user"
+        "Contact",
+        back_populates="assigned_user",
+        foreign_keys="[Contact.assigned_by_id]",
     )
     created_contacts: Mapped[list["Contact"]] = relationship(
-        "Contact", back_populates="created_user"
+        "Contact",
+        back_populates="created_user",
+        foreign_keys="[Contact.created_by_id]",
     )
     modify_contacts: Mapped[list["Contact"]] = relationship(
-        "Contact", back_populates="modify_user"
+        "Contact",
+        back_populates="modify_user",
+        foreign_keys="[Contact.modify_by_id]",
     )
     last_activity_contacts: Mapped[list["Contact"]] = relationship(
-        "Contact", back_populates="last_activity_user"
+        "Contact",
+        back_populates="last_activity_user",
+        foreign_keys="[Contact.last_activity_by]",
     )
 
     assigned_companies: Mapped[list["Company"]] = relationship(
-        "Company", back_populates="assigned_user"
+        "Company",
+        back_populates="assigned_user",
+        foreign_keys="[Company.assigned_by_id]",
     )
     created_companies: Mapped[list["Company"]] = relationship(
-        "Company", back_populates="created_user"
+        "Company",
+        back_populates="created_user",
+        foreign_keys="[Company.created_by_id]",
     )
     modify_companies: Mapped[list["Company"]] = relationship(
-        "Company", back_populates="modify_user"
+        "Company",
+        back_populates="modify_user",
+        foreign_keys="[Company.modify_by_id]",
     )
     last_activity_companies: Mapped[list["Company"]] = relationship(
-        "Company", back_populates="last_activity_user"
+        "Company",
+        back_populates="last_activity_user",
+        foreign_keys="[Company.last_activity_by]",
+    )
+
+    assigned_invoices: Mapped[list["Invoice"]] = relationship(
+        "Invoice",
+        back_populates="assigned_user",
+        foreign_keys="[Invoice.assigned_by_id]",
+    )
+    created_invoices: Mapped[list["Invoice"]] = relationship(
+        "Invoice",
+        back_populates="created_user",
+        foreign_keys="[Invoice.created_by_id]",
+    )
+    modify_invoices: Mapped[list["Invoice"]] = relationship(
+        "Invoice",
+        back_populates="modify_user",
+        foreign_keys="[Invoice.modify_by_id]",
+    )
+    moved_invoices: Mapped[list["Invoice"]] = relationship(
+        "Invoice",
+        back_populates="moved_user",
+        foreign_keys="[Invoice.moved_by_id]",
+    )
+    last_activity_invoices: Mapped[list["Invoice"]] = relationship(
+        "Invoice",
+        back_populates="last_activity_user",
+        foreign_keys="[Invoice.last_activity_by]",
+    )
+    delivery_notes: Mapped[list["DeliveryNote"]] = relationship(
+        "DeliveryNote",
+        back_populates="assigned_by",
+        foreign_keys="[DeliveryNote.assigned_by_id]",
     )

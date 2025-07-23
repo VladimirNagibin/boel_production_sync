@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any, ClassVar, Optional
 
 from pydantic import Field, field_validator
 
@@ -19,7 +19,7 @@ class BaseInvoice:
     SQLAlchemy модели
     """
 
-    FIELDS_BY_TYPE = FIELDS_INVOICE
+    FIELDS_BY_TYPE: ClassVar[dict[str, str]] = FIELDS_INVOICE
 
     # Идентификаторы и основные данные
     account_number: str | None = Field(None, alias="accountNumber")
