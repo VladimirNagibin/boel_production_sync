@@ -31,6 +31,7 @@ from .user_models import User
 
 if TYPE_CHECKING:
     from .deal_models import Deal
+    from .delivery_note_models import DeliveryNote
 
 
 class Invoice(BusinessEntityCore):
@@ -52,6 +53,10 @@ class Invoice(BusinessEntityCore):
     @property
     def entity_type(self) -> EntityType:
         return EntityType.INVOICE
+
+    @property
+    def entity_type1(self) -> str:
+        return "Invoice"
 
     @property
     def tablename(self) -> str:
@@ -149,6 +154,12 @@ class Invoice(BusinessEntityCore):
     )  # ufCrm_62B53CC5A2EDF : Тип отгрузки
 
     # Связи с другими сущностями
+    delivery_notes: Mapped[list["DeliveryNote"]] = relationship(
+        "DeliveryNote",
+        back_populates="invoice",
+        foreign_keys="[DeliveryNote.invoice_id]",
+    )
+
     currency_id: Mapped[str | None] = mapped_column(
         ForeignKey("currencies.external_id")
     )  # currencyId : Ид валюты
@@ -159,35 +170,43 @@ class Invoice(BusinessEntityCore):
         ForeignKey("companies.external_id")
     )  # companyId : Ид компании
     company: Mapped["Company"] = relationship(
-        "Company", back_populates="invoices"
+        "Company", back_populates="invoices", foreign_keys=[company_id]
     )
     contact_id: Mapped[int | None] = mapped_column(
         ForeignKey("contacts.external_id")
     )  # contactId : Ид контакта
     contact: Mapped["Contact"] = relationship(
-        "Contact", back_populates="invoices"
+        "Contact", back_populates="invoices", foreign_keys=[contact_id]
     )
     deal_id: Mapped[int | None] = mapped_column(
         ForeignKey("deals.external_id")
     )  # parentId2 : Ид лида
-    deal: Mapped["Deal"] = relationship("Deal", back_populates="invoices")
+    deal: Mapped["Deal"] = relationship(
+        "Deal", back_populates="invoices", foreign_keys=[deal_id]
+    )
     invoice_stage_id: Mapped[str | None] = mapped_column(
         ForeignKey("invoice_stages.external_id")
     )  # stageId : Идентификатор стадии счёта
     invoice_stage: Mapped["InvoiceStage"] = relationship(
-        "InvoiceStage", back_populates="invoices"
+        "InvoiceStage",
+        back_populates="invoices",
+        foreign_keys=[invoice_stage_id],
     )
     previous_stage_id: Mapped[str | None] = mapped_column(
         ForeignKey("invoice_stages.external_id")
     )  # previousStageId : Предыдущая стадия
     previous_stage: Mapped["InvoiceStage"] = relationship(
-        "InvoiceStage", back_populates="invoices"
+        "InvoiceStage",
+        back_populates="previous_invoices",
+        foreign_keys=[previous_stage_id],
     )
     current_stage_id: Mapped[str | None] = mapped_column(
         ForeignKey("invoice_stages.external_id")
     )  # ufCrm_SMART_INVOICE_1651509493 : Идентификатор стадии счёта
     current_stage: Mapped["InvoiceStage"] = relationship(
-        "InvoiceStage", back_populates="invoices"
+        "InvoiceStage",
+        back_populates="current_invoices",
+        foreign_keys=[current_stage_id],
     )
     source_id: Mapped[str | None] = mapped_column(
         ForeignKey("sources.external_id")
@@ -238,7 +257,7 @@ class Invoice(BusinessEntityCore):
         comment="Кто изменил стадию",
     )  # movedBy : Кто изменил стадию
     moved_user: Mapped["User"] = relationship(
-        "User", foreign_keys=[moved_by_id], back_populates="moved_deals"
+        "User", foreign_keys=[moved_by_id], back_populates="moved_invoices"
     )
 
     # Маркетинговые метки

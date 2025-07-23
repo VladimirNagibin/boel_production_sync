@@ -1,3 +1,5 @@
+from typing import ClassVar
+
 from pydantic import BaseModel, ConfigDict, Field
 
 from .base_schemas import CommonFieldMixin, EntityAwareSchema
@@ -10,7 +12,7 @@ class BaseDeliveryNote(CommonFieldMixin):
     SQLAlchemy модели
     """
 
-    FIELDS_BY_TYPE = FIELDS_DELIVERY
+    FIELDS_BY_TYPE: ClassVar[dict[str, str]] = FIELDS_DELIVERY
 
     company_id: int | None = Field(None)
     assigned_by_id: int | None = Field(None)

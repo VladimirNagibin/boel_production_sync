@@ -4,7 +4,7 @@ from typing import Any, ClassVar, Generic, Optional, Type, TypeVar, cast
 from uuid import UUID
 
 from pydantic import (
-    AliasPath,
+    AliasChoices,
     BaseModel,
     ConfigDict,
     Field,
@@ -25,7 +25,7 @@ class CommonFieldMixin(BaseModel):  # type: ignore[misc]
 
     external_id: Optional[int] = Field(
         None,
-        validation_alias=AliasPath("ID", "id"),
+        validation_alias=AliasChoices("ID", "id"),
     )
 
 
@@ -41,19 +41,21 @@ class TimestampsCreateMixin:
 
     date_create: datetime = Field(
         ...,
-        validation_alias=AliasPath("DATE_CREATE", "createdTime"),
+        validation_alias=AliasChoices("DATE_CREATE", "createdTime"),
     )
     date_modify: datetime = Field(
         ...,
-        validation_alias=AliasPath("DATE_MODIFY", "updatedTime"),
+        validation_alias=AliasChoices("DATE_MODIFY", "updatedTime"),
     )
     last_activity_time: Optional[datetime] = Field(
         None,
-        validation_alias=AliasPath("LAST_ACTIVITY_TIME", "lastActivityTime"),
+        validation_alias=AliasChoices(
+            "LAST_ACTIVITY_TIME", "lastActivityTime"
+        ),
     )
     last_communication_time: Optional[datetime] = Field(
         None,
-        validation_alias=AliasPath(
+        validation_alias=AliasChoices(
             "LAST_COMMUNICATION_TIME", "lastCommunicationTime"
         ),
     )
@@ -64,19 +66,21 @@ class TimestampsUpdateMixin:
 
     date_create: Optional[datetime] = Field(
         None,
-        validation_alias=AliasPath("DATE_CREATE", "createdTime"),
+        validation_alias=AliasChoices("DATE_CREATE", "createdTime"),
     )
     date_modify: Optional[datetime] = Field(
         None,
-        validation_alias=AliasPath("DATE_MODIFY", "updatedTime"),
+        validation_alias=AliasChoices("DATE_MODIFY", "updatedTime"),
     )
     last_activity_time: Optional[datetime] = Field(
         None,
-        validation_alias=AliasPath("LAST_ACTIVITY_TIME", "lastActivityTime"),
+        validation_alias=AliasChoices(
+            "LAST_ACTIVITY_TIME", "lastActivityTime"
+        ),
     )
     last_communication_time: Optional[datetime] = Field(
         None,
-        validation_alias=AliasPath(
+        validation_alias=AliasChoices(
             "LAST_COMMUNICATION_TIME", "lastCommunicationTime"
         ),
     )
@@ -87,38 +91,38 @@ class UserRelationsCreateMixin:
 
     assigned_by_id: int = Field(
         ...,
-        validation_alias=AliasPath("ASSIGNED_BY_ID", "assignedById"),
+        validation_alias=AliasChoices("ASSIGNED_BY_ID", "assignedById"),
     )
     created_by_id: int = Field(
         ...,
-        validation_alias=AliasPath("CREATED_BY_ID", "createdBy"),
+        validation_alias=AliasChoices("CREATED_BY_ID", "createdBy"),
     )
     modify_by_id: int = Field(
         ...,
-        validation_alias=AliasPath("MODIFY_BY_ID", "updatedBy"),
+        validation_alias=AliasChoices("MODIFY_BY_ID", "updatedBy"),
     )
     last_activity_by: Optional[int] = Field(
         None,
-        validation_alias=AliasPath("LAST_ACTIVITY_BY", "lastActivityBy"),
+        validation_alias=AliasChoices("LAST_ACTIVITY_BY", "lastActivityBy"),
     )
 
 
 class UserRelationsUpdateMixin:
     assigned_by_id: Optional[int] = Field(
         None,
-        validation_alias=AliasPath("ASSIGNED_BY_ID", "assignedById"),
+        validation_alias=AliasChoices("ASSIGNED_BY_ID", "assignedById"),
     )
     created_by_id: Optional[int] = Field(
         None,
-        validation_alias=AliasPath("CREATED_BY_ID", "createdBy"),
+        validation_alias=AliasChoices("CREATED_BY_ID", "createdBy"),
     )
     modify_by_id: Optional[int] = Field(
         None,
-        validation_alias=AliasPath("MODIFY_BY_ID", "updatedBy"),
+        validation_alias=AliasChoices("MODIFY_BY_ID", "updatedBy"),
     )
     last_activity_by: Optional[int] = Field(
         None,
-        validation_alias=AliasPath("LAST_ACTIVITY_BY", "lastActivityBy"),
+        validation_alias=AliasChoices("LAST_ACTIVITY_BY", "lastActivityBy"),
     )
 
 
@@ -322,7 +326,9 @@ class BitrixValidators:
         processed_data: dict[str, Any] = cast(dict[str, Any], data)
         for field in list(processed_data.keys()):
             value = processed_data[field]
-            if field in fields.get("str_none", []) and not value:
+            if field == "id":
+                processed_data["ID"] = processed_data.pop("id")
+            elif field in fields.get("str_none", []) and not value:
                 processed_data[field] = ""
             elif field in fields.get("int_none", []) and not value:
                 processed_data[field] = 0

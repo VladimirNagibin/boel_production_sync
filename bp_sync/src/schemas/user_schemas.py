@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import ClassVar
 
 from pydantic import ConfigDict, Field
 
@@ -12,7 +13,7 @@ class BaseUser(CommonFieldMixin):
     SQLAlchemy модели
     """
 
-    FIELDS_BY_TYPE = FIELDS_USER
+    FIELDS_BY_TYPE: ClassVar[dict[str, str]] = FIELDS_USER
 
     # Идентификаторы и основные данные
     name: str | None = Field(None, alias="NAME")

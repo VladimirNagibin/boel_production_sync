@@ -1,5 +1,5 @@
 from datetime import date
-from typing import Any
+from typing import Any, ClassVar
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -15,7 +15,7 @@ class BaseBilling(CommonFieldMixin):
     SQLAlchemy модели
     """
 
-    FIELDS_BY_TYPE = FIELDS_BILLING
+    FIELDS_BY_TYPE: ClassVar[dict[str, str]] = FIELDS_BILLING
 
     model_config = ConfigDict(
         use_enum_values=True,

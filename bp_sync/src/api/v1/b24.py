@@ -27,6 +27,10 @@ from services.dependencies import (
     get_oauth_client,
 )
 from services.exceptions import BitrixAuthError
+from services.invoices.invoice_bitrix_services import (
+    InvoiceBitrixClient,
+    get_invoice_bitrix_client,
+)
 from services.leads.lead_bitrix_services import (
     LeadBitrixClient,
     get_lead_bitrix_client,
@@ -55,6 +59,9 @@ async def check(
     bitrix_client: BitrixAPIClient = Depends(get_bitrix_client),
     deal_bitrix_client: DealBitrixClient = Depends(get_deal_bitrix_client),
     user_bitrix_client: UserBitrixClient = Depends(get_user_bitrix_client),
+    invoice_bitrix_client: InvoiceBitrixClient = Depends(
+        get_invoice_bitrix_client
+    ),
     deal_client: DealClient = Depends(get_deal_client),
     lead_client: DealClient = Depends(get_lead_client),
     lead_bitrix_client: LeadBitrixClient = Depends(get_lead_bitrix_client),
@@ -64,9 +71,9 @@ async def check(
     token_storage: TokenStorage = Depends(get_token_storage),
 ) -> JSONResponse:
 
-    # res3 = await user_bitrix_client.get(121)
-
-    res = await deal_bitrix_client.get(51463)
+    res = await invoice_bitrix_client.get(25699)
+    # res = await user_bitrix_client.get(121)
+    # res = await deal_bitrix_client.get(51463)
     # res2 = ContactUpdate(**res.model_dump(by_alias=True, exclude_unset=True))
     # print(du.to_bitrix_dict())
     # res3 = await contact_bitrix_client.update(res2)  # 60131)

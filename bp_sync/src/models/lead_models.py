@@ -38,6 +38,10 @@ class Lead(CommunicationIntIdEntity):
         return EntityType.LEAD
 
     @property
+    def entity_type1(self) -> str:
+        return "Lead"
+
+    @property
     def tablename(self) -> str:
         return self.__tablename__
 
@@ -116,9 +120,14 @@ class Lead(CommunicationIntIdEntity):
     # )  # UF_CRM_1750571370 : Статус обработки
 
     # Связи с другими сущностями
-    deals: Mapped[list["Deal"]] = relationship("Deal", back_populates="lead")
+    deals: Mapped[list["Deal"]] = relationship(
+        "Deal", back_populates="lead", foreign_keys="[Deal.lead_id]"
+    )
     contacts: Mapped[list["Contact"]] = relationship(
-        "Contact", back_populates="lead"
+        "Contact", back_populates="lead", foreign_keys="[Contact.lead_id]"
+    )
+    companies: Mapped[list["Company"]] = relationship(
+        "Company", back_populates="lead", foreign_keys="[Company.lead_id]"
     )
     currency_id: Mapped[str | None] = mapped_column(
         ForeignKey("currencies.external_id")
@@ -140,13 +149,15 @@ class Lead(CommunicationIntIdEntity):
         ForeignKey("companies.external_id")
     )  # COMPANY_ID : Ид компании
     company: Mapped["Company"] = relationship(
-        "Company", back_populates="leads"
+        "Company",
+        back_populates="leads",
+        foreign_keys=[company_id],
     )
     contact_id: Mapped[int | None] = mapped_column(
         ForeignKey("contacts.external_id")
     )  # CONTACT_ID : Ид контакта
     contact: Mapped["Contact"] = relationship(
-        "Contact", back_populates="leads"
+        "Contact", back_populates="leads", foreign_keys=[contact_id]
     )
     source_id: Mapped[str | None] = mapped_column(
         ForeignKey("sources.external_id")

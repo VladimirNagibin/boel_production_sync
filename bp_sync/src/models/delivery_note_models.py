@@ -3,7 +3,6 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .bases import NameStrIdEntity
 from .company_models import Company as CompanyDB
-from .deal_documents import Billing
 from .invoice_models import Invoice as InvoiceDB
 from .references import ShippingCompany, Warehouse
 from .user_models import User as UserDB
@@ -30,13 +29,17 @@ class DeliveryNote(NameStrIdEntity):
         comment="ID ответственного",
     )
     assigned_by: Mapped["UserDB"] = relationship(
-        "UserDB", back_populates="delivery_notes"
+        lambda: UserDB,
+        back_populates="delivery_notes",
+        foreign_keys=lambda: [DeliveryNote.assigned_by_id],
     )
     invoice_id: Mapped[int | None] = mapped_column(
         ForeignKey("invoices.external_id")
     )  # Ид счёта
     invoice: Mapped["InvoiceDB"] = relationship(
-        "InvoiceDB", back_populates="delivery_notes"
+        lambda: InvoiceDB,
+        back_populates="delivery_notes",
+        foreign_keys=lambda: [DeliveryNote.invoice_id],
     )
     shipping_company_id: Mapped[int | None] = mapped_column(
         ForeignKey("shipping_companies.external_id")
@@ -50,9 +53,9 @@ class DeliveryNote(NameStrIdEntity):
     warehouse: Mapped["Warehouse"] = relationship(
         "Warehouse", back_populates="delivery_notes"
     )
-    billings: Mapped[list["Billing"]] = relationship(
-        "Billing", back_populates="delivery_note"
-    )
+    # billings: Mapped[list["Billing"]] = relationship(
+    #    "Billing", back_populates="delivery_note"
+    # )
 
     @property
     def total_paid(self) -> float:
