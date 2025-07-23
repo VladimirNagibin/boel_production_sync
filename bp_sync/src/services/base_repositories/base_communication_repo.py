@@ -115,7 +115,7 @@ class EntityWithCommunicationsRepository(
 
     async def delete(
         self,
-        external_id: int,
+        external_id: int | str,
         pre_delete_hook: Optional[Callable[..., Awaitable[None]]] = None,
     ) -> bool:
         """Удаляет сущность и её коммуникации в одной транзакции"""

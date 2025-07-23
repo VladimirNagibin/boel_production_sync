@@ -16,7 +16,7 @@ class Settings(BaseSettings):  # type: ignore
     POSTGRES_PASSWORD: str = "postgres"
     POSTGRES_DB: str = "bp_sync"
     POSTGRES_DB_ECHO: bool = True
-    SERVICE_USER: int
+    SERVICE_USER: int = 1
     PROVIDER_B24: str = "B24"
 
     SECRET_KEY: str = "your-secret-key"
@@ -24,16 +24,16 @@ class Settings(BaseSettings):  # type: ignore
     USER_ADMIN: str = "admin"
     PASS_ADMIN: str = "pass"
 
-    BITRIX_LOGIN: str
-    BITRIX_PASS: str
-    BITRIX_CLIENT_ID: str
-    BITRIX_CLIENT_SECRET: str
-    BITRIX_PORTAL: str
-    BITRIX_REDIRECT_URI: str
+    BITRIX_LOGIN: str = ""
+    BITRIX_PASS: str = ""
+    BITRIX_CLIENT_ID: str = ""
+    BITRIX_CLIENT_SECRET: str = ""
+    BITRIX_PORTAL: str = ""
+    BITRIX_REDIRECT_URI: str = ""
 
-    REDIS_HOST: str
-    REDIS_PORT: int
-    REDIS_PASSWORD: str
+    REDIS_HOST: str = ""
+    REDIS_PORT: int = 6379
+    REDIS_PASSWORD: str = ""
 
     ENCRYPTION_KEY: str = (
         "your_fernet_key_here"  # сгенерировать Fernet.generate_key()

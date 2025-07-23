@@ -217,11 +217,13 @@ class MethodPaymentEnum(IntEnum):
     форма оплаты:
     489 - Безнал
     491 - Наличные
+    493 - Зачёт
     0 - Не определено
     """
 
     CASH = 489
     CASHLESS = 491
+    SETTLEMENT = 493
     NOT_DEFINE = 0
 
 

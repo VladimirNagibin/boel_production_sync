@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.logger import logger
 from db.postgres import Base
-from models.bases import IntIdEntity
+from models.bases import IntIdEntity, NameStrIdEntity
 from schemas.base_schemas import (  # BaseCreateSchema,; BaseUpdateSchema,
     CommonFieldMixin,
 )
@@ -18,7 +18,7 @@ SchemaTypeCreate = TypeVar("SchemaTypeCreate", bound=CommonFieldMixin)
 SchemaTypeUpdate = TypeVar("SchemaTypeUpdate", bound=CommonFieldMixin)
 # SchemaTypeCreate = TypeVar("SchemaTypeCreate", bound=BaseCreateSchema)
 # SchemaTypeUpdate = TypeVar("SchemaTypeUpdate", bound=BaseUpdateSchema)
-ModelType = TypeVar("ModelType", bound=IntIdEntity)
+ModelType = TypeVar("ModelType", bound=IntIdEntity | NameStrIdEntity)
 
 
 class BaseRepository(Generic[ModelType, SchemaTypeCreate, SchemaTypeUpdate]):
@@ -39,7 +39,7 @@ class BaseRepository(Generic[ModelType, SchemaTypeCreate, SchemaTypeUpdate]):
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def _exists(self, external_id: int) -> bool:
+    async def _exists(self, external_id: int | str) -> bool:
         """Проверяет существование сущности по external_id"""
         try:
             stmt = select(
@@ -54,7 +54,7 @@ class BaseRepository(Generic[ModelType, SchemaTypeCreate, SchemaTypeUpdate]):
             )
             return False
 
-    def _not_found_exception(self, external_id: int) -> HTTPException:
+    def _not_found_exception(self, external_id: int | str) -> HTTPException:
         """Генерирует исключение для отсутствующей сущности"""
         entity_name = self.model.__name__
         return HTTPException(
@@ -62,7 +62,7 @@ class BaseRepository(Generic[ModelType, SchemaTypeCreate, SchemaTypeUpdate]):
             detail=f"{entity_name} with ID: {external_id} not found",
         )
 
-    def _conflict_exception(self, external_id: int) -> HTTPException:
+    def _conflict_exception(self, external_id: int | str) -> HTTPException:
         """Генерирует исключение для конфликта дубликатов"""
         entity_name = self.model.__name__
         return HTTPException(
@@ -124,7 +124,7 @@ class BaseRepository(Generic[ModelType, SchemaTypeCreate, SchemaTypeUpdate]):
                 ),
             ) from e
 
-    async def get(self, external_id: int) -> Optional[ModelType]:
+    async def get(self, external_id: int | str) -> Optional[ModelType]:
         try:
             stmt = select(self.model).where(
                 self.model.external_id == external_id
@@ -205,7 +205,7 @@ class BaseRepository(Generic[ModelType, SchemaTypeCreate, SchemaTypeUpdate]):
 
     async def delete(
         self,
-        external_id: int,
+        external_id: int | str,
         pre_delete_hook: Optional[Callable[..., Awaitable[None]]] = None,
     ) -> bool:
         """Удаляет сущность по external_id, возвращает статус операции"""
@@ -251,7 +251,7 @@ class BaseRepository(Generic[ModelType, SchemaTypeCreate, SchemaTypeUpdate]):
         return result.scalar_one_or_none() is not None
 
     async def set_deleted_in_bitrix(  # Добавить запись None в ссылках
-        self, external_id: int, is_deleted: bool = True
+        self, external_id: int | str, is_deleted: bool = True
     ) -> bool:
         """
         Устанавливает флаг is_deleted_in_bitrix для сущности по external_id

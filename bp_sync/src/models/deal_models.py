@@ -7,7 +7,8 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .bases import BusinessEntity, EntityType
 from .company_models import Company
 from .contact_models import Contact
-from .deal_documents import Billing
+
+# from .deal_documents import Billing
 from .enums import (  # TypePaymentEnum,; TypeShipmentEnum,
     DualTypePayment,
     DualTypePaymentEnum,
@@ -100,9 +101,9 @@ class Deal(BusinessEntity):
     payment_grace_period: Mapped[int | None] = mapped_column(
         comment="Отсрочка платежа (дни)"
     )  # UF_CRM_1656582798 Отсрочка платежа в днях
-    billings: Mapped["Billing"] = relationship(
-        "Billing", back_populates="deal"
-    )  # UF_CRM_1632738424* : Платёжки по счёту
+    # billings: Mapped["Billing"] = relationship(
+    #    "Billing", back_populates="deal"
+    # )  # UF_CRM_1632738424* : Платёжки по счёту
 
     # Временные метки
     begindate: Mapped[datetime] = mapped_column(

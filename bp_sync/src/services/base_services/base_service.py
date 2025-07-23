@@ -32,13 +32,13 @@ class RepositoryProtocol(Protocol):
         ...
 
     @abstractmethod
-    async def delete(self, external_id: int) -> bool:
+    async def delete(self, external_id: int | str) -> bool:
         """Удаляет сущность по ID"""
         ...
 
     @abstractmethod
     async def set_deleted_in_bitrix(
-        self, external_id: int, is_deleted: bool = True
+        self, external_id: int | str, is_deleted: bool = True
     ) -> bool:
         """Помечает сущность как удаленную в Bitrix"""
         ...

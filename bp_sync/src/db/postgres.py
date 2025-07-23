@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import AsyncGenerator
 
-from sqlalchemy import func
+from sqlalchemy import false, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.asyncio import (
     AsyncAttrs,
@@ -55,7 +55,7 @@ class Base(AsyncAttrs, DeclarativeBase):  # type: ignore[misc]
         comment="Дата и время последнего обновления",
     )
     is_deleted_in_bitrix: Mapped[bool] = mapped_column(
-        default=False, comment="Удалён в Битрикс"
+        server_default=false(), default=False, comment="Удалён в Битрикс"
     )
 
     # @declared_attr.directive  # type: ignore
