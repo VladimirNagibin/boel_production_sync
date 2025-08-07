@@ -144,7 +144,7 @@ class DealCreate(BaseCreateSchema, BaseDeal):
     payment_type: DualTypePaymentEnum = Field(
         DualTypePaymentEnum.NOT_DEFINE, alias="UF_CRM_1632738315"
     )
-    shipping_type: DualTypeShipmentEnum = Field(
+    shipment_type: DualTypeShipmentEnum = Field(
         DualTypeShipmentEnum.NOT_DEFINE, alias="UF_CRM_1655141630"
     )
     processing_status: ProcessingStatusEnum = Field(
@@ -169,9 +169,9 @@ class DealCreate(BaseCreateSchema, BaseDeal):
             v, DualTypePaymentEnum, DualTypePaymentEnum.NOT_DEFINE
         )
 
-    @field_validator("shipping_type", mode="before")  # type: ignore[misc]
+    @field_validator("shipment_type", mode="before")  # type: ignore[misc]
     @classmethod
-    def convert_shipping_type(cls, v: Any) -> DualTypeShipmentEnum:
+    def convert_shipment_type(cls, v: Any) -> DualTypeShipmentEnum:
         return BitrixValidators.convert_enum(
             v, DualTypeShipmentEnum, DualTypeShipmentEnum.NOT_DEFINE
         )
@@ -218,7 +218,7 @@ class DealUpdate(BaseUpdateSchema, BaseDeal):
     payment_type: DualTypePaymentEnum | None = Field(
         None, alias="UF_CRM_1632738315"
     )
-    shipping_type: DualTypeShipmentEnum | None = Field(
+    shipment_type: DualTypeShipmentEnum | None = Field(
         None, alias="UF_CRM_1655141630"
     )
     processing_status: ProcessingStatusEnum | None = Field(
@@ -243,9 +243,9 @@ class DealUpdate(BaseUpdateSchema, BaseDeal):
             v, DualTypePaymentEnum, DualTypePaymentEnum.NOT_DEFINE
         )
 
-    @field_validator("shipping_type", mode="before")  # type: ignore[misc]
+    @field_validator("shipment_type", mode="before")  # type: ignore[misc]
     @classmethod
-    def convert_shipping_type(cls, v: Any) -> DualTypeShipmentEnum:
+    def convert_shipment_type(cls, v: Any) -> DualTypeShipmentEnum:
         return BitrixValidators.convert_enum(
             v, DualTypeShipmentEnum, DualTypeShipmentEnum.NOT_DEFINE
         )

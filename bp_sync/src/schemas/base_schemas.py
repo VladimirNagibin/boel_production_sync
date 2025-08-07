@@ -11,10 +11,13 @@ from pydantic import (
     model_validator,
 )
 
-from .fields import FIELDS_BY_TYPE
+from models.enums import DualTypePaymentEnum, DualTypeShipmentEnum
+
+from .fields import FIELDS_BY_TYPE, FIELDS_BY_TYPE_ALT
 
 EnumT = TypeVar("EnumT", bound=Enum)
 T = TypeVar("T")
+SYSTEM_USER_ID = 1
 
 
 class CommonFieldMixin(BaseModel):  # type: ignore[misc]
@@ -174,6 +177,7 @@ class HasCommunicationUpdateMixin:
 
 class EntityAwareSchema(BaseModel):  # type: ignore[misc]
     FIELDS_BY_TYPE: ClassVar[dict[str, Any]] = FIELDS_BY_TYPE
+    FIELDS_BY_TYPE_ALT: ClassVar[dict[str, Any]] = FIELDS_BY_TYPE_ALT
 
     @model_validator(mode="before")  # type: ignore[misc]
     @classmethod
@@ -181,6 +185,32 @@ class EntityAwareSchema(BaseModel):  # type: ignore[misc]
         return BitrixValidators.normalize_empty_values(
             data, fields=cls.FIELDS_BY_TYPE
         )
+
+    def model_dump_db(self, exclude_unset: bool = False) -> dict[str, Any]:
+
+        # print(f'{self}=======================')
+        data = self.model_dump(exclude_unset=exclude_unset)
+        # print(f'{type(data.get("shipping_type"))}=======================')
+        for key in self.FIELDS_BY_TYPE_ALT["list"]:
+            try:
+                del data[key]
+            except KeyError:
+                ...
+        for key, value in data.items():
+            if (
+                key in self.FIELDS_BY_TYPE_ALT["str_none"] and not value
+            ) or key == "parent_deal_id":
+                data[key] = None
+            elif key in self.FIELDS_BY_TYPE_ALT["int_none"] and (
+                value is None or not int(value)
+            ):
+                data[key] = None
+            elif key == "shipment_type":
+                data[key] = DualTypeShipmentEnum(value)
+            elif key == "payment_type":
+                data[key] = DualTypePaymentEnum(value)
+            # print(f"key: {key}, value: {data[key]}")
+        return data  # type: ignore[no-any-return]
 
 
 class CoreCreateSchema(
@@ -271,6 +301,8 @@ class CoreUpdateSchema(
             else:
                 # Остальные значения без изменений (проверка ссылочных полей)
                 result[alias] = value
+        # if 'created_by_id' not in result or not result['created_by_id']:
+        #    result['created_by_id'] = SYSTEM_USER_ID
         return result
 
 
@@ -328,6 +360,13 @@ class BitrixValidators:
             value = processed_data[field]
             if field == "id":
                 processed_data["ID"] = processed_data.pop("id")
+            elif field in (
+                "CREATED_BY_ID",
+                "created_by_id",
+                "MODIFY_BY_ID",
+                "modify_by_id",
+            ):
+                processed_data[field] = value if int(value) else SYSTEM_USER_ID
             elif field in fields.get("str_none", []) and not value:
                 processed_data[field] = ""
             elif field in fields.get("int_none", []) and not value:

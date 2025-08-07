@@ -1,13 +1,15 @@
 from typing import Any
 
-from fastapi import Depends
-
 from schemas.base_schemas import ListResponseSchema
 from schemas.invoice_schemas import InvoiceCreate, InvoiceUpdate
 
 from ..bitrix_services.base_bitrix_services import BaseBitrixEntityClient
-from ..bitrix_services.bitrix_api_client import BitrixAPIClient
-from ..dependencies import get_bitrix_client
+
+# from fastapi import Depends
+
+
+# from ..bitrix_services.bitrix_api_client import BitrixAPIClient
+# from ..dependencies import get_bitrix_client
 
 ENTITY_TYPE_ID = 31
 
@@ -52,7 +54,7 @@ class InvoiceBitrixClient(
         )
 
 
-def get_invoice_bitrix_client(
-    bitrix_client: BitrixAPIClient = Depends(get_bitrix_client),
-) -> InvoiceBitrixClient:
-    return InvoiceBitrixClient(bitrix_client)
+# def get_invoice_bitrix_client(
+#    bitrix_client: BitrixAPIClient = Depends(get_bitrix_client),
+# ) -> InvoiceBitrixClient:
+#    return InvoiceBitrixClient(bitrix_client)

@@ -1,13 +1,12 @@
-from fastapi import Depends
+# from fastapi import Depends
 
 from models.user_models import User as UserDB
 
 from ..base_services.base_service import BaseEntityClient
-from .user_bitrix_services import (
+from .user_bitrix_services import (  # get_user_bitrix_client,
     UserBitrixClient,
-    get_user_bitrix_client,
 )
-from .user_repository import UserRepository, get_user_repository
+from .user_repository import UserRepository  # , get_user_repository
 
 
 class UserClient(BaseEntityClient[UserDB, UserRepository, UserBitrixClient]):
@@ -32,8 +31,8 @@ class UserClient(BaseEntityClient[UserDB, UserRepository, UserBitrixClient]):
         return self._repo
 
 
-def get_user_client(
-    user_bitrix_client: UserBitrixClient = Depends(get_user_bitrix_client),
-    user_repo: UserRepository = Depends(get_user_repository),
-) -> UserClient:
-    return UserClient(user_bitrix_client, user_repo)
+# def get_user_client(
+#    user_bitrix_client: UserBitrixClient = Depends(get_user_bitrix_client),
+#    user_repo: UserRepository = Depends(get_user_repository),
+# ) -> UserClient:
+#    return UserClient(user_bitrix_client, user_repo)

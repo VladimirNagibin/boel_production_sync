@@ -42,3 +42,9 @@ class BitrixApiError(HTTPException):  # type: ignore[misc]
             self.status_code == status.HTTP_400_BAD_REQUEST
             and self.is_bitrix_error("Not found")
         )
+
+
+class ConflictException(HTTPException):  # type: ignore[misc]
+    def __init__(self, entity: str, external_id: str | int):
+        detail = f"{entity} with ID: {external_id} already exists"
+        super().__init__(status_code=status.HTTP_409_CONFLICT, detail=detail)

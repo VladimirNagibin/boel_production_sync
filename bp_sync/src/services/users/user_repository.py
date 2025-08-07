@@ -30,7 +30,7 @@ class UserRepository(BaseRepository[UserDB, UserCreate, UserUpdate]):
         await self._check_related_objects(data)
         return await self.update(data=data)
 
-    def _get_related_checks(self) -> list[tuple[str, Type[Base], str]]:
+    async def _get_related_checks(self) -> list[tuple[str, Type[Base], str]]:
         """Возвращает специфичные для User проверки"""
         return [
             # (атрибут схемы, модель БД, поле в модели)

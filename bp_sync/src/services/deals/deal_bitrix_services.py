@@ -1,10 +1,11 @@
-from fastapi import Depends
+# from fastapi import Depends
 
 from schemas.deal_schemas import DealCreate, DealUpdate
 
 from ..bitrix_services.base_bitrix_services import BaseBitrixEntityClient
-from ..bitrix_services.bitrix_api_client import BitrixAPIClient
-from ..dependencies import get_bitrix_client
+
+# from ..bitrix_services.bitrix_api_client import BitrixAPIClient
+# from ..dependencies import get_bitrix_client
 
 
 class DealBitrixClient(BaseBitrixEntityClient[DealCreate, DealUpdate]):
@@ -13,7 +14,7 @@ class DealBitrixClient(BaseBitrixEntityClient[DealCreate, DealUpdate]):
     update_schema = DealUpdate
 
 
-def get_deal_bitrix_client(
-    bitrix_client: BitrixAPIClient = Depends(get_bitrix_client),
-) -> DealBitrixClient:
-    return DealBitrixClient(bitrix_client)
+# def get_deal_bitrix_client(
+#    bitrix_client: BitrixAPIClient = Depends(get_bitrix_client),
+# ) -> DealBitrixClient:
+#    return DealBitrixClient(bitrix_client)

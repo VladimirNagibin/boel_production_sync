@@ -69,6 +69,7 @@ class BitrixOAuthClient(BaseBitrixClient):
         self, params: Dict[str, str], operation: str
     ) -> str:
         """Общая логика получения и сохранения токена"""
+        # token_data = await self._post(self.token_url, payload=params)
         token_data = await self._get(self.token_url, params=params)
         self._validate_token_response(token_data)
         access_token = self._extract_access_token(token_data)
