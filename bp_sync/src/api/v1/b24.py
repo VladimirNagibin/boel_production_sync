@@ -1,53 +1,119 @@
+import time
+from datetime import date, timedelta
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import JSONResponse
 
 from core.logger import logger
 
-# from services.bitrix_api_client import BitrixAPIClient
-# from schemas.contact_schemas import ContactUpdate
-from services.bitrix_services.bitrix_api_client import BitrixAPIClient
-
 # from schemas.deal_schemas import DealUpdate
 # from schemas.lead_schemas import LeadUpdate
 from services.bitrix_services.bitrix_oauth_client import BitrixOAuthClient
-from services.contacts.contact_bitrix_services import (
-    ContactBitrixClient,
-    get_contact_bitrix_client,
-)
 from services.deals.deal_bitrix_services import (
     DealBitrixClient,
-    get_deal_bitrix_client,
 )
 from services.deals.deal_services import (
     DealClient,
-    get_deal_client,
 )
 from services.dependencies import (
-    get_bitrix_client,
+    get_deal_bitrix_client_dep,
+    get_deal_client_dep,
+    get_department_client_dep,
     get_oauth_client,
+    request_context,
+)
+from services.entities.department_services import (
+    DepartmentClient,
 )
 from services.exceptions import BitrixAuthError
-from services.invoices.invoice_bitrix_services import (
-    InvoiceBitrixClient,
-    get_invoice_bitrix_client,
-)
-from services.leads.lead_bitrix_services import (
-    LeadBitrixClient,
-    get_lead_bitrix_client,
-)
-from services.leads.lead_services import (  # LeadClient,
-    get_lead_client,
-)
-from services.token_services.token_storage import (
-    TokenStorage,
-    get_token_storage,
-)
-from services.users.user_bitrix_services import (
-    UserBitrixClient,
-    get_user_bitrix_client,
-)
 
-b24_router = APIRouter()
+# from services.bitrix_api_client import BitrixAPIClient
+# from schemas.contact_schemas import ContactUpdate
+# from services.bitrix_services.bitrix_api_client import BitrixAPIClient
+
+
+b24_router = APIRouter(dependencies=[Depends(request_context)])
+
+
+@b24_router.get(
+    "/update-departments",
+    summary="update departments",
+    description="Update departments.",
+)  # type: ignore
+async def update_departments(
+    department_client: DepartmentClient = Depends(get_department_client_dep),
+) -> JSONResponse:
+
+    result = await department_client.import_from_bitrix()
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={
+            "updated": len(result),
+        },
+    )
+
+
+@b24_router.get(
+    "/load-deals",
+    summary="load deals",
+    description="Load deals for period.",
+)  # type: ignore
+async def load_deals(
+    start_data: date,
+    end_data: date,
+    deal_bitrix_client: DealBitrixClient = Depends(get_deal_bitrix_client_dep),
+    deal_client: DealClient = Depends(get_deal_client_dep),
+) -> JSONResponse:
+    # Рассчитываем конец периода как начало следующего дня
+    end_date_plus_one = end_data + timedelta(days=1)
+
+    # Форматируем даты для Bitrix API
+    start_str = start_data.strftime("%Y-%m-%d 00:00:00")
+    end_str = end_date_plus_one.strftime("%Y-%m-%d 00:00:00")
+
+    filter_entity: dict[str, Any] = {
+        ">=BEGINDATE": start_str,
+        "<BEGINDATE": end_str,
+        "CATEGORY_ID": 0,
+    }
+
+    # Получаем сделки с пагинацией
+    all_deals = []
+    select = ["ID"]
+    start = 0
+
+    while True:
+        res = await deal_bitrix_client.list(
+            select=select, filter_entity=filter_entity, start=start
+        )
+        if not res:
+            break
+        deals = res.result
+        # total = res.total
+        next = res.next
+        all_deals.extend(deals)
+        if next:
+            start = next
+        else:
+            break
+        # Прерываем цикл, если получено меньше 50 записей (последняя страница)
+        # if len(deals) < 50:
+        #    break
+        time.sleep(2)
+    # Извлекаем только ID сделок
+    deal_ids: list[int | None] = [deal.external_id for deal in all_deals]
+    print(deal_ids)
+    for deal_id in deal_ids:
+        print(f"{deal_id}====================================")
+        if deal_id:
+            await deal_client.import_from_bitrix(deal_id)
+        time.sleep(2)
+
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={"deal_ids": deal_ids, "count": len(deal_ids)},
+    )
 
 
 @b24_router.get(
@@ -56,23 +122,24 @@ b24_router = APIRouter()
     description="Information about persistency redis.",
 )  # type: ignore
 async def check(
-    bitrix_client: BitrixAPIClient = Depends(get_bitrix_client),
-    deal_bitrix_client: DealBitrixClient = Depends(get_deal_bitrix_client),
-    user_bitrix_client: UserBitrixClient = Depends(get_user_bitrix_client),
-    invoice_bitrix_client: InvoiceBitrixClient = Depends(
-        get_invoice_bitrix_client
-    ),
-    deal_client: DealClient = Depends(get_deal_client),
-    lead_client: DealClient = Depends(get_lead_client),
-    lead_bitrix_client: LeadBitrixClient = Depends(get_lead_bitrix_client),
-    contact_bitrix_client: ContactBitrixClient = Depends(
-        get_contact_bitrix_client
-    ),
-    token_storage: TokenStorage = Depends(get_token_storage),
+    department_client: DepartmentClient = Depends(get_department_client_dep),
+    # bitrix_client: BitrixAPIClient = Depends(get_bitrix_client),
+    # deal_bitrix_client: DealBitrixClient = Depends(get_deal_bitrix_client),
+    # user_bitrix_client: UserBitrixClient = Depends(get_user_bitrix_client),
+    # invoice_bitrix_client: InvoiceBitrixClient = Depends(
+    #    get_invoice_bitrix_client
+    # ),
+    # deal_client: DealClient = Depends(get_deal_client),
+    # lead_client: DealClient = Depends(get_lead_client),
+    # lead_bitrix_client: LeadBitrixClient = Depends(get_lead_bitrix_client),
+    # contact_bitrix_client: ContactBitrixClient = Depends(
+    #    get_contact_bitrix_client
+    # ),
+    # token_storage: TokenStorage = Depends(get_token_storage),
 ) -> JSONResponse:
 
-    res = await invoice_bitrix_client.get(25699)
-    # res = await user_bitrix_client.get(121)
+    # res = await deal_client.import_from_bitrix(50301)
+    res = await department_client.import_from_bitrix()
     # res = await deal_bitrix_client.get(51463)
     # res2 = ContactUpdate(**res.model_dump(by_alias=True, exclude_unset=True))
     # print(du.to_bitrix_dict())

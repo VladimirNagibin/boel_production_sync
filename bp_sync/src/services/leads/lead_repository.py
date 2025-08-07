@@ -1,9 +1,9 @@
-from typing import TYPE_CHECKING, Any, Type
+from typing import TYPE_CHECKING, Any, Callable, Coroutine, Type
 
-from fastapi import Depends
+# from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from db.postgres import Base, get_session
+from db.postgres import Base  # , get_session
 from models.bases import EntityType
 from models.company_models import Company as CompanyDB
 from models.contact_models import Contact as ContactDB
@@ -22,7 +22,7 @@ from schemas.lead_schemas import LeadCreate, LeadUpdate
 from ..base_repositories.base_communication_repo import (
     EntityWithCommunicationsRepository,
 )
-from ..users.user_services import UserClient, get_user_client
+from ..users.user_services import UserClient  # , get_user_client
 
 if TYPE_CHECKING:
     from ..companies.company_services import (  # , get_company_client
@@ -43,14 +43,17 @@ class LeadRepository(
     def __init__(
         self,
         session: AsyncSession,
-        company_client: "CompanyClient",
-        contact_client: "ContactClient",
-        user_client: UserClient,
+        # company_client: "CompanyClient",
+        # contact_client: "ContactClient",
+        # user_client: UserClient,
+        get_company_client: Callable[[], Coroutine[Any, Any, "CompanyClient"]],
+        get_contact_client: Callable[[], Coroutine[Any, Any, "ContactClient"]],
+        get_user_client: Callable[[], Coroutine[Any, Any, UserClient]],
     ):
         super().__init__(session)
-        self.company_client = company_client
-        self.contact_client = contact_client
-        self.user_client = user_client
+        self.get_company_client = get_company_client
+        self.get_contact_client = get_contact_client
+        self.get_user_client = get_user_client
 
     async def create_entity(self, data: LeadCreate) -> LeadDB:
         """Создает новый лид с проверкой связанных объектов"""
@@ -64,7 +67,7 @@ class LeadRepository(
         await self._create_or_update_related(data)
         return await self.update(data=data)
 
-    def _get_related_checks(self) -> list[tuple[str, Type[Base], str]]:
+    async def _get_related_checks(self) -> list[tuple[str, Type[Base], str]]:
         """Возвращает специфичные для Deal проверки"""
         return [
             # (атрибут схемы, модель БД, поле в модели)
@@ -76,31 +79,34 @@ class LeadRepository(
             ("deal_failure_reason_id", DealFailureReason, "ext_alt_id"),
         ]
 
-    def _get_related_create(self) -> dict[str, tuple[Any, Any, bool]]:
+    async def _get_related_create(self) -> dict[str, tuple[Any, Any, bool]]:
         """Возвращает кастомные проверки для дочерних классов"""
+        company_client = await self.get_company_client()
+        contact_client = await self.get_contact_client()
+        user_client = await self.get_user_client()
         return {
-            "company_id": (self.company_client, CompanyDB, False),
-            "contact_id": (self.contact_client, ContactDB, False),
-            "assigned_by_id": (self.user_client, UserDB, True),
-            "created_by_id": (self.user_client, UserDB, True),
-            "modify_by_id": (self.user_client, UserDB, False),
-            "moved_by_id": (self.user_client, UserDB, False),
-            "last_activity_by": (self.user_client, UserDB, False),
+            "company_id": (company_client, CompanyDB, False),
+            "contact_id": (contact_client, ContactDB, False),
+            "assigned_by_id": (user_client, UserDB, True),
+            "created_by_id": (user_client, UserDB, True),
+            "modify_by_id": (user_client, UserDB, False),
+            "moved_by_id": (user_client, UserDB, False),
+            "last_activity_by": (user_client, UserDB, False),
         }
 
 
-def get_lead_repository(
-    session: AsyncSession = Depends(get_session),
-    # company_client: "CompanyClient" = Depends(get_company_client),
-    # contact_client: "ContactClient" = Depends(get_contact_client),
-    user_client: UserClient = Depends(get_user_client),
-) -> LeadRepository:
-    from ..companies.company_services import get_company_client
-    from ..contacts.contact_services import get_contact_client
+# def get_lead_repository(
+#    session: AsyncSession = Depends(get_session),
+#    # company_client: "CompanyClient" = Depends(get_company_client),
+#    # contact_client: "ContactClient" = Depends(get_contact_client),
+#    user_client: UserClient = Depends(get_user_client),
+# ) -> LeadRepository:
+#    from ..companies.company_services import get_company_client
+#    from ..contacts.contact_services import get_contact_client
 
-    return LeadRepository(
-        session=session,
-        company_client=Depends(get_company_client),
-        contact_client=Depends(get_contact_client),
-        user_client=user_client,
-    )
+#    return LeadRepository(
+#        session=session,
+#        company_client=Depends(get_company_client),
+#        contact_client=Depends(get_contact_client),
+#        user_client=user_client,
+#    )

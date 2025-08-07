@@ -241,6 +241,186 @@ FIELDS_BY_TYPE: dict[str, Any] = {
     ],
 }
 
+
+FIELDS_BY_TYPE_ALT: dict[str, Any] = {
+    "str": [
+        # deal
+        "title",
+        "stage_id",
+        # lead
+        "status_id",
+    ],
+    "str_none": [
+        # deal
+        "additional_info",
+        "printed_form_id",
+        "currency_id",
+        "type_id",
+        "source_id",
+        "lead_type_id",
+        "invoice_stage_id",
+        "current_stage_id",
+        "defect_conclusion",
+        "utm_source",
+        "utm_medium",
+        "utm_campaign",
+        "utm_content",
+        "utm_term",
+        "mgo_cc_entry_id",
+        "mgo_cc_channel_type",
+        "mgo_cc_result",
+        "mgo_cc_entry_point",
+        "mgo_cc_tag_id",
+        "calltouch_site_id",
+        "calltouch_call_id",
+        "calltouch_request_id",
+        "yaclientid",
+        "wz_instagram",
+        "wz_vc",
+        "wz_telegram_username",
+        "wz_telegram_id",
+        "wz_avito",
+        "comments",
+        "source_description",
+        "source_external",
+        "originator_id",
+        "origin_id",
+        "city",
+        # lead
+        "name:",
+        "second_name:",
+        "last_name:",
+        "post:",
+        "company_title:",
+        "status_description:",
+        "address:",
+        "address_2:",
+        "address_city:",
+        "address_postal_code:",
+        "address_region:",
+        "address_province:",
+        "address_country:",
+        "address_country_code:",
+        # contact
+        "origin_version",
+        "deal_type_id",
+        # company
+        "banking_details",
+        "address_legal",
+        "address_company",
+        "province_company",
+        "company_type_id",
+        "industry_id",
+        "employees_id",
+        "position_head",
+        "basis_operates",
+        "position_head_genitive",
+        "basis_operates_genitive",
+        "payment_delay_genitive",
+        "full_name_genitive",
+        "current_contract",
+        "current_number_contract",
+    ],
+    "int": [
+        # deal
+        "external_id",
+        "category_id",  # : 0, 1, 2 - funnels
+        "assigned_by_id",
+        "created_by_id",
+        "modify_by_id",
+    ],
+    "int_none": [
+        # deal
+        "probability",
+        "payment_grace_period",
+        "lead_id",
+        "company_id",
+        "contact_id",
+        "main_activity_id",
+        "shipping_company_id",
+        "creation_source_id",
+        "warehouse_id",
+        "deal_failure_reason_id",
+        "last_activity_by",
+        "moved_by_id",
+        "defect_expert_id",
+        "parent_deal_id",
+        # lead
+        "address_loc_addr_id",
+        # "shipping_company ???",
+        "parent_company_id",
+    ],
+    "bool": [  # Y / N
+        # deal
+        "is_manual_opportunity",
+        "closed",
+        "is_new",
+        "is_recurring",
+        "is_return_customer",
+        "is_repeated_approach",
+        "opened",
+        # lead
+        "has_phone" "has_email" "has_imol"
+        # contact
+        "export",
+        # company
+        "is_my_company",
+    ],
+    "bool_none": [  # 1 / 0
+        # deal
+        "is_shipment_approved",
+        "is_shipment_approved_invoice",
+    ],
+    "datetime": [
+        # deal
+        "date_create",
+        "date_modify",
+        "begindate",
+        "closedate",
+    ],
+    "datetime_none": [
+        # deal
+        "last_activity_time",
+        "last_communication_time",
+        "moved_time",
+        "payment_deadline",
+        "mgo_cc_create",
+        "mgo_cc_end",
+        # lead
+        "birthdate" "date_closed" "date_last_shipment",
+    ],
+    "float": [
+        # deal
+        "opportunity",
+        # company
+        "revenue",
+    ],
+    "enums": [
+        # deal
+        "stage_semantic_id",
+        "payment_type",
+        "shipping_type",
+        "processing_status",
+        # lead
+        "status_semantic_id",
+    ],
+    "list": [
+        # deal
+        "defects",
+        "related_deals",
+        # lead
+        "phone",
+        "email",
+        "web",
+        "im",
+        "link",
+        # company
+        "additional_responsables",
+        "additional_responsible",
+        "contracts",
+    ],
+}
+
 FIELDS_USER: dict[str, Any] = {
     "str_none": [
         "NAME",  # "name",
@@ -270,6 +450,38 @@ FIELDS_USER: dict[str, Any] = {
     ],
     "list_in_int": [
         "UF_DEPARTMENT",  # "department_id",
+    ],
+}
+
+FIELDS_USER_ALT: dict[str, Any] = {
+    "str_none": [
+        "name",
+        "second_name",
+        "last_name",
+        "xml_id",
+        "personal_gender",
+        "work_position",
+        "user_type",
+        "time_zone",
+        "personal_city",
+        "email",
+        "personal_mobile",
+        "work_phone",
+        "personal_www",
+    ],
+    "datetime_none": [
+        "last_login",
+        "date_register",
+        "personal_birthday",
+        "employment_date",
+        "date_new",
+    ],
+    "bool": [  # Y / N
+        "active",
+        "is_online",
+    ],
+    "list_in_int": [
+        "department_id",
     ],
 }
 
@@ -363,6 +575,98 @@ FIELDS_INVOICE: dict[str, Any] = {
     ],
 }
 
+FIELDS_INVOICE_ALT: dict[str, Any] = {
+    "str": [
+        "title",
+    ],
+    "str_none": [
+        "account_number",
+        "xml_id",
+        "comments",
+        "city:",
+        "source_external",
+        "source_description",
+        "printed_form_id",
+        "currency_id",
+        "invoice_stage_id",
+        "previous_stage_id",
+        "current_stage_id",
+        "source_id",
+        "type_id",
+        "mgo_cc_entry_id",
+        "mgo_cc_channel_type",
+        "mgo_cc_result",
+        "mgo_cc_entry_point",
+        "mgo_cc_tag_id",
+        "calltouch_site_id",
+        "calltouch_call_id",
+        "calltouch_request_id",
+        "yaclientid",
+        "wz_instagram",
+        "wz_vc",
+        "wz_telegram_username",
+        "wz_telegram_id",
+        "wz_avito",
+    ],
+    "int": [
+        "external_id",
+        "assigned_by_id",
+        "created_by_id",
+        "modify_by_id",
+    ],
+    "int_none": [
+        "proposal_id",
+        "category_id",
+        "payment_grace_period",
+        "main_activity_id",
+        "warehouse_id",
+        "creation_source_id",
+        "invoice_failure_reason_id",
+        "shipping_company_id",
+        "moved_by_id",
+        "last_activity_by",
+        "deal_id",
+        "company_id",
+        "contact_id",
+    ],
+    "bool": [  # Y / N
+        "is_manual_opportunity",
+        "opened:",
+    ],
+    "bool_none": [  # Y / N
+        "is_shipment_approved",
+        "check_repeat",
+        "is_loaded",
+    ],
+    "datetime": [
+        "date_create",
+        "date_modify",
+    ],
+    "datetime_none": [
+        "begindate",
+        "closedate",
+        "moved_time",
+        "last_call_time" "last_email_time" "last_imol_time",
+        "last_webform_time",
+        "mgo_cc_create",
+        "mgo_cc_end",
+        "last_activity_time",
+        "last_communication_time",
+    ],
+    "float": [
+        "opportunity",
+    ],
+    "enums": [
+        "payment_method",
+        "payment_type",
+        "shipping_type",
+    ],
+}
+
 FIELDS_DELIVERY: dict[str, Any] = {}
 
 FIELDS_BILLING: dict[str, Any] = {}
+
+FIELDS_DELIVERY_ALT: dict[str, Any] = {}
+
+FIELDS_BILLING_ALT: dict[str, Any] = {}

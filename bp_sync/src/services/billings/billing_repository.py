@@ -1,9 +1,9 @@
 from typing import Type
 
-from fastapi import Depends
+# from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from db.postgres import Base, get_session
+from db.postgres import Base  # , get_session
 from models.deal_documents import Billing as BillingDB
 from models.delivery_note_models import DeliveryNote as DeliveryNoteDB
 from schemas.billing_schemas import BillingCreate, BillingUpdate
@@ -37,7 +37,7 @@ class BillingRepository(
         await self._create_or_update_related(data)
         return await self.update(data=data)
 
-    def _get_related_checks(self) -> list[tuple[str, Type[Base], str]]:
+    async def _get_related_checks(self) -> list[tuple[str, Type[Base], str]]:
         """Возвращает специфичные для Deal проверки"""
         return [
             # (атрибут схемы, модель БД, поле в модели)
@@ -45,9 +45,9 @@ class BillingRepository(
         ]
 
 
-def get_billing_repository(
-    session: AsyncSession = Depends(get_session),
-) -> BillingRepository:
-    return BillingRepository(
-        session=session,
-    )
+# def get_billing_repository(
+#    session: AsyncSession = Depends(get_session),
+# ) -> BillingRepository:
+#    return BillingRepository(
+#        session=session,
+#    )

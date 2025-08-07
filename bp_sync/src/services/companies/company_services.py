@@ -1,13 +1,12 @@
-from fastapi import Depends
+# from fastapi import Depends
 
 from models.company_models import Company as CompanyDB
 
 from ..base_services.base_service import BaseEntityClient
-from .company_bitrix_services import (
+from .company_bitrix_services import (  # get_company_bitrix_client,
     CompanyBitrixClient,
-    get_company_bitrix_client,
 )
-from .company_repository import CompanyRepository, get_company_repository
+from .company_repository import CompanyRepository  # , get_company_repository
 
 
 class CompanyClient(
@@ -19,11 +18,11 @@ class CompanyClient(
 ):
     def __init__(
         self,
-        contact_bitrix_client: CompanyBitrixClient,
-        contact_repo: CompanyRepository,
+        company_bitrix_client: CompanyBitrixClient,
+        company_repo: CompanyRepository,
     ):
-        self._bitrix_client = contact_bitrix_client
-        self._repo = contact_repo
+        self._bitrix_client = company_bitrix_client
+        self._repo = company_repo
 
     @property
     def entity_name(self) -> str:
@@ -38,10 +37,10 @@ class CompanyClient(
         return self._repo
 
 
-def get_company_client(
-    company_bitrix_client: CompanyBitrixClient = Depends(
-        get_company_bitrix_client
-    ),
-    company_repo: CompanyRepository = Depends(get_company_repository),
-) -> CompanyClient:
-    return CompanyClient(company_bitrix_client, company_repo)
+# def get_company_client(
+#    company_bitrix_client: CompanyBitrixClient = Depends(
+#        get_company_bitrix_client
+#    ),
+#    company_repo: CompanyRepository = Depends(get_company_repository),
+# ) -> CompanyClient:
+#    return CompanyClient(company_bitrix_client, company_repo)

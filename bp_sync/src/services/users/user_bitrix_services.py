@@ -1,11 +1,12 @@
-from fastapi import Depends, HTTPException, status
+from fastapi import HTTPException, status  # , Depends
 
 from core.logger import logger
 from schemas.user_schemas import UserCreate
 
 from ..bitrix_services.bitrix_api_client import BitrixAPIClient
 from ..decorators import handle_bitrix_errors
-from ..dependencies import get_bitrix_client
+
+# from ..dependencies import get_bitrix_client
 
 
 class UserBitrixClient:
@@ -31,11 +32,10 @@ class UserBitrixClient:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"{self.entity_name.capitalize()} not found",
             )
-        print(entity_data[0])
         return UserCreate(**entity_data[0])
 
 
-def get_user_bitrix_client(
-    bitrix_client: BitrixAPIClient = Depends(get_bitrix_client),
-) -> UserBitrixClient:
-    return UserBitrixClient(bitrix_client)
+# def get_user_bitrix_client(
+#    bitrix_client: BitrixAPIClient = Depends(get_bitrix_client),
+# ) -> UserBitrixClient:
+#    return UserBitrixClient(bitrix_client)

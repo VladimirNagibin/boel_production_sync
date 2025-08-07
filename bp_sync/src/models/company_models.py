@@ -90,7 +90,7 @@ class Company(CommunicationIntIdEntity):
     )  # UF_CRM_61974C16DBFBF : Разрешение на отгрузку (1/0)
 
     # Временные метки
-    date_last_shipment: Mapped[datetime] = mapped_column(
+    date_last_shipment: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), comment="Дата последней отгрузки"
     )  # UF_CRM_1623835088 : Дата последней отгрузки(2025-07-11T03:00:00+03:00)
 

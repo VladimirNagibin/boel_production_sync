@@ -4,7 +4,7 @@ from typing import Any, Generic, Protocol, TypeVar
 from core.logger import logger
 from models.bases import IntIdEntity
 
-from ..exceptions import BitrixApiError
+from ..exceptions import BitrixApiError, ConflictException
 
 
 class BitrixClientProtocol(Protocol):
@@ -88,7 +88,10 @@ class BaseEntityClient(ABC, Generic[T, R, C]):
                 "data": entity_data.model_dump(),
             },
         )
-        entity_db = await self.repo.create_entity(entity_data)
+        try:
+            entity_db = await self.repo.create_entity(entity_data)
+        except ConflictException:
+            entity_db = await self.repo.update_entity(entity_data)
         logger.info(
             f"Successfully imported {self.entity_name} from Bitrix",
             extra={f"{self.entity_name}_id": entity_id, "db_id": entity_db.id},

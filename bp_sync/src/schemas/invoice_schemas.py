@@ -148,7 +148,7 @@ class InvoiceCreate(BaseInvoice, CoreCreateSchema):
         DualTypePaymentEnum.NOT_DEFINE,
         alias="ufCrm_SMART_INVOICE_1651114959541",
     )
-    shipping_type: DualTypeShipmentEnum = Field(
+    shipment_type: DualTypeShipmentEnum = Field(
         DualTypeShipmentEnum.NOT_DEFINE, alias="ufCrm_62B53CC5A2EDF"
     )
 
@@ -166,9 +166,9 @@ class InvoiceCreate(BaseInvoice, CoreCreateSchema):
             v, DualTypePaymentEnum, DualTypePaymentEnum.NOT_DEFINE
         )
 
-    @field_validator("shipping_type", mode="before")  # type: ignore[misc]
+    @field_validator("shipment_type", mode="before")  # type: ignore[misc]
     @classmethod
-    def convert_shipping_type(cls, v: Any) -> DualTypeShipmentEnum:
+    def convert_shipment_type(cls, v: Any) -> DualTypeShipmentEnum:
         return BitrixValidators.convert_enum(
             v, DualTypeShipmentEnum, DualTypeShipmentEnum.NOT_DEFINE
         )
@@ -197,7 +197,7 @@ class InvoiceUpdate(BaseInvoice, CoreUpdateSchema):
         None,
         alias="ufCrm_SMART_INVOICE_1651114959541",
     )
-    shipping_type: DualTypeShipmentEnum | None = Field(
+    shipment_type: DualTypeShipmentEnum | None = Field(
         None, alias="ufCrm_62B53CC5A2EDF"
     )
 
@@ -215,9 +215,9 @@ class InvoiceUpdate(BaseInvoice, CoreUpdateSchema):
             v, DualTypePaymentEnum, DualTypePaymentEnum.NOT_DEFINE
         )
 
-    @field_validator("shipping_type", mode="before")  # type: ignore[misc]
+    @field_validator("shipment_type", mode="before")  # type: ignore[misc]
     @classmethod
-    def convert_shipping_type(cls, v: Any) -> DualTypeShipmentEnum:
+    def convert_shipment_type(cls, v: Any) -> DualTypeShipmentEnum:
         return BitrixValidators.convert_enum(
             v, DualTypeShipmentEnum, DualTypeShipmentEnum.NOT_DEFINE
         )

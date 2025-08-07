@@ -1,10 +1,10 @@
-from fastapi import Depends
+# from fastapi import Depends
 
 from models.lead_models import Lead as LeadDB
 
 from ..base_services.base_service import BaseEntityClient
-from .lead_bitrix_services import LeadBitrixClient, get_lead_bitrix_client
-from .lead_repository import LeadRepository, get_lead_repository
+from .lead_bitrix_services import LeadBitrixClient  # , get_lead_bitrix_client
+from .lead_repository import LeadRepository  # , get_lead_repository
 
 
 class LeadClient(BaseEntityClient[LeadDB, LeadRepository, LeadBitrixClient]):
@@ -29,8 +29,8 @@ class LeadClient(BaseEntityClient[LeadDB, LeadRepository, LeadBitrixClient]):
         return self._repo
 
 
-def get_lead_client(
-    lead_bitrix_client: LeadBitrixClient = Depends(get_lead_bitrix_client),
-    lead_repo: LeadRepository = Depends(get_lead_repository),
-) -> LeadClient:
-    return LeadClient(lead_bitrix_client, lead_repo)
+# def get_lead_client(
+#    lead_bitrix_client: LeadBitrixClient = Depends(get_lead_bitrix_client),
+#    lead_repo: LeadRepository = Depends(get_lead_repository),
+# ) -> LeadClient:
+#    return LeadClient(lead_bitrix_client, lead_repo)

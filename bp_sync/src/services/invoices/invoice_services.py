@@ -1,13 +1,12 @@
-from fastapi import Depends
+# from fastapi import Depends
 
 from models.invoice_models import Invoice as InvoiceDB
 
 from ..base_services.base_service import BaseEntityClient
-from .invoice_bitrix_services import (
+from .invoice_bitrix_services import (  # get_invoice_bitrix_client,
     InvoiceBitrixClient,
-    get_invoice_bitrix_client,
 )
-from .invoice_repository import InvoiceRepository, get_invoice_repository
+from .invoice_repository import InvoiceRepository  # , get_invoice_repository
 
 
 class InvoiceClient(
@@ -34,10 +33,10 @@ class InvoiceClient(
         return self._repo
 
 
-def get_invoice_client(
-    invoice_bitrix_client: InvoiceBitrixClient = Depends(
-        get_invoice_bitrix_client
-    ),
-    invoice_repo: InvoiceRepository = Depends(get_invoice_repository),
-) -> InvoiceClient:
-    return InvoiceClient(invoice_bitrix_client, invoice_repo)
+# def get_invoice_client(
+#    invoice_bitrix_client: InvoiceBitrixClient = Depends(
+#        get_invoice_bitrix_client
+#    ),
+#    invoice_repo: InvoiceRepository = Depends(get_invoice_repository),
+# ) -> InvoiceClient:
+#    return InvoiceClient(invoice_bitrix_client, invoice_repo)

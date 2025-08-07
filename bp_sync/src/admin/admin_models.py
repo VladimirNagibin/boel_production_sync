@@ -1,8 +1,6 @@
 # from typing import Any
 
 from sqladmin import Admin, ModelView
-from wtforms import Form, StringField
-from wtforms.validators import Optional
 
 from models.communications import (  # noqa: F401
     CommunicationChannel,
@@ -37,6 +35,9 @@ from models.references import (  # noqa: F401
 )
 from models.user_models import User  # noqa: F401
 
+# from wtforms import Form, StringField
+# from wtforms.validators import Optional
+
 
 # Базовые модели
 class BaseAdmin(ModelView):  # type: ignore[misc]
@@ -50,7 +51,57 @@ class BaseAdmin(ModelView):  # type: ignore[misc]
 
 
 # Основные сущности
-class CompanyAdmin(BaseAdmin, model=Company):
+class DealAdmin(BaseAdmin):
+    model = Deal
+    name = "Сделка"
+    column_list = [  # Поля в списке
+        "external_id",
+        "title",
+        "opportunity",
+        "begindate",
+    ]
+    column_labels = {  # Надписи полей в списке
+        "external_id": "Внешний код",
+        "title": "Название",
+        "opportunity": "Сумма",
+        "begindate": "Дата начала",
+    }
+    column_default_sort = [("external_id", True)]  # Сортировка по умолчанию
+    column_sortable_list = [  # Список полей по которым возможна сортировка
+        "external_id",
+        "title",
+        "opportunity",
+        "begindate",
+    ]
+    column_searchable_list = [  # Список полей по которым возможен поиск
+        "title",
+        "external_id",
+    ]
+    form_columns = [  # Поля на форме
+        "external_id",
+        "title",
+        "opportunity",
+        "begindate",
+        "closedate",
+        "stage_id",
+        "category_id",
+    ]
+    column_details_list = ["title", "stage_semantic_id", "payment_type"]  #
+    # form_ajax_refs = {  # Поиск поля по значению из списка
+    # "currency": {
+    #    "fields": ["name", "external_id"],
+    #    "page_size": 10,
+    #    "placeholder": "Search currency...",
+    #    "minimum_input_length": 2
+    # },
+    # "company_type": {"fields": ["name"]},
+    # "contact": {"fields": ["name", "last_name"]},
+    # }
+    icon = "fa-solid fa-handshake"
+
+
+class CompanyAdmin(BaseAdmin):
+    model = Company
     name = "Компания"
     column_list = [  # Поля в списке
         "title",
@@ -60,7 +111,7 @@ class CompanyAdmin(BaseAdmin, model=Company):
         "created_at",
     ]
     column_labels = {  # Надписи полей в списке
-        "title": "Заголовок",
+        "title": "Название",
         "external_id": "Код Б24",
         "revenue": "Оборот за год",
     }
@@ -91,7 +142,7 @@ class CompanyAdmin(BaseAdmin, model=Company):
         "company_type": {"fields": ["name"]},
         "contact": {"fields": ["name", "last_name"]},
     }
-
+    """
     async def scaffold_form(
         self, rules: list[str] | None = None
     ) -> type[Form]:
@@ -115,8 +166,37 @@ class CompanyAdmin(BaseAdmin, model=Company):
             render_kw=default_render_kw,
         )
         return form_class  # type: ignore
-
+    """
     icon = "fa-solid fa-building"
+
+
+# Справочники
+class DepartmentAdmin(BaseAdmin):
+    model = Department
+    name = "Отдел"
+    column_list = [  # Поля в списке
+        "external_id",
+        "name",
+    ]
+    column_labels = {  # Надписи полей в списке
+        "external_id": "Внешний код",
+        "name": "Название",
+    }
+    column_default_sort = [("external_id", True)]  # Сортировка по умолчанию
+    column_sortable_list = [  # Список полей по которым возможна сортировка
+        "external_id",
+        "name",
+    ]
+    column_searchable_list = [  # Список полей по которым возможен поиск
+        "name",
+        "external_id",
+    ]
+    form_columns = [  # Поля на форме
+        "external_id",
+        "name",
+    ]
+    column_details_list = ["name", "id", "created_at"]  #
+    icon = "fa-solid fa-tags"
 
 
 """
@@ -125,15 +205,6 @@ class ContactAdmin(BaseAdmin):
     form_columns = ["name", "last_name", "post", "company", "type"]
     column_searchable_list = ["name", "last_name"]
     icon = "fa-solid fa-user"
-
-
-class DealAdmin(BaseAdmin):
-    column_list = [
-        "title", "external_id", "opportunity", "stage", "created_at"
-    ]
-    form_columns = ["title", "opportunity", "stage", "company", "contact"]
-    column_details_list = ["title", "additional_info", "probability"]
-    icon = "fa-solid fa-handshake"
 
 
 class LeadAdmin(BaseAdmin):
@@ -204,7 +275,9 @@ class DeliveryNoteAdmin(BaseAdmin):
 # Регистрация всех моделей
 def register_models(admin: Admin) -> None:
     # Основные сущности
+    admin.add_view(DealAdmin)
     admin.add_view(CompanyAdmin)
+    admin.add_view(DepartmentAdmin)
     """
     admin.add_view(ContactAdmin(Contact, name="Контакты"))
     admin.add_view(DealAdmin(Deal, name="Сделки"))

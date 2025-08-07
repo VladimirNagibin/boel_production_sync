@@ -47,7 +47,7 @@ class BaseContact:
     deal_failure_reason_id: int | None = Field(
         None, alias="UF_CRM_6539DA9518373"
     )
-    lead_type_id: str | None = Field(None, alias="UF_CRM_61236340EA7AC")
+    deal_type_id: str | None = Field(None, alias="UF_CRM_61236340EA7AC")
 
     # Маркетинговые метки
     mgo_cc_entry_id: str | None = Field(None, alias="UF_CRM_63E1D6D4B8A68")

@@ -1,9 +1,9 @@
-from typing import Any, Type
+from typing import Any, Callable, Coroutine, Type
 
-from fastapi import Depends
+# from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from db.postgres import Base, get_session
+from db.postgres import Base  # , get_session
 from models.bases import EntityType
 from models.company_models import Company as CompanyDB
 from models.contact_models import Contact as ContactDB
@@ -26,10 +26,10 @@ from models.user_models import User as UserDB
 from schemas.deal_schemas import DealCreate, DealUpdate
 
 from ..base_repositories.base_repository import BaseRepository
-from ..companies.company_services import CompanyClient, get_company_client
-from ..contacts.contact_services import ContactClient, get_contact_client
-from ..leads.lead_services import LeadClient, get_lead_client
-from ..users.user_services import UserClient, get_user_client
+from ..companies.company_services import CompanyClient  # , get_company_client
+from ..contacts.contact_services import ContactClient  # , get_contact_client
+from ..leads.lead_services import LeadClient  # , get_lead_client
+from ..users.user_services import UserClient  # , get_user_client
 
 
 class DealRepository(BaseRepository[DealDB, DealCreate, DealUpdate]):
@@ -41,16 +41,20 @@ class DealRepository(BaseRepository[DealDB, DealCreate, DealUpdate]):
     def __init__(
         self,
         session: AsyncSession,
-        company_client: CompanyClient,
-        contact_client: ContactClient,
-        lead_client: LeadClient,
-        user_client: UserClient,
+        # company_client: CompanyClient,
+        # contact_client: ContactClient,
+        # lead_client: LeadClient,
+        # user_client: UserClient,
+        get_company_client: Callable[[], Coroutine[Any, Any, CompanyClient]],
+        get_contact_client: Callable[[], Coroutine[Any, Any, ContactClient]],
+        get_lead_client: Callable[[], Coroutine[Any, Any, LeadClient]],
+        get_user_client: Callable[[], Coroutine[Any, Any, UserClient]],
     ):
         super().__init__(session)
-        self.company_client = company_client
-        self.contact_client = contact_client
-        self.lead_client = lead_client
-        self.user_client = user_client
+        self.get_company_client = get_company_client
+        self.get_contact_client = get_contact_client
+        self.get_lead_client = get_lead_client
+        self.get_user_client = get_user_client
 
     async def create_entity(self, data: DealCreate) -> DealDB:
         """Создает новую сделку с проверкой связанных объектов"""
@@ -64,7 +68,7 @@ class DealRepository(BaseRepository[DealDB, DealCreate, DealUpdate]):
         await self._create_or_update_related(data)
         return await self.update(data=data)
 
-    def _get_related_checks(self) -> list[tuple[str, Type[Base], str]]:
+    async def _get_related_checks(self) -> list[tuple[str, Type[Base], str]]:
         """Возвращает специфичные для Deal проверки"""
         return [
             # (атрибут схемы, модель БД, поле в модели)
@@ -80,22 +84,26 @@ class DealRepository(BaseRepository[DealDB, DealCreate, DealUpdate]):
             ("creation_source_id", CreationSource, "external_id"),
             ("invoice_stage_id", InvoiceStage, "external_id"),
             ("current_stage_id", DealStage, "external_id"),
-            ("parent_deal_id", DealDB, "external_id"),
+            # ("parent_deal_id", DealDB, "external_id"),
             ("deal_failure_reason_id", DealFailureReason, "external_id"),
         ]
 
-    def _get_related_create(self) -> dict[str, tuple[Any, Any, bool]]:
+    async def _get_related_create(self) -> dict[str, tuple[Any, Any, bool]]:
         """Возвращает кастомные проверки для дочерних классов"""
+        company_client = await self.get_company_client()
+        contact_client = await self.get_contact_client()
+        user_client = await self.get_user_client()
+        lead_client = await self.get_lead_client()
         return {
-            "lead_id": (self.lead_client, LeadDB, False),
-            "company_id": (self.company_client, CompanyDB, False),
-            "contact_id": (self.contact_client, ContactDB, False),
-            "assigned_by_id": (self.user_client, UserDB, True),
-            "created_by_id": (self.user_client, UserDB, True),
-            "modify_by_id": (self.user_client, UserDB, False),
-            "moved_by_id": (self.user_client, UserDB, False),
-            "last_activity_by": (self.user_client, UserDB, False),
-            "defect_expert_id": (self.user_client, UserDB, False),
+            "lead_id": (lead_client, LeadDB, False),
+            "company_id": (company_client, CompanyDB, False),
+            "contact_id": (contact_client, ContactDB, False),
+            "assigned_by_id": (user_client, UserDB, True),
+            "created_by_id": (user_client, UserDB, True),
+            "modify_by_id": (user_client, UserDB, False),
+            "moved_by_id": (user_client, UserDB, False),
+            "last_activity_by": (user_client, UserDB, False),
+            "defect_expert_id": (user_client, UserDB, False),
         }
 
     """
@@ -252,17 +260,17 @@ class DealRepository(BaseRepository[DealDB, DealCreate, DealUpdate]):
         """
 
 
-def get_deal_repository(
-    session: AsyncSession = Depends(get_session),
-    company_client: CompanyClient = Depends(get_company_client),
-    contact_client: ContactClient = Depends(get_contact_client),
-    lead_client: LeadClient = Depends(get_lead_client),
-    user_client: UserClient = Depends(get_user_client),
-) -> DealRepository:
-    return DealRepository(
-        session=session,
-        company_client=company_client,
-        contact_client=contact_client,
-        lead_client=lead_client,
-        user_client=user_client,
-    )
+# def get_deal_repository(
+#    session: AsyncSession = Depends(get_session),
+#    company_client: CompanyClient = Depends(get_company_client),
+#    contact_client: ContactClient = Depends(get_contact_client),
+#    lead_client: LeadClient = Depends(get_lead_client),
+#    user_client: UserClient = Depends(get_user_client),
+# ) -> DealRepository:
+#    return DealRepository(
+#        session=session,
+#        company_client=company_client,
+#        contact_client=contact_client,
+#        lead_client=lead_client,
+#        user_client=user_client,
+#    )
