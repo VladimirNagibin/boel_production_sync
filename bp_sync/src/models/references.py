@@ -248,7 +248,7 @@ SOURCE_VALUES = [
 class Source(NameStrIdEntity):
     """
     Источники сделок:
-    PARTNER:  Существующий клиент
+    PARTNER: Существующий клиент
     19: Новый клиент
     CALL: Звонок
     WEB: Веб-сайт BOELSHOP
@@ -268,6 +268,8 @@ class Source(NameStrIdEntity):
     REPEAT_SALE: Повторные продажи
     # 20: Шоурум
     # 21: Интернет
+    # EMAIL: EMAIL
+    # Существующий клиент: Существующий клиент
     """
 
     __tablename__ = "sources"

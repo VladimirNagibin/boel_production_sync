@@ -367,13 +367,13 @@ class BaseRepository(Generic[ModelType, SchemaTypeCreate, SchemaTypeUpdate]):
         data: SchemaTypeCreate | SchemaTypeUpdate,
         additional_checks: Optional[dict[str, tuple[Any, Any, bool]]] = None,
     ) -> None:
-        from ..dependencies import get_exists_cache
+        from ..dependencies import get_exists_cache, get_updated_cache
 
         errors: list[str] = []
         checks = await self._get_related_create()
         # Для отслеживания уже обработанных сущностей
         processed_entities: set[Any] = set()
-
+        updated_cache = get_updated_cache()
         if additional_checks:
             checks.update(additional_checks)
         for field_name, (client, model, required) in checks.items():
@@ -389,7 +389,7 @@ class BaseRepository(Generic[ModelType, SchemaTypeCreate, SchemaTypeUpdate]):
                 entity_key = (model, value)
 
                 # Пропускаем, если уже обрабатывали эту сущность
-                if entity_key in processed_entities:
+                if entity_key in processed_entities | updated_cache:
                     continue
 
                 # Добавляем в отслеживаемые
@@ -410,6 +410,7 @@ class BaseRepository(Generic[ModelType, SchemaTypeCreate, SchemaTypeUpdate]):
                 else:
                     # print(f"{value} :: {client} ----")
                     await client.refresh_from_bitrix(value)
+                    updated_cache.add(entity_key)
                     # print(f"{value} :: {client} ++++")
             except Exception as e:
                 errors.append(

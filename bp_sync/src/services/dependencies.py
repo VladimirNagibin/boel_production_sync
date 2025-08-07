@@ -56,6 +56,9 @@ _services_cache_ctx: ContextVar[dict[str, Any]] = ContextVar(
 _exists_cache_ctx: ContextVar[
     dict[tuple[Type[Any], tuple[tuple[str, Any], ...]], bool]
 ] = ContextVar("_exists_cache", default={})
+_updated_cache_ctx: ContextVar[set[tuple[Type[Any], int | str]]] = ContextVar(
+    "_updated_cache", default=set()
+)
 
 
 def get_session_context() -> AsyncSession:
@@ -351,3 +354,13 @@ def get_exists_cache() -> (
 def reset_exists_cache() -> None:
     """Сбрасывает кэш проверок"""
     _exists_cache_ctx.set({})
+
+
+def get_updated_cache() -> set[tuple[Type[Any], int | str]]:
+    """Возвращает кэш проверок обновлённых объектов"""
+    return _updated_cache_ctx.get()
+
+
+def reset_updated_cache() -> None:
+    """Сбрасывает кэш обновлённых объектов"""
+    _updated_cache_ctx.set(set())
