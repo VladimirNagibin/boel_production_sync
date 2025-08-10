@@ -13,7 +13,6 @@ from schemas.base_schemas import (  # BaseCreateSchema,; BaseUpdateSchema,
     CommonFieldMixin,
 )
 
-# from ..dependencies import get_exists_cache
 from ..exceptions import ConflictException
 
 # Дженерик для схем
@@ -22,9 +21,12 @@ SchemaTypeUpdate = TypeVar("SchemaTypeUpdate", bound=CommonFieldMixin)
 # SchemaTypeCreate = TypeVar("SchemaTypeCreate", bound=BaseCreateSchema)
 # SchemaTypeUpdate = TypeVar("SchemaTypeUpdate", bound=BaseUpdateSchema)
 ModelType = TypeVar("ModelType", bound=IntIdEntity | NameStrIdEntity)
+ExternalIdType = TypeVar("ExternalIdType", int, str)
 
 
-class BaseRepository(Generic[ModelType, SchemaTypeCreate, SchemaTypeUpdate]):
+class BaseRepository(
+    Generic[ModelType, SchemaTypeCreate, SchemaTypeUpdate, ExternalIdType]
+):
     """Базовый репозиторий для CRUD операций"""
 
     model: Type[ModelType]
@@ -42,9 +44,19 @@ class BaseRepository(Generic[ModelType, SchemaTypeCreate, SchemaTypeUpdate]):
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def _exists(self, external_id: int | str) -> bool:
+    async def _exists(self, external_id: ExternalIdType) -> bool:
         """Проверяет существование сущности по external_id"""
         try:
+
+            field_type = self.model.external_id.type
+
+            # Явное приведение типа для Integer полей
+            if isinstance(field_type, int) and isinstance(external_id, str):
+                try:
+                    external_id = int(external_id)  # type: ignore[assignment]
+                except ValueError:
+                    return False
+
             stmt = select(
                 exists().where(self.model.external_id == external_id)
             )
@@ -57,7 +69,9 @@ class BaseRepository(Generic[ModelType, SchemaTypeCreate, SchemaTypeUpdate]):
             )
             return False
 
-    def _not_found_exception(self, external_id: int | str) -> HTTPException:
+    def _not_found_exception(
+        self, external_id: ExternalIdType
+    ) -> HTTPException:
         """Генерирует исключение для отсутствующей сущности"""
         entity_name = self.model.__name__
         return HTTPException(
@@ -65,7 +79,9 @@ class BaseRepository(Generic[ModelType, SchemaTypeCreate, SchemaTypeUpdate]):
             detail=f"{entity_name} with ID: {external_id} not found",
         )
 
-    def _conflict_exception(self, external_id: int | str) -> ConflictException:
+    def _conflict_exception(
+        self, external_id: ExternalIdType
+    ) -> ConflictException:
         """Генерирует исключение для конфликта дубликатов"""
         entity_name = self.model.__name__
         return ConflictException(entity_name, external_id)
@@ -81,13 +97,24 @@ class BaseRepository(Generic[ModelType, SchemaTypeCreate, SchemaTypeUpdate]):
             logger.error("Update failed: Missing ID")
             raise ValueError("ID is required for update")
         external_id = data.external_id
-        if await self._exists(external_id):
+
+        field_type = self.model.external_id.type
+
+        # Явное приведение типа для Integer полей
+        if isinstance(field_type, int) and isinstance(external_id, str):
+            try:
+                external_id = int(external_id)
+            except ValueError:
+                raise ValueError("ID is not correct type")
+
+        if await self._exists(external_id):  # type: ignore[arg-type]
             logger.warning(
                 f"Creation {self.model.__name__} conflict: "
                 f"ID={external_id} already exists"
             )
-            raise self._conflict_exception(external_id)
-        print(f"Creation {self.model.__name__}, ID={external_id}")
+            raise self._conflict_exception(
+                external_id  # type: ignore[arg-type]
+            )
         try:
             obj = self.model(**data.model_dump_db())
             self.session.add(obj)
@@ -110,7 +137,9 @@ class BaseRepository(Generic[ModelType, SchemaTypeCreate, SchemaTypeUpdate]):
                 f"Integrity error creating {self.model.__name__} "
                 f"ID={external_id}: {str(e)}"
             )
-            raise self._conflict_exception(external_id) from e
+            raise self._conflict_exception(
+                external_id  # type: ignore[arg-type]
+            ) from e
         except SQLAlchemyError as e:
             await self.session.rollback()
             logger.exception(
@@ -124,8 +153,17 @@ class BaseRepository(Generic[ModelType, SchemaTypeCreate, SchemaTypeUpdate]):
                 ),
             ) from e
 
-    async def get(self, external_id: int | str) -> Optional[ModelType]:
+    async def get(self, external_id: ExternalIdType) -> Optional[ModelType]:
         try:
+
+            field_type = self.model.external_id.type
+
+            if isinstance(field_type, int) and isinstance(external_id, str):
+                try:
+                    external_id = int(external_id)  # type: ignore[assignment]
+                except ValueError:
+                    raise ValueError("ID is not correct type")
+
             stmt = select(self.model).where(
                 self.model.external_id == external_id
             )
@@ -158,12 +196,14 @@ class BaseRepository(Generic[ModelType, SchemaTypeCreate, SchemaTypeUpdate]):
             raise ValueError("ID is required for update")
 
         external_id = data.external_id
-        if not await self._exists(external_id):
+        if not await self._exists(external_id):  # type: ignore[arg-type]
             logger.warning(
                 f"Update failed: {self.model.__name__} "
                 f"ID={external_id} not found"
             )
-            raise self._not_found_exception(external_id)
+            raise self._not_found_exception(
+                external_id  # type: ignore[arg-type]
+            )
 
         try:
             stmt = (
@@ -191,7 +231,9 @@ class BaseRepository(Generic[ModelType, SchemaTypeCreate, SchemaTypeUpdate]):
                 f"Update failed: {self.model.__name__} "
                 f"ID={external_id} not found"
             )
-            raise self._not_found_exception(external_id)
+            raise self._not_found_exception(
+                external_id  # type: ignore[arg-type]
+            )
         except SQLAlchemyError as e:
             await self.session.rollback()
             logger.exception(
@@ -205,10 +247,19 @@ class BaseRepository(Generic[ModelType, SchemaTypeCreate, SchemaTypeUpdate]):
 
     async def delete(
         self,
-        external_id: int | str,
+        external_id: ExternalIdType,
         pre_delete_hook: Optional[Callable[..., Awaitable[None]]] = None,
     ) -> bool:
         """Удаляет сущность по external_id, возвращает статус операции"""
+
+        field_type = self.model.external_id.type
+
+        if isinstance(field_type, int) and isinstance(external_id, str):
+            try:
+                external_id = int(external_id)  # type: ignore[assignment]
+            except ValueError:
+                raise ValueError("ID is not correct type")
+
         if not await self._exists(external_id):
             logger.warning(
                 f"Delete failed: {self.model.__name__} "
@@ -268,7 +319,7 @@ class BaseRepository(Generic[ModelType, SchemaTypeCreate, SchemaTypeUpdate]):
         return exists
 
     async def set_deleted_in_bitrix(  # Добавить запись None в ссылках
-        self, external_id: int | str, is_deleted: bool = True
+        self, external_id: ExternalIdType, is_deleted: bool = True
     ) -> bool:
         """
         Устанавливает флаг is_deleted_in_bitrix для сущности по external_id
@@ -276,6 +327,15 @@ class BaseRepository(Generic[ModelType, SchemaTypeCreate, SchemaTypeUpdate]):
         :param is_deleted: новое значение флага удаления
         :return: True, если обновление прошло успешно
         """
+
+        field_type = self.model.external_id.type
+
+        if isinstance(field_type, int) and isinstance(external_id, str):
+            try:
+                external_id = int(external_id)  # type: ignore[assignment]
+            except ValueError:
+                raise ValueError("ID is not correct type")
+
         if not await self._exists(external_id):
             logger.warning(
                 f"Update failed: {self.model.__name__} "

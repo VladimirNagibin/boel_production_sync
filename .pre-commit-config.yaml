@@ -4,7 +4,9 @@ repos:
     hooks:
       - id: check-yaml          # Проверка синтаксиса YAML
       - id: end-of-file-fixer   # Убедиться в наличии пустой строки в конце файла
+        exclude: \.(log|bin|png|jpg|pdf|log.*)$
       - id: trailing-whitespace # Удалить пробелы в конце строк
+        exclude: \.(log|bin|png|jpg|pdf|log.*)$
 
   - repo: https://github.com/psf/black
     rev: 25.1.0

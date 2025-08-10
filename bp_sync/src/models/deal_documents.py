@@ -40,6 +40,7 @@ class Billing(NameStrIdEntity):
         comment="Дата платежа",
     )
     number: Mapped[str]
+    document_type: Mapped[str]
     invoice_id: Mapped[int] = mapped_column(ForeignKey("invoices.external_id"))
     invoice: Mapped["Invoice"] = relationship(
         "Invoice", back_populates="billings"

@@ -28,11 +28,12 @@ from schemas.deal_schemas import DealCreate, DealUpdate
 from ..base_repositories.base_repository import BaseRepository
 from ..companies.company_services import CompanyClient  # , get_company_client
 from ..contacts.contact_services import ContactClient  # , get_contact_client
+from ..entities.source_services import SourceClient
 from ..leads.lead_services import LeadClient  # , get_lead_client
 from ..users.user_services import UserClient  # , get_user_client
 
 
-class DealRepository(BaseRepository[DealDB, DealCreate, DealUpdate]):
+class DealRepository(BaseRepository[DealDB, DealCreate, DealUpdate, int]):
     """Репозиторий для работы со сделками"""
 
     model = DealDB
@@ -49,12 +50,14 @@ class DealRepository(BaseRepository[DealDB, DealCreate, DealUpdate]):
         get_contact_client: Callable[[], Coroutine[Any, Any, ContactClient]],
         get_lead_client: Callable[[], Coroutine[Any, Any, LeadClient]],
         get_user_client: Callable[[], Coroutine[Any, Any, UserClient]],
+        get_source_client: Callable[[], Coroutine[Any, Any, SourceClient]],
     ):
         super().__init__(session)
         self.get_company_client = get_company_client
         self.get_contact_client = get_contact_client
         self.get_lead_client = get_lead_client
         self.get_user_client = get_user_client
+        self.get_source_client = get_source_client
 
     async def create_entity(self, data: DealCreate) -> DealDB:
         """Создает новую сделку с проверкой связанных объектов"""
@@ -76,7 +79,7 @@ class DealRepository(BaseRepository[DealDB, DealCreate, DealUpdate]):
             ("stage_id", DealStage, "external_id"),
             ("currency_id", Currency, "external_id"),
             ("category_id", Category, "external_id"),
-            ("source_id", Source, "external_id"),
+            # ("source_id", Source, "external_id"),
             ("main_activity_id", MainActivity, "external_id"),
             ("lead_type_id", DealType, "external_id"),
             ("shipping_company_id", ShippingCompany, "ext_alt_id"),
@@ -94,6 +97,7 @@ class DealRepository(BaseRepository[DealDB, DealCreate, DealUpdate]):
         contact_client = await self.get_contact_client()
         user_client = await self.get_user_client()
         lead_client = await self.get_lead_client()
+        source_client = await self.get_source_client()
         return {
             "lead_id": (lead_client, LeadDB, False),
             "company_id": (company_client, CompanyDB, False),
@@ -104,6 +108,7 @@ class DealRepository(BaseRepository[DealDB, DealCreate, DealUpdate]):
             "moved_by_id": (user_client, UserDB, False),
             "last_activity_by": (user_client, UserDB, False),
             "defect_expert_id": (user_client, UserDB, False),
+            "source_id": (source_client, Source, False),
         }
 
     """

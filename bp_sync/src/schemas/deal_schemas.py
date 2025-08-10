@@ -115,6 +115,14 @@ class BaseDeal:
     wz_telegram_id: Optional[str] = Field(None, alias="UF_CRM_63A03182DFB0F")
     wz_avito: Optional[str] = Field(None, alias="UF_CRM_63ABEBD42730D")
 
+    @field_validator("external_id", mode="before")  # type: ignore[misc]
+    @classmethod
+    def convert_str_to_int(cls, value: str | int) -> int:
+        """Автоматическое преобразование строк в числа для ID"""
+        if isinstance(value, str) and value.isdigit():
+            return int(value)
+        return value  # type: ignore[return-value]
+
 
 class DealCreate(BaseCreateSchema, BaseDeal):
     """Модель для создания сделок"""

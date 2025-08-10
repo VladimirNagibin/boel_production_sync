@@ -12,10 +12,13 @@ from .communications_service import CommunicationService
 SchemaTypeCreate = TypeVar("SchemaTypeCreate", bound=BaseCreateSchema)
 SchemaTypeUpdate = TypeVar("SchemaTypeUpdate", bound=BaseUpdateSchema)
 ModelType = TypeVar("ModelType", bound=IntIdEntity)
+ExternalIdType = TypeVar("ExternalIdType", int, str)
 
 
 class EntityWithCommunicationsRepository(
-    BaseRepository[ModelType, SchemaTypeCreate, SchemaTypeUpdate]
+    BaseRepository[
+        ModelType, SchemaTypeCreate, SchemaTypeUpdate, ExternalIdType
+    ]
 ):
     """Базовый репозиторий для сущностей с коммуникациями"""
 
@@ -112,7 +115,7 @@ class EntityWithCommunicationsRepository(
 
     async def delete(
         self,
-        external_id: int | str,
+        external_id: ExternalIdType,
         pre_delete_hook: Optional[Callable[..., Awaitable[None]]] = None,
     ) -> bool:
         """Удаляет сущность и её коммуникации в одной транзакции"""
@@ -123,5 +126,6 @@ class EntityWithCommunicationsRepository(
             await self._delete_entity_communications(id)
 
         return await super().delete(
-            external_id, pre_delete_hook=_combined_pre_delete_hook
+            external_id,  # type: ignore[arg-type]
+            pre_delete_hook=_combined_pre_delete_hook,
         )

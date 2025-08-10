@@ -1,4 +1,7 @@
-import time
+import asyncio
+import json
+
+# import uuid
 from datetime import date, timedelta
 from typing import Any
 
@@ -6,9 +9,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import JSONResponse
 
 from core.logger import logger
-
-# from schemas.deal_schemas import DealUpdate
-# from schemas.lead_schemas import LeadUpdate
+from schemas.billing_schemas import BillingCreate
+from schemas.delivery_note_schemas import DeliveryNoteCreate
+from services.billings.billing_repository import BillingRepository
 from services.bitrix_services.bitrix_oauth_client import BitrixOAuthClient
 from services.deals.deal_bitrix_services import (
     DealBitrixClient,
@@ -16,17 +19,27 @@ from services.deals.deal_bitrix_services import (
 from services.deals.deal_services import (
     DealClient,
 )
+from services.delivery_notes.delivery_note_repository import (
+    DeliveryNoteRepository,
+)
 from services.dependencies import (
+    get_billing_repository_dep,
     get_deal_bitrix_client_dep,
     get_deal_client_dep,
+    get_delivery_note_repository_dep,
     get_department_client_dep,
+    get_invoice_bitrix_client_dep,
+    get_invoice_client_dep,
     get_oauth_client,
     request_context,
 )
 from services.entities.department_services import (
     DepartmentClient,
 )
-from services.exceptions import BitrixAuthError
+from services.exceptions import BitrixAuthError, ConflictException
+from services.invoices.invoice_bitrix_services import InvoiceBitrixClient
+from services.invoices.invoice_services import InvoiceClient
+from services.rabbitmq_client import RabbitMQClient, get_rabbitmq
 
 # from services.bitrix_api_client import BitrixAPIClient
 # from schemas.contact_schemas import ContactUpdate
@@ -64,6 +77,11 @@ async def load_deals(
     end_data: date,
     deal_bitrix_client: DealBitrixClient = Depends(get_deal_bitrix_client_dep),
     deal_client: DealClient = Depends(get_deal_client_dep),
+    invoice_bitrix_client: InvoiceBitrixClient = Depends(
+        get_invoice_bitrix_client_dep
+    ),
+    invoice_client: InvoiceClient = Depends(get_invoice_client_dep),
+    rabbitmq_client: RabbitMQClient = Depends(get_rabbitmq),
 ) -> JSONResponse:
     # Рассчитываем конец периода как начало следующего дня
     end_date_plus_one = end_data + timedelta(days=1)
@@ -100,15 +118,44 @@ async def load_deals(
         # Прерываем цикл, если получено меньше 50 записей (последняя страница)
         # if len(deals) < 50:
         #    break
-        time.sleep(2)
+        await asyncio.sleep(2)
     # Извлекаем только ID сделок
-    deal_ids: list[int | None] = [deal.external_id for deal in all_deals]
-    print(deal_ids)
+    deal_ids: list[int | str | None] = [deal.external_id for deal in all_deals]
+    # print(deal_ids)
     for deal_id in deal_ids:
         print(f"{deal_id}====================================")
         if deal_id:
-            await deal_client.import_from_bitrix(deal_id)
-        time.sleep(2)
+            await deal_client.import_from_bitrix(int(deal_id))
+            await asyncio.sleep(2)
+
+            filter_entity2: dict[str, Any] = {
+                "parentId2": deal_id,
+            }
+            select = ["id"]
+            start = 0
+            res = await invoice_bitrix_client.list(
+                select=select, filter_entity=filter_entity2, start=start
+            )
+            if res.result:
+                invoice_id = res.result[0].external_id
+                print(invoice_id)
+                if invoice_id:
+                    invoice = await invoice_client.import_from_bitrix(
+                        int(invoice_id)
+                    )
+                    message = json.dumps(
+                        {
+                            "account_number": invoice.account_number,
+                            "invoice_id": invoice.external_id,
+                            "invoice_date": invoice.date_create.isoformat(),
+                            "company_id": invoice.company_id,
+                        }
+                    ).encode()
+                    await rabbitmq_client.send_message(message)
+    # if not res:
+    #    break
+    # invoice = res.result[0]["id"]
+    await asyncio.sleep(2)
 
     return JSONResponse(
         status_code=status.HTTP_200_OK,
@@ -238,3 +285,106 @@ async def handle_auth_callback(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Internal server error during authentication: {str(e)}",
         )
+
+
+@b24_router.get("/receive_message")  # type: ignore
+async def receive_message(
+    rabbitmq_client: RabbitMQClient = Depends(get_rabbitmq),
+) -> JSONResponse:
+    message = await rabbitmq_client.get_message()
+    if not message:
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={"status": "No messages available"},
+        )
+
+    if message.message_id:
+        rabbitmq_client.unacked_messages[message.message_id] = message
+    print(
+        f"{rabbitmq_client.unacked_messages}----------------------------------"
+    )
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={
+            "message_id": message.message_id,
+            "body": json.loads(message.body.decode()),
+            "instructions": (
+                f"Call /ack_message/{message.message_id} to confirm "
+                "processing"
+            ),
+        },
+    )
+
+
+@b24_router.post("/ack_message/{message_id}")  # type: ignore
+async def acknowledge_message(
+    message_id: str, rabbitmq_client: RabbitMQClient = Depends(get_rabbitmq)
+) -> JSONResponse:
+    print(rabbitmq_client.unacked_messages)
+    if message_id not in rabbitmq_client.unacked_messages:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Message not found or already acknowledged",
+        )
+
+    message = rabbitmq_client.unacked_messages[message_id]
+    success = await rabbitmq_client.ack_message(message)
+
+    if success:
+        del rabbitmq_client.unacked_messages[message_id]
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={
+                "status": "success",
+                "message": f"Message {message_id} acknowledged",
+            },
+        )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to acknowledge message",
+        )
+
+
+@b24_router.post("/billing")  # type: ignore
+async def create_billing(
+    billing_create: BillingCreate,
+    billing_repository: BillingRepository = Depends(
+        get_billing_repository_dep
+    ),
+) -> JSONResponse:
+    try:
+        billing_db = await billing_repository.create_entity(billing_create)
+    except ConflictException:
+        billing_db = await billing_repository.update_entity(billing_create)
+
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={
+            "billing_id": billing_db.external_id,
+        },
+    )
+
+
+@b24_router.post("/delivery-note")  # type: ignore
+async def create_delivery_note(
+    delivery_note_create: DeliveryNoteCreate,
+    delivery_note_repository: DeliveryNoteRepository = Depends(
+        get_delivery_note_repository_dep
+    ),
+) -> JSONResponse:
+    try:
+        delivery_note_db = await delivery_note_repository.create_entity(
+            delivery_note_create
+        )
+    except ConflictException:
+        delivery_note_db = await delivery_note_repository.update_entity(
+            delivery_note_create
+        )
+
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={
+            "delivery_note_id": delivery_note_db.external_id,
+        },
+    )

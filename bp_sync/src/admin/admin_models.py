@@ -252,6 +252,43 @@ class ShippingCompanyAdmin(
     icon = "fa-solid fa-location-arrow"
 
 
+class BillingAdmin(BaseAdmin, model=Billing):  # type: ignore[call-arg]
+    name = "Платежи"
+    column_list = [  # Поля в списке
+        "external_id",
+        "name",
+    ]
+    column_labels = {  # Надписи полей в списке
+        "external_id": "Внешний код",
+        "name": "Название",
+    }
+    column_default_sort = [("external_id", True)]  # Сортировка по умолчанию
+    column_sortable_list = [  # Список полей по которым возможна сортировка
+        "external_id",
+        "name",
+    ]
+    column_searchable_list = [  # Список полей по которым возможен поиск
+        "name",
+        "external_id",
+    ]
+    form_columns = [  # Поля на форме
+        "external_id",
+        "name",
+    ]
+    column_details_list = [
+        "name",
+        "id",
+        "created_at",
+        "payment_method",
+        "amount",
+        "date_payment",
+        "number",
+        "document_type",
+        "invoice",
+    ]  #
+    icon = "fa-solid fa-location-arrow"
+
+
 """
 class ContactAdmin(BaseAdmin):
     column_list = ["name", "last_name", "post", "company", "created_at"]
@@ -333,6 +370,7 @@ def register_models(admin: Admin) -> None:
     admin.add_view(DepartmentAdmin)
     admin.add_view(SourceAdmin)
     admin.add_view(ShippingCompanyAdmin)
+    admin.add_view(BillingAdmin)
     """
     admin.add_view(ContactAdmin(Contact, name="Контакты"))
     admin.add_view(DealAdmin(Deal, name="Сделки"))

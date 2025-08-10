@@ -1,4 +1,6 @@
-from sqlalchemy import ForeignKey
+from datetime import date
+
+from sqlalchemy import Date, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .bases import NameStrIdEntity
@@ -53,47 +55,7 @@ class DeliveryNote(NameStrIdEntity):
     warehouse: Mapped["Warehouse"] = relationship(
         "Warehouse", back_populates="delivery_notes"
     )
-    # billings: Mapped[list["Billing"]] = relationship(
-    #    "Billing", back_populates="delivery_note"
-    # )
-
-    @property
-    def total_paid(self) -> float:
-        """Общая сумма оплаченных платежей"""
-        return (
-            sum(billing.amount for billing in self.billings)
-            if self.billings
-            else 0.0
-        )
-
-    @property
-    def paid_status(self) -> str:
-        """Статус оплаты:
-        - 'paid' - полностью оплачена
-        - 'partial' - частично оплачена
-        - 'unpaid' - не оплачена
-        """
-        total_paid = self.total_paid
-
-        if abs(total_paid - self.opportunity) < 0.01:
-            return "paid"
-        elif total_paid > 0:
-            return "partial"
-        else:
-            return "unpaid"
-
-    @property
-    def paid_percentage(self) -> float:
-        """Процент оплаты от общей суммы"""
-        if self.opportunity > 0:
-            return float(
-                min(
-                    100.0, round((self.total_paid / self.opportunity) * 100, 2)
-                )
-            )
-        return 0.0
-
-    @property
-    def payment_diff(self) -> float:
-        """Оставшаяся сумма к оплате"""
-        return float(max(0.0, self.opportunity - self.total_paid))
+    date_delivery_note: Mapped[date] = mapped_column(
+        Date,
+        comment="Дата накладной в 1с",
+    )

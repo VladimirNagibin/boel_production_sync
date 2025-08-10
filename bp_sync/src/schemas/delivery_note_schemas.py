@@ -1,3 +1,4 @@
+from datetime import date
 from typing import ClassVar
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -33,6 +34,7 @@ class DeliveryNoteCreate(BaseDeliveryNote, EntityAwareSchema):
 
     name: str = Field(...)
     opportunity: float = Field(0.0)
+    date_delivery_note: date = Field(...)
 
 
 class DeliveryNoteUpdate(BaseDeliveryNote, BaseModel):  # type: ignore[misc]
@@ -40,3 +42,4 @@ class DeliveryNoteUpdate(BaseDeliveryNote, BaseModel):  # type: ignore[misc]
 
     name: str | None = Field(None)
     opportunity: float | None = Field(None)
+    date_delivery_note: date | None = Field(None)

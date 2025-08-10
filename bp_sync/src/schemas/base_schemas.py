@@ -21,15 +21,28 @@ SYSTEM_USER_ID = 1
 
 
 class CommonFieldMixin(BaseModel):  # type: ignore[misc]
-    id: Optional[UUID] = Field(None)
+    internal_id: Optional[UUID] = Field(
+        default=None,
+        # alias="id",
+        exclude=True,
+        init_var=False,
+    )
     created_at: Optional[datetime] = Field(None)
     updated_at: Optional[datetime] = Field(None)
     is_deleted_in_bitrix: Optional[bool] = Field(None)
 
-    external_id: Optional[int] = Field(
+    external_id: Optional[int | str] = Field(
         None,
         validation_alias=AliasChoices("ID", "id"),
     )
+
+    @property
+    def id(self) -> Optional[UUID]:
+        return self.internal_id
+
+    @id.setter
+    def id(self, value: UUID) -> None:
+        self.internal_id = value
 
 
 class BaseFieldMixin:
@@ -188,9 +201,7 @@ class EntityAwareSchema(BaseModel):  # type: ignore[misc]
 
     def model_dump_db(self, exclude_unset: bool = False) -> dict[str, Any]:
 
-        # print(f'{self}=======================')
         data = self.model_dump(exclude_unset=exclude_unset)
-        # print(f'{type(data.get("shipping_type"))}=======================')
         for key in self.FIELDS_BY_TYPE_ALT["list"]:
             try:
                 del data[key]
@@ -198,8 +209,10 @@ class EntityAwareSchema(BaseModel):  # type: ignore[misc]
                 ...
         for key, value in data.items():
             if (
-                key in self.FIELDS_BY_TYPE_ALT["str_none"] and not value
-            ) or key == "parent_deal_id":
+                (key in self.FIELDS_BY_TYPE_ALT["str_none"] and not value)
+                or key == "parent_deal_id"
+                or key == "parent_company_id"
+            ):
                 data[key] = None
             elif key in self.FIELDS_BY_TYPE_ALT["int_none"] and (
                 value is None or not int(value)
@@ -209,7 +222,6 @@ class EntityAwareSchema(BaseModel):  # type: ignore[misc]
                 data[key] = DualTypeShipmentEnum(value)
             elif key == "payment_type":
                 data[key] = DualTypePaymentEnum(value)
-            # print(f"key: {key}, value: {data[key]}")
         return data  # type: ignore[no-any-return]
 
 
@@ -370,7 +382,7 @@ class BitrixValidators:
             elif field in fields.get("str_none", []) and not value:
                 processed_data[field] = ""
             elif field in fields.get("int_none", []) and not value:
-                processed_data[field] = 0
+                processed_data[field] = None  # 0
             elif field in (
                 fields.get("bool", []) + fields.get("bool_none", [])
             ):

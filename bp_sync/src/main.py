@@ -18,6 +18,7 @@ from core.logger import LOGGING, logger
 from core.settings import settings
 from db import redis
 from db.postgres import engine
+from services.rabbitmq_client import RabbitMQClient
 
 # from cryptography.fernet import Fernet
 # new_key = Fernet.generate_key()
@@ -25,6 +26,8 @@ from db.postgres import engine
 # Преобразовать в строку для хранения
 # key_str = new_key.decode('utf-8')
 # print("Сгенерированный ключ:", key_str)
+
+rabbitmq_client = RabbitMQClient()
 
 
 @asynccontextmanager
@@ -37,6 +40,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         decode_responses=True,
         ssl=False,  # Для продакшена используйте True
     )
+    await rabbitmq_client.startup()
     try:
         # Проверка подключения и аутентификации
         await redis.redis.ping()
@@ -50,6 +54,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     yield
     await redis.redis.save()
     await redis.redis.aclose()
+    await rabbitmq_client.shutdown()
 
 
 app = FastAPI(

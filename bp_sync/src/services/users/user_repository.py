@@ -1,9 +1,9 @@
 from typing import Type
 
-from fastapi import Depends
+# from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from db.postgres import Base, get_session
+from db.postgres import Base  # , get_session
 from models.bases import EntityType
 from models.references import Department
 from models.user_models import User as UserDB
@@ -12,7 +12,7 @@ from schemas.user_schemas import UserCreate, UserUpdate
 from ..base_repositories.base_repository import BaseRepository
 
 
-class UserRepository(BaseRepository[UserDB, UserCreate, UserUpdate]):
+class UserRepository(BaseRepository[UserDB, UserCreate, UserUpdate, int]):
 
     model = UserDB
     entity_type = EntityType.USER
@@ -38,7 +38,7 @@ class UserRepository(BaseRepository[UserDB, UserCreate, UserUpdate]):
         ]
 
 
-def get_user_repository(
-    session: AsyncSession = Depends(get_session),
-) -> UserRepository:
-    return UserRepository(session)
+# def get_user_repository(
+#    session: AsyncSession = Depends(get_session),
+# ) -> UserRepository:
+#    return UserRepository(session)

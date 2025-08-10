@@ -14,7 +14,7 @@ from ..bitrix_services.bitrix_api_client import BitrixAPIClient
 from ..exceptions import ConflictException
 
 
-class DepartmentClient(BaseRepository[DepartDB, Department, Department]):
+class DepartmentClient(BaseRepository[DepartDB, Department, Department, int]):
 
     model = DepartDB
 

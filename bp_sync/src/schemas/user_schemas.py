@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import ClassVar
 
-from pydantic import ConfigDict, Field
+from pydantic import ConfigDict, Field, field_validator
 
 from .base_schemas import CommonFieldMixin, EntityAwareSchema
 from .fields import FIELDS_USER
@@ -43,6 +43,14 @@ class BaseUser(CommonFieldMixin):
 
     # Связи с другими сущностями
     department_id: int | None = Field(None, alias="UF_DEPARTMENT")
+
+    @field_validator("external_id", mode="before")  # type: ignore[misc]
+    @classmethod
+    def convert_str_to_int(cls, value: str | int) -> int:
+        """Автоматическое преобразование строк в числа для ID"""
+        if isinstance(value, str) and value.isdigit():
+            return int(value)
+        return value  # type: ignore[return-value]
 
     model_config = ConfigDict(
         use_enum_values=True,

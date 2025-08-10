@@ -21,7 +21,7 @@ from ..users.user_services import UserClient  # , get_user_client
 
 
 class DeliveryNoteRepository(
-    BaseRepository[DeliveryNoteDB, DeliveryNoteCreate, DeliveryNoteUpdate]
+    BaseRepository[DeliveryNoteDB, DeliveryNoteCreate, DeliveryNoteUpdate, str]
 ):
 
     model = DeliveryNoteDB

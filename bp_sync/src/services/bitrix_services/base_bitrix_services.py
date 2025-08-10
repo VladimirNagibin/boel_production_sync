@@ -38,7 +38,7 @@ class BaseBitrixEntityClient(Generic[SchemaTypeCreate, SchemaTypeUpdate]):
 
     def _prepare_params(
         self,
-        entity_id: int | None = None,
+        entity_id: int | str | None = None,
         data: Any = None,
         entity_type_id: int | None = None,
         **kwargs: Any,
@@ -61,7 +61,7 @@ class BaseBitrixEntityClient(Generic[SchemaTypeCreate, SchemaTypeUpdate]):
         self,
         response: dict[str, Any],
         action: str,
-        entity_id: int | None = None,
+        entity_id: int | str | None = None,
         entity_type_id: int | None = None,
     ) -> Any:
         """Обрабатывает ответ API и извлекает данные"""
@@ -114,7 +114,7 @@ class BaseBitrixEntityClient(Generic[SchemaTypeCreate, SchemaTypeUpdate]):
 
     @handle_bitrix_errors()
     async def get(
-        self, entity_id: int, entity_type_id: int | None = None
+        self, entity_id: int | str, entity_type_id: int | None = None
     ) -> SchemaTypeCreate:
         """Получение сущности по ID"""
         logger.debug(f"Fetching {self.entity_name} ID={entity_id}")
@@ -175,7 +175,7 @@ class BaseBitrixEntityClient(Generic[SchemaTypeCreate, SchemaTypeUpdate]):
 
     @handle_bitrix_errors()
     async def delete(
-        self, entity_id: int, entity_type_id: int | None = None
+        self, entity_id: int | str, entity_type_id: int | None = None
     ) -> bool:
         """Удаление сущности по ID"""
         logger.info(f"Deleting {self.entity_name} ID={entity_id}")
