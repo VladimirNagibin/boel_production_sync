@@ -6,13 +6,15 @@ from models.bases import IntIdEntity
 
 from ..exceptions import BitrixApiError, ConflictException
 
+ExternalIdType = TypeVar("ExternalIdType", int, str)
+
 
 class BitrixClientProtocol(Protocol):
     """Протокол для клиента Bitrix API"""
 
     @abstractmethod
     async def get(
-        self, entity_id: int, entity_type_id: int | None = None
+        self, entity_id: str | int, entity_type_id: int | None = None
     ) -> Any:
         """Получает сущность по ID из Bitrix"""
         ...
@@ -32,13 +34,13 @@ class RepositoryProtocol(Protocol):
         ...
 
     @abstractmethod
-    async def delete(self, external_id: int | str) -> bool:
+    async def delete(self, external_id: Any) -> bool:
         """Удаляет сущность по ID"""
         ...
 
     @abstractmethod
     async def set_deleted_in_bitrix(
-        self, external_id: int | str, is_deleted: bool = True
+        self, external_id: Any, is_deleted: bool = True
     ) -> bool:
         """Помечает сущность как удаленную в Bitrix"""
         ...
@@ -71,7 +73,7 @@ class BaseEntityClient(ABC, Generic[T, R, C]):
         pass
 
     async def import_from_bitrix(
-        self, entity_id: int, entity_type_id: int | None = None
+        self, entity_id: ExternalIdType, entity_type_id: int | None = None
     ) -> T:
         """Импортирует сущность из Bitrix в базу данных"""
         logger.info(
@@ -99,7 +101,7 @@ class BaseEntityClient(ABC, Generic[T, R, C]):
         return entity_db  # type: ignore[no-any-return]
 
     async def refresh_from_bitrix(
-        self, entity_id: int, entity_type_id: int | None = None
+        self, entity_id: int | str, entity_type_id: int | None = None
     ) -> T:
         """Обновляет данные сущности из Bitrix в базе данных"""
         logger.info(
@@ -147,7 +149,7 @@ class BaseEntityClient(ABC, Generic[T, R, C]):
             return False
 
     async def set_deleted_in_bitrix(
-        self, external_id: int, is_deleted: bool = True
+        self, external_id: int | str, is_deleted: bool = True
     ) -> bool:
         """Помечает сущность как удаленную в Bitrix"""
         try:

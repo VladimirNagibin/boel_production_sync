@@ -27,11 +27,12 @@ from ..base_repositories.base_repository import BaseRepository
 from ..companies.company_services import CompanyClient  # , get_company_client
 from ..contacts.contact_services import ContactClient  # , get_contact_client
 from ..deals.deal_services import DealClient  # , get_deal_client
+from ..entities.source_services import SourceClient
 from ..users.user_services import UserClient  # , get_user_client
 
 
 class InvoiceRepository(
-    BaseRepository[InvoiceDB, InvoiceCreate, InvoiceUpdate]
+    BaseRepository[InvoiceDB, InvoiceCreate, InvoiceUpdate, int]
 ):
 
     model = InvoiceDB
@@ -48,12 +49,14 @@ class InvoiceRepository(
         get_contact_client: Callable[[], Coroutine[Any, Any, ContactClient]],
         get_deal_client: Callable[[], Coroutine[Any, Any, DealClient]],
         get_user_client: Callable[[], Coroutine[Any, Any, UserClient]],
+        get_source_client: Callable[[], Coroutine[Any, Any, SourceClient]],
     ):
         super().__init__(session)
         self.get_company_client = get_company_client
         self.get_contact_client = get_contact_client
         self.get_deal_client = get_deal_client
         self.get_user_client = get_user_client
+        self.get_source_client = get_source_client
 
     async def create_entity(self, data: InvoiceCreate) -> InvoiceDB:
         """Создает новый контакт с проверкой связанных объектов"""
@@ -77,7 +80,7 @@ class InvoiceRepository(
             ("invoice_stage_id", InvoiceStage, "external_id"),
             ("previous_stage_id", InvoiceStage, "external_id"),
             ("current_stage_id", InvoiceStage, "external_id"),
-            ("source_id", Source, "external_id"),
+            # ("source_id", Source, "external_id"),
             ("main_activity_id", MainActivity, "ext_alt4_id"),
             ("warehouse_id", Warehouse, "ext_alt_id"),
             ("creation_source_id", CreationSource, "ext_alt_id"),
@@ -92,6 +95,7 @@ class InvoiceRepository(
         contact_client = await self.get_contact_client()
         user_client = await self.get_user_client()
         deal_client = await self.get_deal_client()
+        source_client = await self.get_source_client()
         return {
             "contact_id": (contact_client, ContactDB, False),
             "company_id": (company_client, CompanyDB, False),
@@ -101,6 +105,7 @@ class InvoiceRepository(
             "modify_by_id": (user_client, UserDB, False),
             "last_activity_by": (user_client, UserDB, False),
             "moved_by_id": (user_client, UserDB, False),
+            "source_id": (source_client, Source, False),
         }
 
 

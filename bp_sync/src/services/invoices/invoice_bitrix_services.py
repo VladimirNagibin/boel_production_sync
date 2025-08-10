@@ -27,7 +27,7 @@ class InvoiceBitrixClient(
         return await super().create(data, ENTITY_TYPE_ID)
 
     async def get(
-        self, entity_id: int, entity_type_id: int | None = None
+        self, entity_id: int | str, entity_type_id: int | None = None
     ) -> InvoiceCreate:
         return await super().get(entity_id, ENTITY_TYPE_ID)
 
@@ -37,7 +37,7 @@ class InvoiceBitrixClient(
         return await super().update(data, ENTITY_TYPE_ID)
 
     async def delete(
-        self, entity_id: int, entity_type_id: int | None = None
+        self, entity_id: int | str, entity_type_id: int | None = None
     ) -> bool:
         return await super().delete(entity_id, ENTITY_TYPE_ID)
 

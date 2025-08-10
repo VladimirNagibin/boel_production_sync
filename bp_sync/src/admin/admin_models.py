@@ -51,8 +51,7 @@ class BaseAdmin(ModelView):  # type: ignore[misc]
 
 
 # Основные сущности
-class DealAdmin(BaseAdmin):
-    model = Deal
+class DealAdmin(BaseAdmin, model=Deal):  # type: ignore[call-arg]
     name = "Сделка"
     column_list = [  # Поля в списке
         "external_id",
@@ -100,8 +99,7 @@ class DealAdmin(BaseAdmin):
     icon = "fa-solid fa-handshake"
 
 
-class CompanyAdmin(BaseAdmin):
-    model = Company
+class CompanyAdmin(BaseAdmin, model=Company):  # type: ignore[call-arg]
     name = "Компания"
     column_list = [  # Поля в списке
         "title",
@@ -171,8 +169,7 @@ class CompanyAdmin(BaseAdmin):
 
 
 # Справочники
-class DepartmentAdmin(BaseAdmin):
-    model = Department
+class DepartmentAdmin(BaseAdmin, model=Department):  # type: ignore[call-arg]
     name = "Отдел"
     column_list = [  # Поля в списке
         "external_id",
@@ -197,6 +194,99 @@ class DepartmentAdmin(BaseAdmin):
     ]
     column_details_list = ["name", "id", "created_at"]  #
     icon = "fa-solid fa-tags"
+
+
+class SourceAdmin(BaseAdmin, model=Source):  # type: ignore[call-arg]
+    name = "Источник"
+    column_list = [  # Поля в списке
+        "external_id",
+        "name",
+    ]
+    column_labels = {  # Надписи полей в списке
+        "external_id": "Внешний код",
+        "name": "Название",
+    }
+    column_default_sort = [("external_id", True)]  # Сортировка по умолчанию
+    column_sortable_list = [  # Список полей по которым возможна сортировка
+        "external_id",
+        "name",
+    ]
+    column_searchable_list = [  # Список полей по которым возможен поиск
+        "name",
+        "external_id",
+    ]
+    form_columns = [  # Поля на форме
+        "external_id",
+        "name",
+    ]
+    column_details_list = ["name", "id", "created_at"]  #
+    icon = "fa-solid fa-location-arrow"
+
+
+class ShippingCompanyAdmin(
+    BaseAdmin, model=ShippingCompany
+):  # type: ignore[call-arg]
+    name = "Фирмы отгрузки"
+    column_list = [  # Поля в списке
+        "external_id",
+        "name",
+    ]
+    column_labels = {  # Надписи полей в списке
+        "external_id": "Внешний код",
+        "name": "Название",
+    }
+    column_default_sort = [("external_id", True)]  # Сортировка по умолчанию
+    column_sortable_list = [  # Список полей по которым возможна сортировка
+        "external_id",
+        "name",
+    ]
+    column_searchable_list = [  # Список полей по которым возможен поиск
+        "name",
+        "external_id",
+    ]
+    form_columns = [  # Поля на форме
+        "external_id",
+        "name",
+    ]
+    column_details_list = ["name", "id", "created_at"]  #
+    icon = "fa-solid fa-location-arrow"
+
+
+class BillingAdmin(BaseAdmin, model=Billing):  # type: ignore[call-arg]
+    name = "Платежи"
+    column_list = [  # Поля в списке
+        "external_id",
+        "name",
+    ]
+    column_labels = {  # Надписи полей в списке
+        "external_id": "Внешний код",
+        "name": "Название",
+    }
+    column_default_sort = [("external_id", True)]  # Сортировка по умолчанию
+    column_sortable_list = [  # Список полей по которым возможна сортировка
+        "external_id",
+        "name",
+    ]
+    column_searchable_list = [  # Список полей по которым возможен поиск
+        "name",
+        "external_id",
+    ]
+    form_columns = [  # Поля на форме
+        "external_id",
+        "name",
+    ]
+    column_details_list = [
+        "name",
+        "id",
+        "created_at",
+        "payment_method",
+        "amount",
+        "date_payment",
+        "number",
+        "document_type",
+        "invoice",
+    ]  #
+    icon = "fa-solid fa-location-arrow"
 
 
 """
@@ -278,6 +368,9 @@ def register_models(admin: Admin) -> None:
     admin.add_view(DealAdmin)
     admin.add_view(CompanyAdmin)
     admin.add_view(DepartmentAdmin)
+    admin.add_view(SourceAdmin)
+    admin.add_view(ShippingCompanyAdmin)
+    admin.add_view(BillingAdmin)
     """
     admin.add_view(ContactAdmin(Contact, name="Контакты"))
     admin.add_view(DealAdmin(Deal, name="Сделки"))

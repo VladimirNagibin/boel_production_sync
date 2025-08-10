@@ -1,6 +1,6 @@
 from typing import Any
 
-from pydantic import ConfigDict, Field
+from pydantic import ConfigDict, Field, field_validator
 
 from .base_schemas import CommonFieldMixin
 
@@ -25,3 +25,11 @@ class Department(CommonFieldMixin):
         return self.model_dump(  # type: ignore[no-any-return]
             exclude_unset=exclude_unset
         )
+
+    @field_validator("external_id", mode="before")  # type: ignore[misc]
+    @classmethod
+    def convert_str_to_int(cls, value: str | int) -> int:
+        """Автоматическое преобразование строк в числа для ID"""
+        if isinstance(value, str) and value.isdigit():
+            return int(value)
+        return value  # type: ignore[return-value]

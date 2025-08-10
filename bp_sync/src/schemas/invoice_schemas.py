@@ -126,6 +126,14 @@ class BaseInvoice:
     wz_telegram_id: Optional[str] = Field(None, alias="ufCrm_6721D5AEA56E0")
     wz_avito: Optional[str] = Field(None, alias="ufCrm_6721D5AEDFA5C")
 
+    @field_validator("external_id", mode="before")  # type: ignore[misc]
+    @classmethod
+    def convert_str_to_int(cls, value: str | int) -> int:
+        """Автоматическое преобразование строк в числа для ID"""
+        if isinstance(value, str) and value.isdigit():
+            return int(value)
+        return value  # type: ignore[return-value]
+
 
 class InvoiceCreate(BaseInvoice, CoreCreateSchema):
     """Модель для создания счетов"""

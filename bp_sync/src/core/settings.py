@@ -39,8 +39,14 @@ class Settings(BaseSettings):  # type: ignore
         "your_fernet_key_here"  # сгенерировать Fernet.generate_key()
     )
 
+    RABBIT_HOST: str = "rabbitmq"
+    RABBIT_PORT: int = 5672
+    RABBIT_USER: str = "admin"
+    RABBIT_PASSWORD: str = "zxcvbn"
+
     BASE_DIR: str = str(Path(__file__).resolve().parent.parent)
     LOGGING_FILE_MAX_BYTES: int = 500_000
+    EXCHANGE_NAME: str = "sync"
 
     @property
     def dsn(self) -> str:

@@ -12,7 +12,7 @@ from ..base_repositories.base_repository import BaseRepository
 
 
 class BillingRepository(
-    BaseRepository[BillingDB, BillingCreate, BillingUpdate]
+    BaseRepository[BillingDB, BillingCreate, BillingUpdate, str]
 ):
 
     model = BillingDB

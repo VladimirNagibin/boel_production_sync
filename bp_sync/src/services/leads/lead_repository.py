@@ -31,10 +31,11 @@ if TYPE_CHECKING:
     from ..contacts.contact_services import (  # , get_contact_client
         ContactClient,
     )
+    from ..entities.source_services import SourceClient
 
 
 class LeadRepository(
-    EntityWithCommunicationsRepository[LeadDB, LeadCreate, LeadUpdate]
+    EntityWithCommunicationsRepository[LeadDB, LeadCreate, LeadUpdate, int]
 ):
 
     model = LeadDB
@@ -49,11 +50,13 @@ class LeadRepository(
         get_company_client: Callable[[], Coroutine[Any, Any, "CompanyClient"]],
         get_contact_client: Callable[[], Coroutine[Any, Any, "ContactClient"]],
         get_user_client: Callable[[], Coroutine[Any, Any, UserClient]],
+        get_source_client: Callable[[], Coroutine[Any, Any, "SourceClient"]],
     ):
         super().__init__(session)
         self.get_company_client = get_company_client
         self.get_contact_client = get_contact_client
         self.get_user_client = get_user_client
+        self.get_source_client = get_source_client
 
     async def create_entity(self, data: LeadCreate) -> LeadDB:
         """Создает новый лид с проверкой связанных объектов"""
@@ -74,7 +77,7 @@ class LeadRepository(
             ("type_id", DealType, "external_id"),
             ("status_id", LeadStatus, "external_id"),
             ("currency_id", Currency, "external_id"),
-            ("source_id", Source, "external_id"),
+            # ("source_id", Source, "external_id"),
             ("main_activity_id", MainActivity, "ext_alt_id"),  # Особое поле
             ("deal_failure_reason_id", DealFailureReason, "ext_alt_id"),
         ]
@@ -84,6 +87,7 @@ class LeadRepository(
         company_client = await self.get_company_client()
         contact_client = await self.get_contact_client()
         user_client = await self.get_user_client()
+        source_client = await self.get_source_client()
         return {
             "company_id": (company_client, CompanyDB, False),
             "contact_id": (contact_client, ContactDB, False),
@@ -92,6 +96,7 @@ class LeadRepository(
             "modify_by_id": (user_client, UserDB, False),
             "moved_by_id": (user_client, UserDB, False),
             "last_activity_by": (user_client, UserDB, False),
+            "source_id": (source_client, Source, False),
         }
 
 

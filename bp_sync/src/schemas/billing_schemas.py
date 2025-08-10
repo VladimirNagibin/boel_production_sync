@@ -34,7 +34,8 @@ class BillingCreate(BaseBilling, EntityAwareSchema):
     amount: float = Field(0.0)
     date_payment: date = Field(...)
     number: str = Field(...)
-    delivery_note_id: str = Field(...)
+    document_type: str = Field(...)
+    invoice_id: int = Field(...)
 
     @field_validator("payment_method", mode="before")  # type: ignore[misc]
     @classmethod
@@ -53,7 +54,8 @@ class BillingUpdate(BaseBilling, BaseModel):  # type: ignore[misc]
     amount: float | None = Field(None)
     date_payment: date | None = Field(None)
     number: str | None = Field(None)
-    delivery_note_id: str | None = Field(None)
+    document_type: str | None = Field(None)
+    invoice_id: int | None = Field(None)
 
     @field_validator("payment_method", mode="before")  # type: ignore[misc]
     @classmethod

@@ -31,11 +31,14 @@ if TYPE_CHECKING:
     from ..contacts.contact_services import (  # , get_contact_client
         ContactClient,
     )
+    from ..entities.source_services import SourceClient
     from ..leads.lead_services import LeadClient  # , get_lead_client
 
 
 class CompanyRepository(
-    EntityWithCommunicationsRepository[CompanyDB, CompanyCreate, CompanyUpdate]
+    EntityWithCommunicationsRepository[
+        CompanyDB, CompanyCreate, CompanyUpdate, int
+    ]
 ):
 
     model = CompanyDB
@@ -50,11 +53,13 @@ class CompanyRepository(
         get_contact_client: Callable[[], Coroutine[Any, Any, "ContactClient"]],
         get_lead_client: Callable[[], Coroutine[Any, Any, "LeadClient"]],
         get_user_client: Callable[[], Coroutine[Any, Any, UserClient]],
+        get_source_client: Callable[[], Coroutine[Any, Any, "SourceClient"]],
     ):
         super().__init__(session)
         self.get_contact_client = get_contact_client
         self.get_lead_client = get_lead_client
         self.get_user_client = get_user_client
+        self.get_source_client = get_source_client
 
     async def create_entity(self, data: CompanyCreate) -> CompanyDB:
         """Создает новый контакт с проверкой связанных объектов"""
@@ -76,7 +81,7 @@ class CompanyRepository(
             # (атрибут схемы, модель БД, поле в модели)
             ("currency_id", Currency, "external_id"),
             ("company_type_id", ContactType, "external_id"),
-            ("source_id", Source, "external_id"),
+            # ("source_id", Source, "external_id"),
             ("main_activity_id", MainActivity, "ext_alt3_id"),
             ("deal_failure_reason_id", DealFailureReason, "ext_alt3_id"),
             ("deal_type_id", DealType, "external_id"),
@@ -90,6 +95,7 @@ class CompanyRepository(
         lead_client = await self.get_lead_client()
         contact_client = await self.get_contact_client()
         user_client = await self.get_user_client()
+        source_client = await self.get_source_client()
         return {
             "lead_id": (lead_client, LeadDB, False),
             "contact_id": (contact_client, ContactDB, False),
@@ -97,6 +103,7 @@ class CompanyRepository(
             "created_by_id": (user_client, UserDB, True),
             "modify_by_id": (user_client, UserDB, False),
             "last_activity_by": (user_client, UserDB, False),
+            "source_id": (source_client, Source, False),
         }
 
 

@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import Field
+from pydantic import Field, field_validator
 
 from .base_schemas import (
     AddressMixin,
@@ -109,6 +109,14 @@ class BaseCompany:
     additional_responsible: list[int] | None = Field(
         None, alias="UF_CRM_1629106458"
     )
+
+    @field_validator("external_id", mode="before")  # type: ignore[misc]
+    @classmethod
+    def convert_str_to_int(cls, value: str | int) -> int:
+        """Автоматическое преобразование строк в числа для ID"""
+        if isinstance(value, str) and value.isdigit():
+            return int(value)
+        return value  # type: ignore[return-value]
 
 
 class CompanyCreate(

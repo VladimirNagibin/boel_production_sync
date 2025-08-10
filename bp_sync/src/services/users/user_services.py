@@ -9,7 +9,11 @@ from .user_bitrix_services import (  # get_user_bitrix_client,
 from .user_repository import UserRepository  # , get_user_repository
 
 
-class UserClient(BaseEntityClient[UserDB, UserRepository, UserBitrixClient]):
+class UserClient(
+    BaseEntityClient[
+        UserDB, UserRepository, UserBitrixClient  # type: ignore[type-var]
+    ]
+):
     def __init__(
         self,
         user_bitrix_client: UserBitrixClient,

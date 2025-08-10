@@ -33,6 +33,7 @@ from .deals.deal_repository import DealRepository
 from .deals.deal_services import DealClient
 from .delivery_notes.delivery_note_repository import DeliveryNoteRepository
 from .entities.department_services import DepartmentClient
+from .entities.source_services import SourceClient
 from .invoices.invoice_bitrix_services import InvoiceBitrixClient
 from .invoices.invoice_repository import InvoiceRepository
 from .invoices.invoice_services import InvoiceClient
@@ -56,6 +57,9 @@ _services_cache_ctx: ContextVar[dict[str, Any]] = ContextVar(
 _exists_cache_ctx: ContextVar[
     dict[tuple[Type[Any], tuple[tuple[str, Any], ...]], bool]
 ] = ContextVar("_exists_cache", default={})
+_updated_cache_ctx: ContextVar[set[tuple[Type[Any], int | str]]] = ContextVar(
+    "_updated_cache", default=set()
+)
 
 
 def get_session_context() -> AsyncSession:
@@ -120,6 +124,7 @@ async def create_lead_repository() -> LeadRepository:
         get_company_client=lambda: locator.get("company_client"),
         get_contact_client=lambda: locator.get("contact_client"),
         get_user_client=lambda: locator.get("user_client"),
+        get_source_client=lambda: locator.get("source_client"),
     )
 
 
@@ -142,6 +147,7 @@ async def create_invoice_repository() -> InvoiceRepository:
         get_contact_client=lambda: locator.get("contact_client"),
         get_deal_client=lambda: locator.get("deal_client"),
         get_user_client=lambda: locator.get("user_client"),
+        get_source_client=lambda: locator.get("source_client"),
     )
 
 
@@ -157,6 +163,10 @@ async def create_department_client() -> DepartmentClient:
         bitrix_client=await create_bitrix_client(),
         session=get_session_context(),
     )
+
+
+async def create_source_client() -> SourceClient:
+    return SourceClient(get_session_context())
 
 
 async def create_delivery_note_repository() -> DeliveryNoteRepository:
@@ -181,6 +191,7 @@ async def create_deal_repository() -> DealRepository:
         get_contact_client=lambda: locator.get("contact_client"),
         get_lead_client=lambda: locator.get("lead_client"),
         get_user_client=lambda: locator.get("user_client"),
+        get_source_client=lambda: locator.get("source_client"),
     )
 
 
@@ -202,6 +213,7 @@ async def create_contact_repository() -> ContactRepository:
         get_company_client=lambda: locator.get("company_client"),
         get_lead_client=lambda: locator.get("lead_client"),
         get_user_client=lambda: locator.get("user_client"),
+        get_source_client=lambda: locator.get("source_client"),
     )
 
 
@@ -223,6 +235,7 @@ async def create_company_repository() -> CompanyRepository:
         get_contact_client=lambda: locator.get("contact_client"),
         get_lead_client=lambda: locator.get("lead_client"),
         get_user_client=lambda: locator.get("user_client"),
+        get_source_client=lambda: locator.get("source_client"),
     )
 
 
@@ -302,6 +315,11 @@ async def get_department_client_dep() -> DepartmentClient:
     return cast(DepartmentClient, client)
 
 
+async def get_source_client_dep() -> SourceClient:
+    client = await get_service("source_client")
+    return cast(SourceClient, client)
+
+
 async def get_user_client_dep() -> UserClient:
     client = await get_service("user_client")
     return cast(UserClient, client)
@@ -337,6 +355,21 @@ async def get_deal_bitrix_client_dep() -> DealClient:
     return cast(DealClient, client)
 
 
+async def get_invoice_bitrix_client_dep() -> InvoiceBitrixClient:
+    client = await get_service("invoice_bitrix_client")
+    return cast(InvoiceBitrixClient, client)
+
+
+async def get_billing_repository_dep() -> BillingRepository:
+    client = await get_service("billing_repository")
+    return cast(BillingRepository, client)
+
+
+async def get_delivery_note_repository_dep() -> DeliveryNoteRepository:
+    client = await get_service("delivery_note_repository")
+    return cast(DeliveryNoteRepository, client)
+
+
 async def get_oauth_client() -> BitrixOAuthClient:
     return await create_oauth_client()
 
@@ -351,3 +384,13 @@ def get_exists_cache() -> (
 def reset_exists_cache() -> None:
     """Сбрасывает кэш проверок"""
     _exists_cache_ctx.set({})
+
+
+def get_updated_cache() -> set[tuple[Type[Any], int | str]]:
+    """Возвращает кэш проверок обновлённых объектов"""
+    return _updated_cache_ctx.get()
+
+
+def reset_updated_cache() -> None:
+    """Сбрасывает кэш обновлённых объектов"""
+    _updated_cache_ctx.set(set())
