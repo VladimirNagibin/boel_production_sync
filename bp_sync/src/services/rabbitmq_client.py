@@ -1,5 +1,6 @@
 # import json
 import uuid
+from asyncio import Lock
 from http import HTTPStatus
 from typing import Any, Dict, Optional, Tuple
 
@@ -29,6 +30,7 @@ class RabbitMQClient:
         self.queue: AbstractQueue | None = None
         self.dlq: AbstractQueue | None = None
         self.queue_name = "fastapi_queue"
+        self._lock = Lock()  # Добавьте блокировку
         self.unacked_messages: Dict[str, AbstractIncomingMessage] = {}
 
     async def startup(self) -> None:
@@ -75,6 +77,9 @@ class RabbitMQClient:
 
             # Привязываем очередь к exchange
             await self.queue.bind(self.exchange, routing_key=self.queue_name)
+
+            async with self._lock:
+                self.unacked_messages.clear()
 
         except AMQPConnectionError as exp:
             logger.error(f"Ошибка подключения к RabbitMQ: {exp}")
@@ -153,5 +158,11 @@ class RabbitMQClient:
             return False
 
 
+_rabbitmq_instance = None
+
+
 def get_rabbitmq() -> RabbitMQClient:
-    return RabbitMQClient()
+    global _rabbitmq_instance
+    if _rabbitmq_instance is None:
+        _rabbitmq_instance = RabbitMQClient()
+    return _rabbitmq_instance

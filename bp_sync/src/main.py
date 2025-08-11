@@ -14,11 +14,12 @@ from admin.authenticate import BasicAuthBackend
 # from api.v1.health import health_router
 # from api.v1.products import product_router
 from api.v1.b24 import b24_router
+from api.v1.reports import reports_router
 from core.logger import LOGGING, logger
 from core.settings import settings
 from db import redis
 from db.postgres import engine
-from services.rabbitmq_client import RabbitMQClient
+from services.rabbitmq_client import get_rabbitmq
 
 # from cryptography.fernet import Fernet
 # new_key = Fernet.generate_key()
@@ -27,7 +28,7 @@ from services.rabbitmq_client import RabbitMQClient
 # key_str = new_key.decode('utf-8')
 # print("Сгенерированный ключ:", key_str)
 
-rabbitmq_client = RabbitMQClient()
+# rabbitmq_client = RabbitMQClient()
 
 
 @asynccontextmanager
@@ -40,6 +41,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         decode_responses=True,
         ssl=False,  # Для продакшена используйте True
     )
+    rabbitmq_client = get_rabbitmq()
     await rabbitmq_client.startup()
     try:
         # Проверка подключения и аутентификации
@@ -54,6 +56,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     yield
     await redis.redis.save()
     await redis.redis.aclose()
+    rabbitmq_client = get_rabbitmq()
     await rabbitmq_client.shutdown()
 
 
@@ -66,6 +69,7 @@ app = FastAPI(
 )
 
 app.include_router(b24_router, prefix="/api/v1/b24", tags=["b24"])
+app.include_router(reports_router, prefix="/api/v1/reports", tags=["reports"])
 # app.include_router(health_router, prefix="/api/v1/health", tags=["health"])
 # app.include_router(producths_router, prefix="/api/v1/hs", tags=["hs"])
 auth_backend = BasicAuthBackend()

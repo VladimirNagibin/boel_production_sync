@@ -3,6 +3,7 @@ from datetime import datetime
 from pydantic import Field, field_validator
 
 from .base_schemas import (
+    SYSTEM_USER_ID,
     AddressMixin,
     BaseCreateSchema,
     BaseUpdateSchema,
@@ -128,10 +129,34 @@ class CompanyCreate(
     title: str = Field(..., alias="TITLE")
 
     # Финансы
-    revenue: float = Field(0.0, alias="REVENUE")
+    revenue: float = Field(default=0.0, alias="REVENUE")
 
     # Статусы и флаги
-    is_my_company: bool = Field(False, alias="IS_MY_COMPANY")
+    is_my_company: bool = Field(default=False, alias="IS_MY_COMPANY")
+
+    @classmethod
+    def get_default_entity(cls, external_id: int) -> "CompanyCreate":
+        now = datetime.now()
+        return CompanyCreate(
+            # Обязательные поля из TimestampsCreateMixin
+            date_create=now,
+            date_modify=now,
+            # Обязательные поля из UserRelationsCreateMixin
+            assigned_by_id=SYSTEM_USER_ID,  # SYSTEM_USER_ID
+            created_by_id=SYSTEM_USER_ID,  # SYSTEM_USER_ID
+            modify_by_id=SYSTEM_USER_ID,  # SYSTEM_USER_ID
+            # Обязательные поля из HasCommunicationCreateMixin
+            has_phone=False,
+            has_email=False,
+            has_imol=False,
+            # Обязательные поля из LeadCreate
+            title=f"Deleted Company {external_id}",  # Обязательное поле
+            # Задаем external_id и флаг удаления
+            external_id=external_id,  # Ваш внешний ID
+            is_deleted_in_bitrix=True,
+            # created_at=now,
+            # updated_at=now,
+        )
 
 
 class CompanyUpdate(
