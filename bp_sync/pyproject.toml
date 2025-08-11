@@ -22,6 +22,8 @@ cryptography = "^45.0.4"
 python-jose = {extras = ["cryptography"], version = "^3.4.0"}
 itsdangerous = "^2.2.0"
 aio-pika = "^9.5.7"
+openpyxl = "^3.1.5"
+types-pytz = "^2025.2.0.20250809"
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.10.0"

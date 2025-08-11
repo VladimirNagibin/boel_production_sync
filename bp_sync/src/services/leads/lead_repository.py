@@ -60,12 +60,18 @@ class LeadRepository(
 
     async def create_entity(self, data: LeadCreate) -> LeadDB:
         """Создает новый лид с проверкой связанных объектов"""
+        # data_without_entity = LeadCreate(**data.model_dump())
+        # data_without_entity.company_id = None
+        # data_without_entity.contact_id = None
         await self._check_related_objects(data)
         await self._create_or_update_related(data)
         return await self.create(data=data)
+        # return await self.update_entity(data)
 
     async def update_entity(self, data: LeadUpdate | LeadCreate) -> LeadDB:
         """Обновляет существующий лид"""
+        # data.company_id = None
+        # data.contact_id = None
         await self._check_related_objects(data)
         await self._create_or_update_related(data)
         return await self.update(data=data)

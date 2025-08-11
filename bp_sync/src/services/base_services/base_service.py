@@ -19,6 +19,11 @@ class BitrixClientProtocol(Protocol):
         """Получает сущность по ID из Bitrix"""
         ...
 
+    @abstractmethod
+    def get_default_create_schema(self, external_id: int | str) -> Any:
+        """Получает дефолтную схему для создания сущности"""
+        ...
+
 
 class RepositoryProtocol(Protocol):
     """Протокол для репозитория"""
@@ -80,9 +85,25 @@ class BaseEntityClient(ABC, Generic[T, R, C]):
             f"Starting {self.entity_name} import from Bitrix",
             extra={f"{self.entity_name}_id": entity_id},
         )
-        entity_data = await self.bitrix_client.get(
-            entity_id, entity_type_id=entity_type_id
-        )
+        try:
+            entity_data = await self.bitrix_client.get(
+                entity_id, entity_type_id=entity_type_id
+            )
+        except BitrixApiError as e:
+            if e.is_not_found_error():
+                entity_data = self.bitrix_client.get_default_create_schema(
+                    entity_id
+                )
+                logger.warning(
+                    f"Can't retrieved {self.entity_name} data from Bitrix",
+                    extra={
+                        f"{self.entity_name}_id": entity_id,
+                        "data": entity_data.model_dump(),
+                    },
+                )
+            else:
+                raise
+
         logger.debug(
             f"Retrieved {self.entity_name} data from Bitrix",
             extra={
@@ -123,8 +144,19 @@ class BaseEntityClient(ABC, Generic[T, R, C]):
             # test //
         except BitrixApiError as e:
             if e.is_not_found_error():
-                await self.set_deleted_in_bitrix(entity_id)
-            raise
+                # await self.set_deleted_in_bitrix(entity_id)
+                entity_data = self.bitrix_client.get_default_create_schema(
+                    entity_id
+                )
+                logger.warning(
+                    f"Can't retrieved {self.entity_name} data from Bitrix",
+                    extra={
+                        f"{self.entity_name}_id": entity_id,
+                        "data": entity_data.model_dump(),
+                    },
+                )
+            else:
+                raise
 
         logger.debug(
             f"Retrieved updated {self.entity_name} data from Bitrix",

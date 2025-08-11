@@ -248,7 +248,7 @@ class BaseCreateSchema(
 ):
     """Базовая схема для создания сущностей"""
 
-    opened: bool = Field(True, alias="OPENED")
+    opened: bool = Field(default=True, alias="OPENED")
 
 
 class CoreUpdateSchema(
@@ -378,7 +378,11 @@ class BitrixValidators:
                 "MODIFY_BY_ID",
                 "modify_by_id",
             ):
-                processed_data[field] = value if int(value) else SYSTEM_USER_ID
+                processed_data[field] = (
+                    value
+                    if (int(value) and int(value) != 8971)
+                    else SYSTEM_USER_ID
+                )
             elif field in fields.get("str_none", []) and not value:
                 processed_data[field] = ""
             elif field in fields.get("int_none", []) and not value:

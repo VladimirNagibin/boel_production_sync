@@ -63,14 +63,20 @@ class CompanyRepository(
 
     async def create_entity(self, data: CompanyCreate) -> CompanyDB:
         """Создает новый контакт с проверкой связанных объектов"""
+        # data_without_entity = CompanyCreate(**data.model_dump())
+        # data_without_entity.lead_id = None
+        # data_without_entity.contact_id = None
         await self._check_related_objects(data)
         await self._create_or_update_related(data)
         return await self.create(data=data)
+        # return await self.update_entity(data)
 
     async def update_entity(
         self, data: CompanyCreate | CompanyUpdate
     ) -> CompanyDB:
         """Обновляет существующий контакт"""
+        # data.contact_id = None
+        # data.lead_id = None
         await self._check_related_objects(data)
         await self._create_or_update_related(data)
         return await self.update(data=data)

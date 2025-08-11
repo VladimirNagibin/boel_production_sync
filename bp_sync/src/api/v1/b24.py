@@ -11,6 +11,7 @@ from fastapi.responses import JSONResponse
 from core.logger import logger
 from schemas.billing_schemas import BillingCreate
 from schemas.delivery_note_schemas import DeliveryNoteCreate
+from schemas.lead_schemas import LeadCreate
 from services.billings.billing_repository import BillingRepository
 from services.bitrix_services.bitrix_oauth_client import BitrixOAuthClient
 from services.deals.deal_bitrix_services import (
@@ -123,7 +124,10 @@ async def load_deals(
     deal_ids: list[int | str | None] = [deal.external_id for deal in all_deals]
     # print(deal_ids)
     for deal_id in deal_ids:
+        if deal_id in (42183, 43507, 43757):
+            continue
         print(f"{deal_id}====================================")
+        # deal_id = 44137
         if deal_id:
             await deal_client.import_from_bitrix(int(deal_id))
             await asyncio.sleep(2)
@@ -138,7 +142,6 @@ async def load_deals(
             )
             if res.result:
                 invoice_id = res.result[0].external_id
-                print(invoice_id)
                 if invoice_id:
                     invoice = await invoice_client.import_from_bitrix(
                         int(invoice_id)
@@ -184,7 +187,8 @@ async def check(
     # ),
     # token_storage: TokenStorage = Depends(get_token_storage),
 ) -> JSONResponse:
-
+    lead = LeadCreate.get_defoult_entity(12345)
+    print(lead)
     # res = await deal_client.import_from_bitrix(50301)
     res = await department_client.import_from_bitrix()
     # res = await deal_bitrix_client.get(51463)
@@ -299,10 +303,8 @@ async def receive_message(
         )
 
     if message.message_id:
-        rabbitmq_client.unacked_messages[message.message_id] = message
-    print(
-        f"{rabbitmq_client.unacked_messages}----------------------------------"
-    )
+        async with rabbitmq_client._lock:
+            rabbitmq_client.unacked_messages[message.message_id] = message
     return JSONResponse(
         status_code=status.HTTP_200_OK,
         content={
@@ -320,12 +322,12 @@ async def receive_message(
 async def acknowledge_message(
     message_id: str, rabbitmq_client: RabbitMQClient = Depends(get_rabbitmq)
 ) -> JSONResponse:
-    print(rabbitmq_client.unacked_messages)
-    if message_id not in rabbitmq_client.unacked_messages:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Message not found or already acknowledged",
-        )
+    async with rabbitmq_client._lock:
+        if message_id not in rabbitmq_client.unacked_messages:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Message not found or already acknowledged",
+            )
 
     message = rabbitmq_client.unacked_messages[message_id]
     success = await rabbitmq_client.ack_message(message)

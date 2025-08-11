@@ -6,6 +6,7 @@ from pydantic import Field, field_validator
 from models.enums import StageSemanticEnum
 
 from .base_schemas import (
+    SYSTEM_USER_ID,
     AddressMixin,
     BaseCreateSchema,
     BaseUpdateSchema,
@@ -34,7 +35,7 @@ class BaseLead:
 
     # Временные метки
     birthdate: datetime | None = Field(None, alias="BIRTHDATE")
-    date_closed: datetime | None = Field(..., alias="DATE_CLOSED")
+    date_closed: datetime | None = Field(None, alias="DATE_CLOSED")
     moved_time: datetime | None = Field(None, alias="MOVED_TIME")
 
     # География и источники
@@ -107,15 +108,17 @@ class LeadCreate(
     title: str = Field(..., alias="TITLE")
 
     # Статусы и флаги
-    is_manual_opportunity: bool = Field(False, alias="IS_MANUAL_OPPORTUNITY")
-    is_return_customer: bool = Field(False, alias="IS_RETURN_CUSTOMER")
+    is_manual_opportunity: bool = Field(
+        default=False, alias="IS_MANUAL_OPPORTUNITY"
+    )
+    is_return_customer: bool = Field(default=False, alias="IS_RETURN_CUSTOMER")
 
     # Финансовые данные
-    opportunity: float = Field(0.0, alias="OPPORTUNITY")
+    opportunity: float = Field(default=0.0, alias="OPPORTUNITY")
 
     # Перечисляемые типы
     status_semantic_id: StageSemanticEnum = Field(
-        StageSemanticEnum.PROSPECTIVE, alias="STATUS_SEMANTIC_ID"
+        default=StageSemanticEnum.PROSPECTIVE, alias="STATUS_SEMANTIC_ID"
     )
 
     # Связи с другими сущностями
@@ -126,6 +129,31 @@ class LeadCreate(
     def convert_status_semantic_id(cls, v: Any) -> StageSemanticEnum:
         return BitrixValidators.convert_enum(
             v, StageSemanticEnum, StageSemanticEnum.PROSPECTIVE
+        )
+
+    @classmethod
+    def get_default_entity(cls, external_id: int) -> "LeadCreate":
+        now = datetime.now()
+        return LeadCreate(
+            # Обязательные поля из TimestampsCreateMixin
+            date_create=now,
+            date_modify=now,
+            # Обязательные поля из UserRelationsCreateMixin
+            assigned_by_id=SYSTEM_USER_ID,  # SYSTEM_USER_ID
+            created_by_id=SYSTEM_USER_ID,  # SYSTEM_USER_ID
+            modify_by_id=SYSTEM_USER_ID,  # SYSTEM_USER_ID
+            # Обязательные поля из HasCommunicationCreateMixin
+            has_phone=False,
+            has_email=False,
+            has_imol=False,
+            # Обязательные поля из LeadCreate
+            status_id="JUNK",
+            title=f"Deleted Lead {external_id}",  # Обязательное поле
+            # Задаем external_id и флаг удаления
+            external_id=external_id,  # Ваш внешний ID
+            is_deleted_in_bitrix=True,
+            # created_at=now,
+            # updated_at=now,
         )
 
 

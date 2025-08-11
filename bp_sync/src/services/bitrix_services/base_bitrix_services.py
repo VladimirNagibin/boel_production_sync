@@ -341,3 +341,6 @@ class BaseBitrixEntityClient(Generic[SchemaTypeCreate, SchemaTypeUpdate]):
             total=total,
             next=next_page,
         )
+
+    def get_default_create_schema(self, external_id: int | str) -> Any:
+        return self.create_schema.get_default_entity(external_id)
