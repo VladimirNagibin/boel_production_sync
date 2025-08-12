@@ -35,6 +35,10 @@ class User(IntIdEntity):
     def tablename(self) -> str:
         return self.__tablename__
 
+    @property
+    def full_name(self) -> str:
+        return f"{self.name} {self.last_name}"
+
     # Идентификаторы и основные данные
     xml_id: Mapped[str | None] = mapped_column(
         comment="Внешний код"
@@ -236,6 +240,6 @@ class User(IntIdEntity):
     )
     delivery_notes: Mapped[list["DeliveryNote"]] = relationship(
         "DeliveryNote",
-        back_populates="assigned_by",
+        back_populates="assigned_user",
         foreign_keys="[DeliveryNote.assigned_by_id]",
     )

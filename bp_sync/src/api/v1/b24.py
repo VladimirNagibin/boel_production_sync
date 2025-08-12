@@ -74,8 +74,9 @@ async def update_departments(
     description="Load deals for period.",
 )  # type: ignore
 async def load_deals(
-    start_data: date,
-    end_data: date,
+    start_date: date,
+    end_date: date,
+    deal_id: int | str | None = None,
     deal_bitrix_client: DealBitrixClient = Depends(get_deal_bitrix_client_dep),
     deal_client: DealClient = Depends(get_deal_client_dep),
     invoice_bitrix_client: InvoiceBitrixClient = Depends(
@@ -84,85 +85,104 @@ async def load_deals(
     invoice_client: InvoiceClient = Depends(get_invoice_client_dep),
     rabbitmq_client: RabbitMQClient = Depends(get_rabbitmq),
 ) -> JSONResponse:
-    # Рассчитываем конец периода как начало следующего дня
-    end_date_plus_one = end_data + timedelta(days=1)
+    if deal_id:
+        deal_ids: list[int | str | None] = [deal_id]
+    else:
+        # Рассчитываем конец периода как начало следующего дня
+        end_date_plus_one = end_date + timedelta(days=1)
 
-    # Форматируем даты для Bitrix API
-    start_str = start_data.strftime("%Y-%m-%d 00:00:00")
-    end_str = end_date_plus_one.strftime("%Y-%m-%d 00:00:00")
+        # Форматируем даты для Bitrix API
+        start_str = start_date.strftime("%Y-%m-%d 00:00:00")
+        end_str = end_date_plus_one.strftime("%Y-%m-%d 00:00:00")
 
-    filter_entity: dict[str, Any] = {
-        ">=BEGINDATE": start_str,
-        "<BEGINDATE": end_str,
-        "CATEGORY_ID": 0,
-    }
+        filter_entity: dict[str, Any] = {
+            ">=BEGINDATE": start_str,
+            "<BEGINDATE": end_str,
+            "CATEGORY_ID": 0,
+        }
 
-    # Получаем сделки с пагинацией
-    all_deals = []
-    select = ["ID"]
-    start = 0
+        # Получаем сделки с пагинацией
+        all_deals = []
+        select = ["ID"]
+        start = 0
 
-    while True:
-        res = await deal_bitrix_client.list(
-            select=select, filter_entity=filter_entity, start=start
-        )
-        if not res:
-            break
-        deals = res.result
-        # total = res.total
-        next = res.next
-        all_deals.extend(deals)
-        if next:
-            start = next
-        else:
-            break
-        # Прерываем цикл, если получено меньше 50 записей (последняя страница)
-        # if len(deals) < 50:
-        #    break
-        await asyncio.sleep(2)
-    # Извлекаем только ID сделок
-    deal_ids: list[int | str | None] = [deal.external_id for deal in all_deals]
+        while True:
+            res = await deal_bitrix_client.list(
+                select=select, filter_entity=filter_entity, start=start
+            )
+            if not res:
+                break
+            deals = res.result
+            # total = res.total
+            next = res.next
+            all_deals.extend(deals)
+            if next:
+                start = next
+            else:
+                break
+            # Прерываем цикл, если получено меньше 50 записей
+            # (последняя страница)
+            # if len(deals) < 50:
+            #    break
+            await asyncio.sleep(2)
+        # Извлекаем только ID сделок
+        deal_ids = [deal.external_id for deal in all_deals]
     # print(deal_ids)
+    deal_success = {}
+    deal_fail = {}
+
     for deal_id in deal_ids:
+
         if deal_id in (42183, 43507, 43757):
             continue
         print(f"{deal_id}====================================")
         # deal_id = 44137
         if deal_id:
-            await deal_client.import_from_bitrix(int(deal_id))
-            await asyncio.sleep(2)
+            try:
+                await deal_client.import_from_bitrix(int(deal_id))
+                await asyncio.sleep(2)
 
-            filter_entity2: dict[str, Any] = {
-                "parentId2": deal_id,
-            }
-            select = ["id"]
-            start = 0
-            res = await invoice_bitrix_client.list(
-                select=select, filter_entity=filter_entity2, start=start
-            )
-            if res.result:
-                invoice_id = res.result[0].external_id
-                if invoice_id:
-                    invoice = await invoice_client.import_from_bitrix(
-                        int(invoice_id)
-                    )
-                    message = json.dumps(
-                        {
-                            "account_number": invoice.account_number,
-                            "invoice_id": invoice.external_id,
-                            "invoice_date": invoice.date_create.isoformat(),
-                            "company_id": invoice.company_id,
-                        }
-                    ).encode()
-                    await rabbitmq_client.send_message(message)
+                filter_entity2: dict[str, Any] = {
+                    "parentId2": deal_id,
+                }
+                select = ["id"]
+                start = 0
+                res = await invoice_bitrix_client.list(
+                    select=select, filter_entity=filter_entity2, start=start
+                )
+                if res.result:
+                    invoice_id = res.result[0].external_id
+                    if invoice_id:
+                        invoice = await invoice_client.import_from_bitrix(
+                            int(invoice_id)
+                        )
+                        message = json.dumps(
+                            {
+                                "account_number": invoice.account_number,
+                                "invoice_id": invoice.external_id,
+                                "invoice_date": (
+                                    invoice.date_create.isoformat()
+                                ),
+                                "company_id": invoice.company_id,
+                            }
+                        ).encode()
+                        await rabbitmq_client.send_message(message)
+                deal_success[str(deal_id)] = "success"
+            except Exception as e:
+                deal_fail[str(deal_id)] = str(e)
+
     # if not res:
     #    break
     # invoice = res.result[0]["id"]
-    await asyncio.sleep(2)
+    # await asyncio.sleep(2)
 
     return JSONResponse(
         status_code=status.HTTP_200_OK,
-        content={"deal_ids": deal_ids, "count": len(deal_ids)},
+        content={
+            "deal_success": deal_success,
+            "deal_fail": deal_fail,
+            "count": len(deal_ids),
+        },
     )
 
 
