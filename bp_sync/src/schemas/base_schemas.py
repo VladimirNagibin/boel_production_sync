@@ -377,6 +377,7 @@ class BitrixValidators:
                 "created_by_id",
                 "MODIFY_BY_ID",
                 "modify_by_id",
+                "updatedBy",
             ):
                 processed_data[field] = (
                     value
@@ -384,7 +385,7 @@ class BitrixValidators:
                     else SYSTEM_USER_ID
                 )
             elif field in fields.get("str_none", []) and not value:
-                processed_data[field] = ""
+                processed_data[field] = None
             elif field in fields.get("int_none", []) and not value:
                 processed_data[field] = None  # 0
             elif field in (

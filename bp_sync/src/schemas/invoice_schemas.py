@@ -134,6 +134,16 @@ class BaseInvoice:
             return int(value)
         return value  # type: ignore[return-value]
 
+    @field_validator(
+        "last_communication_time", mode="before"
+    )  # type: ignore[misc]
+    @classmethod
+    def convert_datetime_with_tz_to_(cls, value: Any) -> datetime:
+        """Автоматическое преобразование даты с таймзоной в без"""
+        if isinstance(value, datetime) and value.tzinfo:
+            return value.replace(tzinfo=None)
+        return value  # type: ignore[no-any-return]
+
 
 class InvoiceCreate(BaseInvoice, CoreCreateSchema):
     """Модель для создания счетов"""

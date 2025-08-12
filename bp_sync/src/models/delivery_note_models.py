@@ -30,7 +30,7 @@ class DeliveryNote(NameStrIdEntity):
         ForeignKey("users.external_id"),
         comment="ID ответственного",
     )
-    assigned_by: Mapped["UserDB"] = relationship(
+    assigned_user: Mapped["UserDB"] = relationship(
         lambda: UserDB,
         back_populates="delivery_notes",
         foreign_keys=lambda: [DeliveryNote.assigned_by_id],
