@@ -5,7 +5,7 @@ import json
 from datetime import date, timedelta
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import JSONResponse
 
 from core.logger import logger
@@ -75,8 +75,12 @@ async def update_departments(
     description="Load deals for period.",
 )  # type: ignore
 async def load_deals(
-    start_date: date,
-    end_date: date,
+    start_date: date = Query(
+        ..., description="Дата начала в формате YYYY-MM-DD"
+    ),
+    end_date: date = Query(
+        ..., description="Дата окончания в формате YYYY-MM-DD"
+    ),
     deal_id: int | str | None = None,
     deal_bitrix_client: DealBitrixClient = Depends(get_deal_bitrix_client_dep),
     deal_client: DealClient = Depends(get_deal_client_dep),

@@ -1,5 +1,5 @@
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import Enum
 from tempfile import NamedTemporaryFile
 from typing import Any, Generator
@@ -28,9 +28,13 @@ async def fetch_deals(
 ) -> Any:
     """Асинхронно получает сделки с связанными данными"""
     # Рассчитываем конец периода как начало следующего дня
+    end_date_plus_one = end_date + timedelta(days=1)
     result = await session.execute(
         select(Deal)
-        .where(Deal.date_create >= start_date, Deal.date_create <= end_date)
+        .where(
+            Deal.date_create >= start_date,
+            Deal.date_create <= end_date_plus_one,
+        )
         .options(
             # Загрузка отношений для Deal
             selectinload(Deal.assigned_user),
@@ -130,9 +134,13 @@ def build_data_row(deal: Deal) -> Generator[dict[str, Any], Any, None]:
         )
 
     # Данные счетов
-    for invoice in deal.invoices:
-        invoice_row = row.copy()
-        invoice_row.update(
+
+    # for invoice in deal.invoices:
+    #    invoice_row = row.copy()
+    #    invoice_row.update(
+    if deal.invoices:
+        invoice = deal.invoices[0]
+        row.update(
             {
                 "invoice_external_id": invoice.external_id,
                 "invoice_date_create": invoice.date_create,
@@ -161,9 +169,12 @@ def build_data_row(deal: Deal) -> Generator[dict[str, Any], Any, None]:
         )
 
         # Данные накладных
-        for note in invoice.delivery_notes:
-            note_row = invoice_row.copy()
-            note_row.update(
+        # for note in invoice.delivery_notes:
+        #    note_row = invoice_row.copy()
+        #    note_row.update(
+        if invoice.delivery_notes:
+            note = invoice.delivery_notes[0]
+            row.update(
                 {
                     "delivery_note_external_id": note.external_id,
                     "delivery_note_name": note.name,
@@ -176,9 +187,10 @@ def build_data_row(deal: Deal) -> Generator[dict[str, Any], Any, None]:
                     ),
                 }
             )
-            yield note_row
+            # yield note_row
         else:
-            yield invoice_row
+            ...
+            # yield invoice_row
     else:
         yield row
 
@@ -234,6 +246,16 @@ async def export_deals(
         # Создание DataFrame
         df = pd.DataFrame(data)
         logger.info(f"Created DataFrame with {len(df)} rows")
+
+        df = df.sort_values(
+            by=["deal_date_create", "deal_assigned_by_id", "deal_opportunity"],
+            ascending=[
+                True,  # deal_date_create: по возрастанию (старые -> новые)
+                True,  # deal_assigned_by_id: A->Я
+                False,  # deal_opportunity: по убыванию (крупные сначала)
+            ],
+            na_position="last",  # поместить пустые значения в конец
+        )
 
         # Создание временного файла
         with NamedTemporaryFile(delete=False, suffix=".xlsx") as tmp:
