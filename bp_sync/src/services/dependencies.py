@@ -47,18 +47,33 @@ from .users.user_repository import UserRepository
 from .users.user_services import UserClient
 
 ModelBase = TypeVar("ModelBase", bound=DeclarativeBase)
-# Контекстная переменная для хранения текущей сессии
+
+# Контекстная переменная для хранения текущей сессии базы данных
 _session_ctx: ContextVar[AsyncSession | None] = ContextVar(
     "_session_ctx", default=None
 )
+# Контекстная переменная для хранения созданных сервисов с проверкой на повтор
 _services_cache_ctx: ContextVar[dict[str, Any]] = ContextVar(
     "_services_cache", default={}
 )
+# Контекстная переменная для хранения проверенных объектов на существование в
+# рамках запроса
 _exists_cache_ctx: ContextVar[
     dict[tuple[Type[Any], tuple[tuple[str, Any], ...]], bool]
 ] = ContextVar("_exists_cache", default={})
+# Контекстная переменная для хранения проверенных объектов на существование
+# либо созданных в рамках запроса
 _updated_cache_ctx: ContextVar[set[tuple[Type[Any], int | str]]] = ContextVar(
     "_updated_cache", default=set()
+)
+# Глобальный кэш для отслеживания создания сущностей в текущем контексте
+_creation_cache_ctx: ContextVar[dict[tuple[Type[Any], int | str], bool]] = (
+    ContextVar("creation_cache", default={})
+)
+
+# Кэш для отслеживания сущностей, требующих обновления
+_update_needed_cache_ctx: ContextVar[set[tuple[Type[Any], int | str]]] = (
+    ContextVar("update_needed_cache", default=set())
 )
 
 
@@ -394,3 +409,41 @@ def get_updated_cache() -> set[tuple[Type[Any], int | str]]:
 def reset_updated_cache() -> None:
     """Сбрасывает кэш обновлённых объектов"""
     _updated_cache_ctx.set(set())
+
+
+def get_creation_cache() -> dict[tuple[Type[Any], int | str], bool]:
+    """
+    Возвращает кэш для отслеживания создания сущностей в текущем контексте
+    """
+    return _creation_cache_ctx.get()
+
+
+def reset_creation_cache() -> None:
+    """
+    Сбрасывает кэш для отслеживания создания сущностей в текущем контексте
+    """
+    _creation_cache_ctx.set({})
+
+
+def get_update_needed_cache() -> set[tuple[Type[Any], int | str]]:
+    """
+    Возвращает кэш для отслеживания сущностей, требующих обновления
+    """
+    return _update_needed_cache_ctx.get()
+
+
+def reset_update_needed_cache() -> None:
+    """
+    Сбрасывает кэш для отслеживания сущностей, требующих обновления
+    """
+    _update_needed_cache_ctx.set(set())
+
+
+def reset_cache() -> None:
+    """
+    Сбрасывает кэш
+    """
+    _update_needed_cache_ctx.set(set())
+    _creation_cache_ctx.set({})
+    _updated_cache_ctx.set(set())
+    _exists_cache_ctx.set({})

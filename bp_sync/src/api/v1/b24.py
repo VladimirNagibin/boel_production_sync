@@ -33,6 +33,7 @@ from services.dependencies import (
     get_invoice_client_dep,
     get_oauth_client,
     request_context,
+    reset_cache,
 )
 from services.entities.department_services import (
     DepartmentClient,
@@ -133,14 +134,17 @@ async def load_deals(
 
     for deal_id in deal_ids:
 
-        if deal_id in (42183, 43507, 43757):
+        if deal_id in (43757,):
             continue
         print(f"{deal_id}====================================")
         # deal_id = 44137
         if deal_id:
             try:
-                await deal_client.import_from_bitrix(int(deal_id))
+                _, upd = await deal_client.import_from_bitrix(int(deal_id))
                 await asyncio.sleep(2)
+                if upd:
+                    reset_cache()
+                    await deal_client.import_from_bitrix(int(deal_id))
 
                 filter_entity2: dict[str, Any] = {
                     "parentId2": deal_id,
@@ -153,7 +157,7 @@ async def load_deals(
                 if res.result:
                     invoice_id = res.result[0].external_id
                     if invoice_id:
-                        invoice = await invoice_client.import_from_bitrix(
+                        invoice, _ = await invoice_client.import_from_bitrix(
                             int(invoice_id)
                         )
                         message = json.dumps(

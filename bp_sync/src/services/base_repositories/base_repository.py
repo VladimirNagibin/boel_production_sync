@@ -9,17 +9,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from core.logger import logger
 from db.postgres import Base
 from models.bases import IntIdEntity, NameStrIdEntity
-from schemas.base_schemas import (  # BaseCreateSchema,; BaseUpdateSchema,
-    CommonFieldMixin,
-)
+from schemas.base_schemas import CommonFieldMixin
 
-from ..exceptions import ConflictException
+from ..exceptions import ConflictException, CyclicCallException
 
 # Дженерик для схем
 SchemaTypeCreate = TypeVar("SchemaTypeCreate", bound=CommonFieldMixin)
 SchemaTypeUpdate = TypeVar("SchemaTypeUpdate", bound=CommonFieldMixin)
-# SchemaTypeCreate = TypeVar("SchemaTypeCreate", bound=BaseCreateSchema)
-# SchemaTypeUpdate = TypeVar("SchemaTypeUpdate", bound=BaseUpdateSchema)
 ModelType = TypeVar("ModelType", bound=IntIdEntity | NameStrIdEntity)
 ExternalIdType = TypeVar("ExternalIdType", int, str)
 
@@ -318,7 +314,7 @@ class BaseRepository(
         cache[cache_key] = exists
         return exists
 
-    async def set_deleted_in_bitrix(  # Добавить запись None в ссылках
+    async def set_deleted_in_bitrix(
         self, external_id: ExternalIdType, is_deleted: bool = True
     ) -> bool:
         """
@@ -427,15 +423,24 @@ class BaseRepository(
         data: SchemaTypeCreate | SchemaTypeUpdate,
         additional_checks: Optional[dict[str, tuple[Any, Any, bool]]] = None,
     ) -> None:
-        from ..dependencies import get_exists_cache, get_updated_cache
+        from ..dependencies import (
+            get_creation_cache,
+            get_exists_cache,
+            get_update_needed_cache,
+            get_updated_cache,
+        )
 
         errors: list[str] = []
         checks = await self._get_related_create()
         # Для отслеживания уже обработанных сущностей
         processed_entities: set[Any] = set()
         updated_cache = get_updated_cache()
+        creation_cache = get_creation_cache()
+        update_needed_cache = get_update_needed_cache()
+
         if additional_checks:
             checks.update(additional_checks)
+
         for field_name, (client, model, required) in checks.items():
             value = getattr(data, field_name, None)
 
@@ -447,7 +452,6 @@ class BaseRepository(
             try:
                 # Ключ для отслеживания уже обработанных сущностей
                 entity_key = (model, value)
-
                 # Пропускаем, если уже обрабатывали эту сущность
                 if entity_key in processed_entities | updated_cache:
                     continue
@@ -463,15 +467,21 @@ class BaseRepository(
                 if not await self._check_object_exists(
                     model, external_id=value
                 ):
+                    if entity_key in creation_cache.keys():
+                        update_needed_cache.add(entity_key)
+                        raise CyclicCallException
                     await client.import_from_bitrix(value)
                     cache = get_exists_cache()
                     if cache_key in cache:
                         del cache[cache_key]
                 else:
-                    # print(f"{value} :: {client} ----")
+                    if entity_key in creation_cache.keys():
+                        continue
                     await client.refresh_from_bitrix(value)
                     updated_cache.add(entity_key)
-                    # print(f"{value} :: {client} ++++")
+                creation_cache[entity_key] = True
+            except CyclicCallException:
+                raise
             except Exception as e:
                 errors.append(
                     f"{model.__name__} with id={value} failed: {str(e)}"

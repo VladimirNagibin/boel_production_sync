@@ -4,7 +4,7 @@ from typing import Any, Generic, Protocol, TypeVar
 from core.logger import logger
 from models.bases import IntIdEntity
 
-from ..exceptions import BitrixApiError, ConflictException
+from ..exceptions import BitrixApiError, ConflictException, CyclicCallException
 
 ExternalIdType = TypeVar("ExternalIdType", int, str)
 
@@ -79,8 +79,18 @@ class BaseEntityClient(ABC, Generic[T, R, C]):
 
     async def import_from_bitrix(
         self, entity_id: ExternalIdType, entity_type_id: int | None = None
-    ) -> T:
+    ) -> tuple[T, bool]:
         """Импортирует сущность из Bitrix в базу данных"""
+
+        from ..dependencies import get_creation_cache, get_update_needed_cache
+
+        creation_cache = get_creation_cache()
+        update_needed_cache = get_update_needed_cache()
+
+        entity_key = (self.repo.model, entity_id)  # type: ignore[attr-defined]
+        if entity_key in creation_cache.keys():
+            raise CyclicCallException
+        creation_cache[entity_key] = True
         logger.info(
             f"Starting {self.entity_name} import from Bitrix",
             extra={f"{self.entity_name}_id": entity_id},
@@ -119,12 +129,22 @@ class BaseEntityClient(ABC, Generic[T, R, C]):
             f"Successfully imported {self.entity_name} from Bitrix",
             extra={f"{self.entity_name}_id": entity_id, "db_id": entity_db.id},
         )
-        return entity_db  # type: ignore[no-any-return]
+        update_needed = bool(update_needed_cache)
+        return entity_db, update_needed
 
     async def refresh_from_bitrix(
         self, entity_id: int | str, entity_type_id: int | None = None
     ) -> T:
         """Обновляет данные сущности из Bitrix в базе данных"""
+
+        from ..dependencies import get_creation_cache
+
+        creation_cache = get_creation_cache()
+        entity_key = (self.repo.model, entity_id)  # type: ignore[attr-defined]
+        if entity_key in creation_cache.keys():
+            raise CyclicCallException
+        creation_cache[entity_key] = True
+
         logger.info(
             f"Refreshing {self.entity_name} data from Bitrix",
             extra={f"{self.entity_name}_id": entity_id},
@@ -133,15 +153,6 @@ class BaseEntityClient(ABC, Generic[T, R, C]):
             entity_data = await self.bitrix_client.get(
                 entity_id, entity_type_id=entity_type_id
             )
-            # test
-            # from schemas.lead_schemas import LeadUpdate
-            # from schemas.deal_schemas import DealUpdate
-            # print(entity_data)
-            # res2 = LeadUpdate(
-            #    **entity_data.model_dump(by_alias=True, exclude_unset=True)
-            # )
-            # print(res2.to_bitrix_dict())
-            # test //
         except BitrixApiError as e:
             if e.is_not_found_error():
                 # await self.set_deleted_in_bitrix(entity_id)

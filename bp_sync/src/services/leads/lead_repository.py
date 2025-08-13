@@ -1,9 +1,9 @@
 from typing import TYPE_CHECKING, Any, Callable, Coroutine, Type
 
-# from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from db.postgres import Base  # , get_session
+from core.logger import logger
+from db.postgres import Base
 from models.bases import EntityType
 from models.company_models import Company as CompanyDB
 from models.contact_models import Contact as ContactDB
@@ -22,15 +22,12 @@ from schemas.lead_schemas import LeadCreate, LeadUpdate
 from ..base_repositories.base_communication_repo import (
     EntityWithCommunicationsRepository,
 )
-from ..users.user_services import UserClient  # , get_user_client
+from ..exceptions import CyclicCallException
+from ..users.user_services import UserClient
 
 if TYPE_CHECKING:
-    from ..companies.company_services import (  # , get_company_client
-        CompanyClient,
-    )
-    from ..contacts.contact_services import (  # , get_contact_client
-        ContactClient,
-    )
+    from ..companies.company_services import CompanyClient
+    from ..contacts.contact_services import ContactClient
     from ..entities.source_services import SourceClient
 
 
@@ -44,9 +41,6 @@ class LeadRepository(
     def __init__(
         self,
         session: AsyncSession,
-        # company_client: "CompanyClient",
-        # contact_client: "ContactClient",
-        # user_client: UserClient,
         get_company_client: Callable[[], Coroutine[Any, Any, "CompanyClient"]],
         get_contact_client: Callable[[], Coroutine[Any, Any, "ContactClient"]],
         get_user_client: Callable[[], Coroutine[Any, Any, UserClient]],
@@ -60,18 +54,19 @@ class LeadRepository(
 
     async def create_entity(self, data: LeadCreate) -> LeadDB:
         """Создает новый лид с проверкой связанных объектов"""
-        # data_without_entity = LeadCreate(**data.model_dump())
-        # data_without_entity.company_id = None
-        # data_without_entity.contact_id = None
         await self._check_related_objects(data)
-        await self._create_or_update_related(data)
+        try:
+            await self._create_or_update_related(data)
+        except CyclicCallException:
+            if not data.external_id:
+                logger.error("Update failed: Missing ID")
+                raise ValueError("ID is required for update")
+            external_id = data.external_id
+            data = LeadCreate.get_default_entity(int(external_id))
         return await self.create(data=data)
-        # return await self.update_entity(data)
 
     async def update_entity(self, data: LeadUpdate | LeadCreate) -> LeadDB:
         """Обновляет существующий лид"""
-        # data.company_id = None
-        # data.contact_id = None
         await self._check_related_objects(data)
         await self._create_or_update_related(data)
         return await self.update(data=data)
@@ -83,7 +78,6 @@ class LeadRepository(
             ("type_id", DealType, "external_id"),
             ("status_id", LeadStatus, "external_id"),
             ("currency_id", Currency, "external_id"),
-            # ("source_id", Source, "external_id"),
             ("main_activity_id", MainActivity, "ext_alt_id"),  # Особое поле
             ("deal_failure_reason_id", DealFailureReason, "ext_alt_id"),
         ]
@@ -104,20 +98,3 @@ class LeadRepository(
             "last_activity_by": (user_client, UserDB, False),
             "source_id": (source_client, Source, False),
         }
-
-
-# def get_lead_repository(
-#    session: AsyncSession = Depends(get_session),
-#    # company_client: "CompanyClient" = Depends(get_company_client),
-#    # contact_client: "ContactClient" = Depends(get_contact_client),
-#    user_client: UserClient = Depends(get_user_client),
-# ) -> LeadRepository:
-#    from ..companies.company_services import get_company_client
-#    from ..contacts.contact_services import get_contact_client
-
-#    return LeadRepository(
-#        session=session,
-#        company_client=Depends(get_company_client),
-#        contact_client=Depends(get_contact_client),
-#        user_client=user_client,
-#    )
