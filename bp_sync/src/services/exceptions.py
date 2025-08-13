@@ -48,3 +48,7 @@ class ConflictException(HTTPException):  # type: ignore[misc]
     def __init__(self, entity: str, external_id: str | int):
         detail = f"{entity} with ID: {external_id} already exists"
         super().__init__(status_code=status.HTTP_409_CONFLICT, detail=detail)
+
+
+class CyclicCallException(Exception):
+    pass

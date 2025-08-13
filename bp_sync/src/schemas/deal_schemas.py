@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Optional
 
 from pydantic import Field, field_validator
@@ -190,6 +190,13 @@ class DealCreate(BaseCreateSchema, BaseDeal):
         return BitrixValidators.convert_enum(
             v, ProcessingStatusEnum, ProcessingStatusEnum.NOT_DEFINE
         )
+
+    @field_validator("closedate", mode="before")  # type: ignore[misc]
+    @classmethod
+    def set_closedate_default(cls, value: datetime | None) -> datetime:
+        if value is None:
+            return datetime.now(timezone.utc)
+        return value
 
 
 class DealUpdate(BaseUpdateSchema, BaseDeal):
