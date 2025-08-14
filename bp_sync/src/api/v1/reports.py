@@ -68,6 +68,7 @@ async def fetch_deals(
             selectinload(Deal.invoices).selectinload(Invoice.billings),
             selectinload(Deal.lead),
             selectinload(Deal.invoices).selectinload(Invoice.delivery_notes),
+            selectinload(Deal.invoices).selectinload(Invoice.company),
             selectinload(Deal.invoices).selectinload(Invoice.billings),
         )
     )
@@ -97,39 +98,39 @@ def get_name(value: Any) -> str:
 def build_data_row(deal: Deal) -> Generator[dict[str, Any], Any, None]:
     """Строит строку данных для экспорта"""
     row: dict[str, Any] = {
-        "deal_external_id": deal.external_id,
-        "deal_date_create": deal.date_create,
-        "deal_assigned_by_id": get_name(deal.assigned_user),
-        "deal_created_by_id": get_name(deal.created_user),
-        "deal_calltouch_site_id": deal.calltouch_site_id,
-        "deal_calltouch_call_id": deal.calltouch_call_id,
-        "deal_calltouch_request_id": deal.calltouch_request_id,
-        "deal_yaclientid": deal.yaclientid,
-        "deal_origin_id": deal.origin_id,
-        "deal_title": deal.title,
-        "deal_opportunity": deal.opportunity,
-        "deal_type_id": get_name(deal.type),
-        "deal_stage_id": get_name(deal.stage),
-        "deal_source_id": get_name(deal.source),
-        "deal_creation_source_id": get_name(deal.creation_source),
+        "ИД сделки": deal.external_id,
+        "Дата сделки": deal.date_create,
+        "Название сделки": deal.title,
+        "Ответственный по сделке": get_name(deal.assigned_user),
+        "Создал сделку": get_name(deal.created_user),
+        "Сумма сделки": deal.opportunity,
+        "Тип создания сделки": get_name(deal.creation_source),
+        "Источник сделки": get_name(deal.source),
+        "Тип сделки": get_name(deal.type),
+        "Стадия сделки": get_name(deal.stage),
+        "Внешний номер сделки": deal.origin_id,
+        "ИД сайта Calltouch": deal.calltouch_site_id,
+        # "deal_calltouch_call_id": deal.calltouch_call_id,
+        # "deal_calltouch_request_id": deal.calltouch_request_id,
+        "ИД клиента Яндекс": deal.yaclientid,
     }
 
     # Данные лида
     if deal.lead:
         row.update(
             {
-                "lead_external_id": deal.lead.external_id,
-                "lead_date_create": deal.lead.date_create,
-                "lead_assigned_by_id": get_name(deal.lead.assigned_user),
-                "lead_created_by_id": get_name(deal.lead.created_user),
-                "lead_calltouch_site_id": deal.lead.calltouch_site_id,
-                "lead_calltouch_call_id": deal.lead.calltouch_call_id,
-                "lead_calltouch_request_id": deal.lead.calltouch_request_id,
-                "lead_yaclientid": deal.lead.yaclientid,
-                "lead_title": deal.lead.title,
-                "lead_type_id": get_name(deal.lead.type),
-                "lead_status_id": get_name(deal.lead.status),
-                "lead_source_id": get_name(deal.lead.source),
+                "ИД лида": deal.lead.external_id,
+                "Дата лида": deal.lead.date_create,
+                "Название лида": deal.lead.title,
+                "Ответственный по лиду": get_name(deal.lead.assigned_user),
+                "Создатель лида": get_name(deal.lead.created_user),
+                "Источник лида": get_name(deal.lead.source),
+                "Тип лида": get_name(deal.lead.type),
+                "Стадия лида": get_name(deal.lead.status),
+                "ИД сайта Calltouch": deal.lead.calltouch_site_id,
+                # "lead_calltouch_call_id": deal.lead.calltouch_call_id,
+                # "lead_calltouch_request_id": deal.lead.calltouch_request_id,
+                "ИД клиента Яндекс": deal.lead.yaclientid,
             }
         )
 
@@ -140,31 +141,33 @@ def build_data_row(deal: Deal) -> Generator[dict[str, Any], Any, None]:
     #    invoice_row.update(
     if deal.invoices:
         invoice = deal.invoices[0]
+        print(invoice)
         row.update(
             {
-                "invoice_external_id": invoice.external_id,
-                "invoice_date_create": invoice.date_create,
-                "invoice_assigned_by_id": get_name(invoice.assigned_user),
-                "invoice_created_by_id": get_name(invoice.created_user),
-                "invoice_calltouch_site_id": invoice.calltouch_site_id,
-                "invoice_calltouch_call_id": invoice.calltouch_call_id,
-                "invoice_calltouch_request_id": invoice.calltouch_request_id,
-                "invoice_yaclientid": invoice.yaclientid,
-                "invoice_title": invoice.title,
-                "invoice_account_number": invoice.account_number,
-                "invoice_is_loaded": invoice.is_loaded,
-                "invoice_opportunity": invoice.opportunity,
-                "invoice_invoice_stage_id": get_name(invoice.invoice_stage),
-                "invoice_total_paid": sum(b.amount for b in invoice.billings),
-                "invoice_paid_status": (
-                    "paid"
+                "ИД счета": invoice.external_id,
+                "Дата счета": invoice.date_create,
+                "Название счета": invoice.title,
+                "Ответственный по счету": get_name(invoice.assigned_user),
+                "Номер счета": invoice.account_number,
+                "Компания": get_name(invoice.company),
+                "Выгружен в 1С": invoice.is_loaded,
+                "Сумма счета": invoice.opportunity,
+                "Стадия счета": get_name(invoice.invoice_stage),
+                "Оплачено по счету": sum(b.amount for b in invoice.billings),
+                "Статус оплаты": (
+                    "Оплачен"
                     if abs(
                         sum(b.amount for b in invoice.billings)
                         - invoice.opportunity
                     )
                     < 0.01
-                    else "partial" if any(invoice.billings) else "unpaid"
+                    else "Частично" if any(invoice.billings) else "-"
                 ),
+                # "invoice_created_by_id": get_name(invoice.created_user),
+                # "invoice_calltouch_site_id": invoice.calltouch_site_id,
+                # "invoice_calltouch_call_id": invoice.calltouch_call_id,
+                # "invoice_calltouch_request_id": invoice.calltouch_request_id,
+                # "invoice_yaclientid": invoice.yaclientid,
             }
         )
 
@@ -176,15 +179,13 @@ def build_data_row(deal: Deal) -> Generator[dict[str, Any], Any, None]:
             note = invoice.delivery_notes[0]
             row.update(
                 {
-                    "delivery_note_external_id": note.external_id,
-                    "delivery_note_name": note.name,
-                    "delivery_note_opportunity": note.opportunity,
-                    "delivery_note_assigned_by_id": (
+                    # "delivery_note_external_id": note.external_id,
+                    "Накладная 1С": note.name,
+                    "Сумма накладной": note.opportunity,
+                    "Ответственный по накладной": (
                         get_name(note.assigned_user)
                     ),
-                    "delivery_note_date_delivery_note": (
-                        note.date_delivery_note
-                    ),
+                    "Дата накладной": (note.date_delivery_note),
                 }
             )
             # yield note_row
@@ -192,7 +193,8 @@ def build_data_row(deal: Deal) -> Generator[dict[str, Any], Any, None]:
             ...
             # yield invoice_row
     else:
-        yield row
+        ...
+    yield row
 
 
 def convert_to_naive_datetime(value: Any) -> Any:
@@ -248,7 +250,7 @@ async def export_deals(
         logger.info(f"Created DataFrame with {len(df)} rows")
 
         df = df.sort_values(
-            by=["deal_date_create", "deal_assigned_by_id", "deal_opportunity"],
+            by=["Дата сделки", "Ответственный по сделке", "Сумма сделки"],
             ascending=[
                 True,  # deal_date_create: по возрастанию (старые -> новые)
                 True,  # deal_assigned_by_id: A->Я
@@ -259,7 +261,8 @@ async def export_deals(
 
         # Создание временного файла
         with NamedTemporaryFile(delete=False, suffix=".xlsx") as tmp:
-            df.to_excel(tmp.name, index=False, engine="openpyxl")
+            with pd.ExcelWriter(tmp.name, engine="openpyxl") as writer:
+                df.to_excel(writer, index=False)
             tmp_path = tmp.name
             logger.info(f"Created temporary Excel file: {tmp_path}")
 
