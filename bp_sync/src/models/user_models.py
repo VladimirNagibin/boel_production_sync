@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from .delivery_note_models import DeliveryNote
     from .invoice_models import Invoice
     from .lead_models import Lead
+    from .timeline_comment_models import TimelineComment
 
 
 class User(IntIdEntity):
@@ -242,4 +243,9 @@ class User(IntIdEntity):
         "DeliveryNote",
         back_populates="assigned_user",
         foreign_keys="[DeliveryNote.assigned_by_id]",
+    )
+    timeline_comments: Mapped[list["TimelineComment"]] = relationship(
+        "TimelineComment",
+        back_populates="author",
+        foreign_keys="[TimelineComment.author_id]",
     )

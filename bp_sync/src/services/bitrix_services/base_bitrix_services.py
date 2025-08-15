@@ -317,22 +317,18 @@ class BaseBitrixEntityClient(Generic[SchemaTypeCreate, SchemaTypeUpdate]):
             order=order,
             start=start,
         )
-
         response = await self.bitrix_client.call_api(
             method=method, params=params
         )
         result = response.get("result", {})
-
         # Обработка разных форматов ответа
         if entity_type_id:
             entities = result.get("items", [])
         else:
             entities = result
-
         total = response.get("total", 0)
         next_page = response.get("next")
         parsed_entities = [self.update_schema(**entity) for entity in entities]
-
         logger.info(
             f"Fetched {len(parsed_entities)} of {total} {self.entity_name}s"
         )

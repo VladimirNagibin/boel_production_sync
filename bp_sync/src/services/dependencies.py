@@ -40,6 +40,12 @@ from .invoices.invoice_services import InvoiceClient
 from .leads.lead_bitrix_services import LeadBitrixClient
 from .leads.lead_repository import LeadRepository
 from .leads.lead_services import LeadClient
+from .timeline_comments.timeline_comment_bitrix_services import (
+    TimeLineCommentBitrixClient,
+)
+from .timeline_comments.timeline_comment_repository import (
+    TimelineCommentRepository,
+)
 from .token_services.token_cipher import TokenCipher
 from .token_services.token_storage import TokenStorage
 from .users.user_bitrix_services import UserBitrixClient
@@ -265,6 +271,20 @@ async def create_billing_repository() -> BillingRepository:
     return BillingRepository(session=get_session_context())
 
 
+async def create_timeline_comment_bitrix_client() -> (
+    TimeLineCommentBitrixClient
+):
+    return TimeLineCommentBitrixClient(await create_bitrix_client())
+
+
+async def create_timeline_comment_repository() -> TimelineCommentRepository:
+    locator = ServiceLocator()
+    return TimelineCommentRepository(
+        session=get_session_context(),
+        get_user_client=lambda: locator.get("user_client"),
+    )
+
+
 async def get_service(service_name: str) -> Any:
     """Получает сервис из реестра или создает новый"""
     cache = _services_cache_ctx.get()
@@ -383,6 +403,18 @@ async def get_billing_repository_dep() -> BillingRepository:
 async def get_delivery_note_repository_dep() -> DeliveryNoteRepository:
     client = await get_service("delivery_note_repository")
     return cast(DeliveryNoteRepository, client)
+
+
+async def get_timeline_comment_bitrix_client_dep() -> (
+    TimeLineCommentBitrixClient
+):
+    client = await get_service("timeline_comment_bitrix_client")
+    return cast(TimeLineCommentBitrixClient, client)
+
+
+async def get_timeline_comment_repository_dep() -> TimelineCommentRepository:
+    client = await get_service("timeline_comment_repository")
+    return cast(TimelineCommentRepository, client)
 
 
 async def get_oauth_client() -> BitrixOAuthClient:

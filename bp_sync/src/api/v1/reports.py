@@ -19,6 +19,7 @@ from models.deal_models import Deal
 from models.delivery_note_models import DeliveryNote
 from models.invoice_models import Invoice
 from models.lead_models import Lead
+from models.timeline_comment_models import TimelineComment
 
 reports_router = APIRouter()
 
@@ -45,6 +46,10 @@ async def fetch_deals(
             selectinload(Deal.stage),
             selectinload(Deal.source),
             selectinload(Deal.creation_source),
+            selectinload(Deal.timeline_comments),
+            selectinload(Deal.timeline_comments).selectinload(
+                TimelineComment.author
+            ),
             # Загрузка отношений для Lead
             selectinload(Deal.lead).selectinload(Lead.assigned_user),
             selectinload(Deal.lead).selectinload(Lead.created_user),
@@ -102,13 +107,16 @@ def build_data_row(deal: Deal) -> Generator[dict[str, Any], Any, None]:
         "Дата сделки": deal.date_create,
         "Название сделки": deal.title,
         "Ответственный по сделке": get_name(deal.assigned_user),
-        "Создал сделку": get_name(deal.created_user),
+        "Создатель сделки": get_name(deal.created_user),
         "Сумма сделки": deal.opportunity,
-        "Тип создания сделки": get_name(deal.creation_source),
+        "Тип созд. сделки": get_name(deal.creation_source),
+        "Тип создания новый (авто/ручной)": "",
         "Источник сделки": get_name(deal.source),
+        "Источник новый": "",
         "Тип сделки": get_name(deal.type),
+        "Тип новый": "",
         "Стадия сделки": get_name(deal.stage),
-        "Внешний номер сделки": deal.origin_id,
+        "Вн ном сделки": deal.origin_id,
         "ИД сайта Calltouch": deal.calltouch_site_id,
         # "deal_calltouch_call_id": deal.calltouch_call_id,
         # "deal_calltouch_request_id": deal.calltouch_request_id,
@@ -127,10 +135,10 @@ def build_data_row(deal: Deal) -> Generator[dict[str, Any], Any, None]:
                 "Источник лида": get_name(deal.lead.source),
                 "Тип лида": get_name(deal.lead.type),
                 "Стадия лида": get_name(deal.lead.status),
-                "ИД сайта Calltouch": deal.lead.calltouch_site_id,
+                "ИД сайта Calltouch лид": deal.lead.calltouch_site_id,
                 # "lead_calltouch_call_id": deal.lead.calltouch_call_id,
                 # "lead_calltouch_request_id": deal.lead.calltouch_request_id,
-                "ИД клиента Яндекс": deal.lead.yaclientid,
+                "ИД клиента Яндекс лид": deal.lead.yaclientid,
             }
         )
 
@@ -171,24 +179,54 @@ def build_data_row(deal: Deal) -> Generator[dict[str, Any], Any, None]:
             }
         )
 
-        # Данные накладных
-        # for note in invoice.delivery_notes:
-        #    note_row = invoice_row.copy()
-        #    note_row.update(
-        if invoice.delivery_notes:
-            note = invoice.delivery_notes[0]
+        # Данные комментариев
+        if deal.timeline_comments:
+            comments: list[str] = []
+            authors: set[str] = set()
+            for comm in deal.timeline_comments:
+                comments.append(comm.comment_entity)
+                author_name = get_name(comm.author)
+                if author_name:
+                    authors.add(author_name)
             row.update(
                 {
                     # "delivery_note_external_id": note.external_id,
-                    "Накладная 1С": note.name,
-                    "Сумма накладной": note.opportunity,
-                    "Ответственный по накладной": (
-                        get_name(note.assigned_user)
+                    "Комментарии из ленты": "; ".join(comments),
+                    "Автор комментария": (
+                        ", ".join(authors) if authors else ""
                     ),
-                    "Дата накладной": (note.date_delivery_note),
+                    # "Дата комментария": ,
                 }
             )
             # yield note_row
+        # Данные накладных
+        if invoice.delivery_notes:
+            names: list[str] = []
+            opportunity = 0.0
+            assigned_users: set[str] = set()
+            date_delivery_note = None
+            for note in invoice.delivery_notes:
+                names.append(note.name)
+                opportunity += note.opportunity
+                user_name = get_name(note.assigned_user)
+                if user_name:
+                    assigned_users.add(user_name)
+                if date_delivery_note is None:
+                    date_delivery_note = note.date_delivery_note
+            #    note_row = invoice_row.copy()
+            #    note_row.update(
+            # if invoice.delivery_notes:
+            row.update(
+                {
+                    # "delivery_note_external_id": note.external_id,
+                    "Накладная 1С": ", ".join(names),
+                    "Сумма накладной": opportunity,
+                    "Ответственный по накладной": (
+                        ", ".join(assigned_users) if assigned_users else ""
+                    ),
+                    "Дата накладной": date_delivery_note,
+                }
+            )
         else:
             ...
             # yield invoice_row

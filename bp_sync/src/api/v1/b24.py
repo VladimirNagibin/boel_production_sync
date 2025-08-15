@@ -11,7 +11,8 @@ from fastapi.responses import JSONResponse
 from core.logger import logger
 from schemas.billing_schemas import BillingCreate
 from schemas.delivery_note_schemas import DeliveryNoteCreate
-from schemas.lead_schemas import LeadCreate
+
+# from schemas.lead_schemas import LeadCreate
 from services.billings.billing_repository import BillingRepository
 from services.bitrix_services.bitrix_oauth_client import BitrixOAuthClient
 from services.deals.deal_bitrix_services import (
@@ -32,6 +33,8 @@ from services.dependencies import (
     get_invoice_bitrix_client_dep,
     get_invoice_client_dep,
     get_oauth_client,
+    get_timeline_comment_bitrix_client_dep,
+    get_timeline_comment_repository_dep,
     request_context,
     reset_cache,
 )
@@ -42,6 +45,12 @@ from services.exceptions import BitrixAuthError, ConflictException
 from services.invoices.invoice_bitrix_services import InvoiceBitrixClient
 from services.invoices.invoice_services import InvoiceClient
 from services.rabbitmq_client import RabbitMQClient, get_rabbitmq
+from services.timeline_comments.timeline_comment_bitrix_services import (
+    TimeLineCommentBitrixClient,
+)
+from services.timeline_comments.timeline_comment_repository import (
+    TimelineCommentRepository,
+)
 
 # from services.bitrix_api_client import BitrixAPIClient
 # from schemas.contact_schemas import ContactUpdate
@@ -194,6 +203,142 @@ async def load_deals(
     )
 
 
+async def get_comm(
+    deal_id: int,
+    timeline_client: TimeLineCommentBitrixClient,
+    timeline_repo: TimelineCommentRepository,
+) -> str | None:
+    filter_entity: dict[str, Any] = {
+        "ENTITY_TYPE": "deal",
+        "ENTITY_ID": deal_id,
+    }
+    from models.bases import EntityType
+    from schemas.timeline_comment_schemas import TimelineCommentCreate
+
+    # all_deals = []
+    select = ["ID", "COMMENT", "CREATED", "AUTHOR_ID"]
+    start = 0
+    res = await timeline_client.list(
+        select=select, filter_entity=filter_entity, start=start
+    )
+    comms = []
+    if res.result:
+        for ree in res.result:
+            # print(type(ree))
+            ree.entity_id = deal_id
+            ree.entity_type = EntityType.DEAL
+            ree.external_id = ree.external_id
+
+            timeline_create = TimelineCommentCreate(
+                **ree.model_dump(by_alias=True, exclude_unset=True)
+            )
+
+            # print(timeline_create)
+            try:
+                ress = await timeline_repo.create_entity(timeline_create)
+            except ConflictException:
+                ress = await timeline_repo.update_entity(timeline_create)
+
+            comms.append(ress.comment_entity)
+    return " ,".join(comms)
+
+
+@b24_router.get(
+    "/load-deal-comments",
+    summary="load deal comments",
+    description="Load deal comments for period.",
+)  # type: ignore
+async def load_deal_comments(
+    start_date: date = Query(
+        ..., description="Дата начала в формате YYYY-MM-DD"
+    ),
+    end_date: date = Query(
+        ..., description="Дата окончания в формате YYYY-MM-DD"
+    ),
+    deal_id: int | str | None = None,
+    deal_bitrix_client: DealBitrixClient = Depends(get_deal_bitrix_client_dep),
+    timeline_client: TimeLineCommentBitrixClient = Depends(
+        get_timeline_comment_bitrix_client_dep
+    ),
+    timeline_repo: TimelineCommentRepository = Depends(
+        get_timeline_comment_repository_dep
+    ),
+) -> JSONResponse:
+    if deal_id:
+        deal_ids: list[int | str | None] = [deal_id]
+    else:
+        # Рассчитываем конец периода как начало следующего дня
+        end_date_plus_one = end_date + timedelta(days=1)
+
+        # Форматируем даты для Bitrix API
+        start_str = start_date.strftime("%Y-%m-%d 00:00:00")
+        end_str = end_date_plus_one.strftime("%Y-%m-%d 00:00:00")
+
+        filter_entity: dict[str, Any] = {
+            ">=BEGINDATE": start_str,
+            "<BEGINDATE": end_str,
+            "CATEGORY_ID": 0,
+        }
+
+        # Получаем сделки с пагинацией
+        all_deals = []
+        select = ["ID"]
+        start = 0
+
+        while True:
+            res = await deal_bitrix_client.list(
+                select=select, filter_entity=filter_entity, start=start
+            )
+            if not res:
+                break
+            deals = res.result
+            # total = res.total
+            next = res.next
+            all_deals.extend(deals)
+            if next:
+                start = next
+            else:
+                break
+            # Прерываем цикл, если получено меньше 50 записей
+            # (последняя страница)
+            # if len(deals) < 50:
+            #    break
+            await asyncio.sleep(2)
+        # Извлекаем только ID сделок
+        deal_ids = [deal.external_id for deal in all_deals]
+    # print(deal_ids)
+    deal_success = {}
+    deal_fail = {}
+
+    for deal_id in deal_ids:
+
+        if deal_id in (43757,):
+            continue
+        print(f"{deal_id}====================================")
+        # deal_id = 44137
+        if deal_id:
+            try:
+                await get_comm(int(deal_id), timeline_client, timeline_repo)
+                deal_success[str(deal_id)] = "success"
+                await asyncio.sleep(2)
+            except Exception as e:
+                deal_fail[str(deal_id)] = str(e)
+
+    # if not res:
+    #    break
+    # invoice = res.result[0]["id"]
+    # await asyncio.sleep(2)
+
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={
+            "deal_success": deal_success,
+            "deal_fail": deal_fail,
+            "count": len(deal_ids),
+        },
+    )
+
+
 @b24_router.get(
     "/",
     summary="check redis",
@@ -214,11 +359,20 @@ async def check(
     #    get_contact_bitrix_client
     # ),
     # token_storage: TokenStorage = Depends(get_token_storage),
+    timeline_client: TimeLineCommentBitrixClient = Depends(
+        get_timeline_comment_bitrix_client_dep
+    ),
+    timeline_repo: TimelineCommentRepository = Depends(
+        get_timeline_comment_repository_dep
+    ),
 ) -> JSONResponse:
-    lead = LeadCreate.get_defoult_entity(12345)
-    print(lead)
+    deal_id = 48133
+    comm = await get_comm(deal_id, timeline_client, timeline_repo)
+    print(comm)
+    # lead = LeadCreate.get_defoult_entity(12345)
+    # print(lead)
     # res = await deal_client.import_from_bitrix(50301)
-    res = await department_client.import_from_bitrix()
+    # res = await department_client.import_from_bitrix()
     # res = await deal_bitrix_client.get(51463)
     # res2 = ContactUpdate(**res.model_dump(by_alias=True, exclude_unset=True))
     # print(du.to_bitrix_dict())
@@ -240,7 +394,7 @@ async def check(
     #    select=["ID", "TITLE", "OPPORTUNITY"],
     #    start=0,
     # )
-    print(res)
+    # print(res.result)
     # await token_storage.delete_token("access_token")
     # if res3:
     #     deal_create = DealCreate(**res)

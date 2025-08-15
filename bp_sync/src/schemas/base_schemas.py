@@ -331,7 +331,7 @@ class BaseUpdateSchema(
 class ListResponseSchema(BaseModel, Generic[T]):  # type: ignore[misc]
     """Схема для ответа со списком сущностей"""
 
-    result: list[T]
+    result: list[CommonFieldMixin]  # list[T]
     total: int
     next: Optional[int] = None
 
