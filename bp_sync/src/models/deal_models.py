@@ -32,6 +32,7 @@ from .references import (  # DefectType,
     Source,
     Warehouse,
 )
+from .timeline_comment_models import TimelineComment
 from .user_models import User
 
 
@@ -179,8 +180,21 @@ class Deal(BusinessEntity):
 
     # Связи с другими сущностями
     invoices: Mapped[list["Invoice"]] = relationship(
-        "Invoice", back_populates="deal", foreign_keys="[Invoice.deal_id]"
+        "Invoice",
+        back_populates="deal",
+        foreign_keys="[Invoice.deal_id]",
     )
+    timeline_comments: Mapped[list["TimelineComment"]] = relationship(
+        "TimelineComment",
+        primaryjoin=(
+            "and_(Deal.external_id == foreign(TimelineComment.entity_id), "
+            "TimelineComment.entity_type == 'Deal')"
+        ),
+        viewonly=True,
+        lazy="selectin",
+        back_populates="deal",
+    )
+
     currency_id: Mapped[str | None] = mapped_column(
         ForeignKey("currencies.external_id")
     )  # CURRENCY_ID : Ид валюты

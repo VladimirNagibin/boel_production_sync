@@ -51,8 +51,7 @@ class BitrixAPIClient(BaseBitrixClient):
                 response = await self._post(url, payload)
                 if "error" in response:
                     self._handle_api_error(response, attempt)
-
-                if response.get("result"):
+                if response.get("result") is not None:
                     return response
                 logger.error(f"Response has no result. {method}: {params}")
                 raise BitrixApiError(

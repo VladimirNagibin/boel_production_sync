@@ -39,6 +39,7 @@ from models.references import (  # noqa: F401
     Department,
     Emploees,
 )
+from models.timeline_comment_models import TimelineComment  # noqa: F401
 from models.user_models import User  # noqa: F401
 
 # this is the Alembic Config object, which provides

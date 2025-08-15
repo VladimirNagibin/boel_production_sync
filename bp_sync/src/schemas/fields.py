@@ -670,3 +670,5 @@ FIELDS_BILLING: dict[str, Any] = {}
 FIELDS_DELIVERY_ALT: dict[str, Any] = {}
 
 FIELDS_BILLING_ALT: dict[str, Any] = {}
+
+FIELDS_TIMELINE_COMMENT: dict[str, Any] = {}
