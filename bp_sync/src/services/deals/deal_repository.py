@@ -1,13 +1,19 @@
+from datetime import datetime, timedelta
+from enum import Enum
 from typing import Any, Callable, Coroutine, Type
 
-# from fastapi import Depends
+from pytz import UTC  # type: ignore[import-untyped]
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
-from db.postgres import Base  # , get_session
+from db.postgres import Base
 from models.bases import EntityType
 from models.company_models import Company as CompanyDB
 from models.contact_models import Contact as ContactDB
 from models.deal_models import Deal as DealDB
+from models.delivery_note_models import DeliveryNote
+from models.invoice_models import Invoice as InvoiceDB
 from models.lead_models import Lead as LeadDB
 from models.references import (
     Category,
@@ -22,15 +28,16 @@ from models.references import (
     Source,
     Warehouse,
 )
+from models.timeline_comment_models import TimelineComment
 from models.user_models import User as UserDB
 from schemas.deal_schemas import DealCreate, DealUpdate
 
 from ..base_repositories.base_repository import BaseRepository
-from ..companies.company_services import CompanyClient  # , get_company_client
-from ..contacts.contact_services import ContactClient  # , get_contact_client
+from ..companies.company_services import CompanyClient
+from ..contacts.contact_services import ContactClient
 from ..entities.source_services import SourceClient
-from ..leads.lead_services import LeadClient  # , get_lead_client
-from ..users.user_services import UserClient  # , get_user_client
+from ..leads.lead_services import LeadClient
+from ..users.user_services import UserClient
 
 
 class DealRepository(BaseRepository[DealDB, DealCreate, DealUpdate, int]):
@@ -42,10 +49,6 @@ class DealRepository(BaseRepository[DealDB, DealCreate, DealUpdate, int]):
     def __init__(
         self,
         session: AsyncSession,
-        # company_client: CompanyClient,
-        # contact_client: ContactClient,
-        # lead_client: LeadClient,
-        # user_client: UserClient,
         get_company_client: Callable[[], Coroutine[Any, Any, CompanyClient]],
         get_contact_client: Callable[[], Coroutine[Any, Any, ContactClient]],
         get_lead_client: Callable[[], Coroutine[Any, Any, LeadClient]],
@@ -79,7 +82,6 @@ class DealRepository(BaseRepository[DealDB, DealCreate, DealUpdate, int]):
             ("stage_id", DealStage, "external_id"),
             ("currency_id", Currency, "external_id"),
             ("category_id", Category, "external_id"),
-            # ("source_id", Source, "external_id"),
             ("main_activity_id", MainActivity, "external_id"),
             ("lead_type_id", DealType, "external_id"),
             ("shipping_company_id", ShippingCompany, "ext_alt_id"),
@@ -111,171 +113,214 @@ class DealRepository(BaseRepository[DealDB, DealCreate, DealUpdate, int]):
             "source_id": (source_client, Source, False),
         }
 
-    """
-    async def _create_or_update_related(
-        self, deal_schema: DealCreate | DealUpdate
-    ) -> None:
-        "
-        Проверяет существование связанных объектов в БД и создаёт отсутствующие
-        "
-        errors: list[str] = []
-
-        # Проверка Lead
-        if lead_id := deal_schema.lead_id:
-            try:
-                if not await self._check_object_exists(
-                    LeadDB, external_id=lead_id
-                ):
-                    await self.lead_client.import_from_bitrix(lead_id)
-                else:
-                    await self.lead_client.refresh_from_bitrix(lead_id)
-            except Exception as e:
-                errors.append(
-                    f"Lead with id={lead_id:} not found and can't created "
-                    f"{str(e)}"
-                )
-
-        # Проверка Company
-        if company_id := deal_schema.company_id:
-            try:
-                if not await self._check_object_exists(
-                    CompanyDB, external_id=company_id
-                ):
-                    await self.company_client.import_from_bitrix(company_id)
-                else:
-                    await self.company_client.refresh_from_bitrix(company_id)
-            except Exception as e:
-                errors.append(
-                    f"Company with id={company_id:} not found and "
-                    f"can't created {str(e)}"
-                )
-
-        # Проверка Contact
-        if contact_id := deal_schema.contact_id:
-            try:
-                if not await self._check_object_exists(
-                    ContactDB, external_id=contact_id
-                ):
-                    await self.contact_client.import_from_bitrix(contact_id)
-                else:
-                    await self.contact_client.refresh_from_bitrix(contact_id)
-            except Exception as e:
-                errors.append(
-                    f"Contact with id={contact_id:} not found and "
-                    f"can't created {str(e)}"
-                )
-
-        # Проверка User для assigned_by_id
-        if user_id := deal_schema.assigned_by_id:
-            try:
-                if not await self._check_object_exists(
-                    UserDB, external_id=user_id
-                ):
-                    await self.user_client.import_from_bitrix(user_id)
-                else:
-                    await self.user_client.refresh_from_bitrix(user_id)
-            except Exception as e:
-                errors.append(
-                    f"User with id={user_id:} not found and "
-                    f"can't created {str(e)}"
-                )
-
-        # Проверка User для created_by_id
-        if user_id := deal_schema.created_by_id:
-            try:
-                if not await self._check_object_exists(
-                    UserDB, external_id=user_id
-                ):
-                    await self.user_client.import_from_bitrix(user_id)
-                else:
-                    await self.user_client.refresh_from_bitrix(user_id)
-            except Exception as e:
-                errors.append(
-                    f"User with id={user_id:} not found and "
-                    f"can't created {str(e)}"
-                )
-
-        # Проверка User для modify_by_id
-        if user_id := deal_schema.modify_by_id:
-            try:
-                if not await self._check_object_exists(
-                    UserDB, external_id=user_id
-                ):
-                    await self.user_client.import_from_bitrix(user_id)
-                else:
-                    await self.user_client.refresh_from_bitrix(user_id)
-            except Exception as e:
-                errors.append(
-                    f"User with id={user_id:} not found and "
-                    f"can't created {str(e)}"
-                )
-
-
-        # Проверка User для moved_by_id
-        if user_id := deal_schema.moved_by_id:
-            try:
-                if not await self._check_object_exists(
-                    UserDB, external_id=user_id
-                ):
-                    await self.user_client.import_from_bitrix(user_id)
-                else:
-                    await self.user_client.refresh_from_bitrix(user_id)
-            except Exception as e:
-                errors.append(
-                    f"User with id={user_id:} not found and "
-                    f"can't created {str(e)}"
-                )
-
-        # Проверка User для last_activity_by
-        if user_id := deal_schema.last_activity_by:
-            try:
-                if not await self._check_object_exists(
-                    UserDB, external_id=user_id
-                ):
-                    await self.user_client.import_from_bitrix(user_id)
-                else:
-                    await self.user_client.refresh_from_bitrix(user_id)
-            except Exception as e:
-                errors.append(
-                    f"User with id={user_id:} not found and "
-                    f"can't created {str(e)}"
-                )
-
-        # Проверка User для defect_expert_id
-        if user_id := deal_schema.defect_expert_id:
-            try:
-                if not await self._check_object_exists(
-                    UserDB, external_id=user_id
-                ):
-                    await self.user_client.import_from_bitrix(user_id)
-                else:
-                    await self.user_client.refresh_from_bitrix(user_id)
-            except Exception as e:
-                errors.append(
-                    f"User with id={user_id:} not found and "
-                    f"can't created {str(e)}"
-                )
-
-        if errors:
-            logger.exception(f"Failed to create related objects: {errors}")
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Failed to create related objects: {errors}",
+    async def fetch_deals(
+        self, start_date: datetime, end_date: datetime
+    ) -> Any:
+        """Асинхронно получает сделки с связанными данными"""
+        # Рассчитываем конец периода как начало следующего дня
+        end_date_plus_one = end_date + timedelta(days=1)
+        result = await self.session.execute(
+            select(DealDB)
+            .where(
+                DealDB.date_create >= start_date,
+                DealDB.date_create <= end_date_plus_one,
             )
+            .options(
+                # Загрузка отношений для Deal
+                selectinload(DealDB.assigned_user),
+                selectinload(DealDB.created_user),
+                selectinload(DealDB.type),
+                selectinload(DealDB.stage),
+                selectinload(DealDB.source),
+                selectinload(DealDB.creation_source),
+                selectinload(DealDB.timeline_comments),
+                selectinload(DealDB.timeline_comments).selectinload(
+                    TimelineComment.author
+                ),
+                # Загрузка отношений для Lead
+                selectinload(DealDB.lead).selectinload(LeadDB.assigned_user),
+                selectinload(DealDB.lead).selectinload(LeadDB.created_user),
+                selectinload(DealDB.lead).selectinload(LeadDB.type),
+                selectinload(DealDB.lead).selectinload(LeadDB.status),
+                selectinload(DealDB.lead).selectinload(LeadDB.source),
+                # Загрузка отношений для Invoice
+                selectinload(DealDB.invoices).selectinload(
+                    InvoiceDB.assigned_user
+                ),
+                selectinload(DealDB.invoices).selectinload(
+                    InvoiceDB.created_user
+                ),
+                selectinload(DealDB.invoices).selectinload(
+                    InvoiceDB.invoice_stage
+                ),
+                # Загрузка отношений для DeliveryNote
+                selectinload(DealDB.invoices)
+                .selectinload(InvoiceDB.delivery_notes)
+                .selectinload(DeliveryNote.assigned_user),
+                selectinload(DealDB.invoices).selectinload(InvoiceDB.billings),
+                selectinload(DealDB.lead),
+                selectinload(DealDB.invoices).selectinload(
+                    InvoiceDB.delivery_notes
+                ),
+                selectinload(DealDB.invoices).selectinload(InvoiceDB.company),
+                selectinload(DealDB.invoices).selectinload(InvoiceDB.billings),
+            )
+        )
+        return result.scalars().all()
+
+    def get_name(self, value: Any) -> str:
+        """Безопасное получение имени из объекта"""
+        if value is None:
+            return ""
+
+        # Для пользователей
+        if hasattr(value, "full_name") and value.full_name:
+            return str(value.full_name)
+        if hasattr(value, "name") and value.name:
+            return str(value.name)
+        if hasattr(value, "title") and value.title:
+            return str(value.title)
+
+        # Для перечислений
+        if isinstance(value, Enum):
+            return value.name
+
+        return ""
+
+    def build_data_row(self, deal: DealDB) -> dict[str, Any]:
+        """Строит строку данных для экспорта"""
+        row: dict[str, Any] = {
+            "ИД сделки": deal.external_id,
+            "Дата сделки": deal.date_create,
+            "Название сделки": deal.title,
+            "Ответственный по сделке": self.get_name(deal.assigned_user),
+            "Создатель сделки": self.get_name(deal.created_user),
+            "Сумма сделки": deal.opportunity,
+            "Тип созд. сделки": self.get_name(deal.creation_source),
+            "Тип создания новый (авто/ручной)": "",
+            "Источник сделки": self.get_name(deal.source),
+            "Источник новый": "",
+            "Тип сделки": self.get_name(deal.type),
+            "Тип новый": "",
+            "Стадия сделки": self.get_name(deal.stage),
+            "Вн ном сделки": deal.origin_id,
+            "ИД сайта Calltouch": deal.calltouch_site_id,
+            # "deal_calltouch_call_id": deal.calltouch_call_id,
+            # "deal_calltouch_request_id": deal.calltouch_request_id,
+            "ИД клиента Яндекс": deal.yaclientid,
+        }
+
+        # Данные лида
+        if deal.lead:
+            row.update(
+                {
+                    "ИД лида": deal.lead.external_id,
+                    "Дата лида": deal.lead.date_create,
+                    "Название лида": deal.lead.title,
+                    "Ответственный по лиду": self.get_name(
+                        deal.lead.assigned_user
+                    ),
+                    "Создатель лида": self.get_name(deal.lead.created_user),
+                    "Источник лида": self.get_name(deal.lead.source),
+                    "Тип лида": self.get_name(deal.lead.type),
+                    "Стадия лида": self.get_name(deal.lead.status),
+                    "ИД сайта Calltouch лид": deal.lead.calltouch_site_id,
+                    "ИД клиента Яндекс лид": deal.lead.yaclientid,
+                }
+            )
+        # Данные комментариев
+        if deal.timeline_comments:
+            comments: list[str] = []
+            authors: set[str] = set()
+            date_comm: datetime | None = None
+            for comm in deal.timeline_comments:
+                if comm.comment_entity:
+                    comments.append(comm.comment_entity)
+                author_name = self.get_name(comm.author)
+                if author_name:
+                    authors.add(author_name)
+                if date_comm is None:
+                    date_comm = comm.created
+            row.update(
+                {
+                    "Комментарии из ленты": "; ".join(comments),
+                    "Автор комментария": (
+                        ", ".join(authors) if authors else ""
+                    ),
+                    "Дата комментария": date_comm,
+                }
+            )
+
+        # Данные счетов
+        if deal.invoices:
+            invoice = deal.invoices[0]
+            print(invoice)
+            row.update(
+                {
+                    "ИД счета": invoice.external_id,
+                    "Дата счета": invoice.date_create,
+                    "Название счета": invoice.title,
+                    "Ответственный по счету": self.get_name(
+                        invoice.assigned_user
+                    ),
+                    "Номер счета": invoice.account_number,
+                    "Компания": self.get_name(invoice.company),
+                    "Выгружен в 1С": invoice.is_loaded,
+                    "Сумма счета": invoice.opportunity,
+                    "Стадия счета": self.get_name(invoice.invoice_stage),
+                    "Оплачено по счету": sum(
+                        b.amount for b in invoice.billings
+                    ),
+                    "Статус оплаты": (
+                        "Оплачен"
+                        if abs(
+                            sum(b.amount for b in invoice.billings)
+                            - invoice.opportunity
+                        )
+                        < 0.01
+                        else "Частично" if any(invoice.billings) else "-"
+                    ),
+                }
+            )
+
+            # Данные накладных
+            if invoice.delivery_notes:
+                names: list[str] = []
+                opportunity = 0.0
+                assigned_users: set[str] = set()
+                date_delivery_note = None
+                for note in invoice.delivery_notes:
+                    names.append(note.name)
+                    opportunity += note.opportunity
+                    user_name = self.get_name(note.assigned_user)
+                    if user_name:
+                        assigned_users.add(user_name)
+                    if date_delivery_note is None:
+                        date_delivery_note = note.date_delivery_note
+                row.update(
+                    {
+                        "Накладная 1С": ", ".join(names),
+                        "Сумма накладной": opportunity,
+                        "Ответственный по накладной": (
+                            ", ".join(assigned_users) if assigned_users else ""
+                        ),
+                        "Дата накладной": date_delivery_note,
+                    }
+                )
+            else:
+                ...
+                # yield invoice_row
+        else:
+            ...
+        return row
+
+    @staticmethod
+    def convert_to_naive_datetime(value: Any) -> Any:
         """
-
-
-# def get_deal_repository(
-#    session: AsyncSession = Depends(get_session),
-#    company_client: CompanyClient = Depends(get_company_client),
-#    contact_client: ContactClient = Depends(get_contact_client),
-#    lead_client: LeadClient = Depends(get_lead_client),
-#    user_client: UserClient = Depends(get_user_client),
-# ) -> DealRepository:
-#    return DealRepository(
-#        session=session,
-#        company_client=company_client,
-#        contact_client=contact_client,
-#        lead_client=lead_client,
-#        user_client=user_client,
-#    )
+        Преобразует datetime с временной зоной в наивный datetime
+        (без временной зоны)
+        """
+        if isinstance(value, datetime) and value.tzinfo is not None:
+            # Конвертируем в UTC и удаляем информацию о временной зоне
+            return value.astimezone(UTC).replace(tzinfo=None)
+        return value
