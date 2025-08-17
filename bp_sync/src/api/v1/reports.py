@@ -141,6 +141,25 @@ def build_data_row(deal: Deal) -> Generator[dict[str, Any], Any, None]:
                 "ИД клиента Яндекс лид": deal.lead.yaclientid,
             }
         )
+    # print(f"{deal.external_id}::--------------------")
+    # Данные комментариев
+    if deal.timeline_comments:
+        comments: list[str] = []
+        authors: set[str] = set()
+        for comm in deal.timeline_comments:
+            # print(f"{deal.external_id}::{comm.comment_entity}")
+            comments.append(comm.comment_entity)
+            author_name = get_name(comm.author)
+            if author_name:
+                authors.add(author_name)
+        row.update(
+            {
+                # "delivery_note_external_id": note.external_id,
+                "Комментарии из ленты": "; ".join(comments),
+                "Автор комментария": (", ".join(authors) if authors else ""),
+                # "Дата комментария": ,
+            }
+        )
 
     # Данные счетов
 
@@ -179,26 +198,6 @@ def build_data_row(deal: Deal) -> Generator[dict[str, Any], Any, None]:
             }
         )
 
-        # Данные комментариев
-        if deal.timeline_comments:
-            comments: list[str] = []
-            authors: set[str] = set()
-            for comm in deal.timeline_comments:
-                comments.append(comm.comment_entity)
-                author_name = get_name(comm.author)
-                if author_name:
-                    authors.add(author_name)
-            row.update(
-                {
-                    # "delivery_note_external_id": note.external_id,
-                    "Комментарии из ленты": "; ".join(comments),
-                    "Автор комментария": (
-                        ", ".join(authors) if authors else ""
-                    ),
-                    # "Дата комментария": ,
-                }
-            )
-            # yield note_row
         # Данные накладных
         if invoice.delivery_notes:
             names: list[str] = []
