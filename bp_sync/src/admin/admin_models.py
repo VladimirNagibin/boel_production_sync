@@ -33,6 +33,7 @@ from models.references import (  # noqa: F401
     Source,
     Warehouse,
 )
+from models.timeline_comment_models import TimelineComment
 from models.user_models import User  # noqa: F401
 
 # from wtforms import Form, StringField
@@ -318,6 +319,46 @@ class DeliveryNoteAdmin(
     icon = "fa-solid fa-location-arrow"
 
 
+class TimelineCommentAdmin(
+    BaseAdmin, model=TimelineComment
+):  # type: ignore[call-arg]
+    name = "Комментарии"
+    column_list = [  # Поля в списке
+        "external_id",
+        "entity_id",
+    ]
+    column_labels = {  # Надписи полей в списке
+        "external_id": "Внешний код",
+        "entity_id": "Название",
+    }
+    column_default_sort = [("external_id", True)]  # Сортировка по умолчанию
+    column_sortable_list = [  # Список полей по которым возможна сортировка
+        "external_id",
+        "entity_id",
+    ]
+    column_searchable_list = [  # Список полей по которым возможен поиск
+        "entity_id",
+        "external_id",
+    ]
+    form_columns = [  # Поля на форме
+        "created",
+        "entity_id",
+        "entity_type",
+        "author",
+        "deal",
+        "comment_entity",
+    ]
+    column_details_list = [
+        "created",
+        "entity_id",
+        "entity_type",
+        "author",
+        "deal",
+        "comment_entity",
+    ]  #
+    icon = "fa-solid fa-location-arrow"
+
+
 """
 class ContactAdmin(BaseAdmin):
     column_list = ["name", "last_name", "post", "company", "created_at"]
@@ -401,6 +442,7 @@ def register_models(admin: Admin) -> None:
     admin.add_view(ShippingCompanyAdmin)
     admin.add_view(BillingAdmin)
     admin.add_view(DeliveryNoteAdmin)
+    admin.add_view(TimelineCommentAdmin)
 
     """
     admin.add_view(ContactAdmin(Contact, name="Контакты"))
