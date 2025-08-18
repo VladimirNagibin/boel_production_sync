@@ -1,6 +1,6 @@
 from datetime import datetime
 from tempfile import NamedTemporaryFile
-from typing import Any
+from typing import Any  # , cast
 
 import pandas as pd
 from fastapi import HTTPException
@@ -11,6 +11,9 @@ from models.deal_models import Deal as DealDB
 from ..base_services.base_service import BaseEntityClient
 from .deal_bitrix_services import DealBitrixClient
 from .deal_repository import DealRepository
+
+# from openpyxl.workbook import Workbook
+# from pandas.io.excel._base import ExcelWriter
 
 
 class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
@@ -75,6 +78,9 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
 
     async def _create_excel_file(self, df: pd.DataFrame) -> str:
         """Создает временный Excel-файл"""
+        if df.empty:
+            # Создаем DataFrame с сообщением если нет данных
+            df = pd.DataFrame({"Сообщение": ["Нет данных для отображения"]})
         with NamedTemporaryFile(delete=False, suffix=".xlsx") as tmp:
             with pd.ExcelWriter(tmp.name, engine="openpyxl") as writer:
                 df.to_excel(writer, index=False)
@@ -87,7 +93,9 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
     ) -> str:
         """Основной метод экспорта сделок в Excel"""
         try:
-            logger.info(f"Exporting deals from {start_date} to {end_date}")
+            logger.info(
+                f"Exporting deals to excel from {start_date} to {end_date}"
+            )
             data = await self._prepare_data(start_date, end_date)
             df = await self._create_dataframe(data)
             return await self._create_excel_file(df)
