@@ -313,8 +313,6 @@ class CoreUpdateSchema(
             else:
                 # Остальные значения без изменений (проверка ссылочных полей)
                 result[alias] = value
-        # if 'created_by_id' not in result or not result['created_by_id']:
-        #    result['created_by_id'] = SYSTEM_USER_ID
         return result
 
 
@@ -370,6 +368,7 @@ class BitrixValidators:
         processed_data: dict[str, Any] = cast(dict[str, Any], data)
         for field in list(processed_data.keys()):
             value = processed_data[field]
+            # print(f"{field}::{value}")
             if field == "id":
                 processed_data["ID"] = processed_data.pop("id")
             elif field in (
@@ -402,6 +401,9 @@ class BitrixValidators:
                 processed_data[field] = BitrixValidators.normalize_list(value)
             elif field in fields.get("list_in_int", []):
                 processed_data[field] = BitrixValidators.list_in_int(value)
+            elif field in fields.get("dict_none", []):
+                if value:
+                    processed_data[field] = value["value"]
         return processed_data
 
     @staticmethod

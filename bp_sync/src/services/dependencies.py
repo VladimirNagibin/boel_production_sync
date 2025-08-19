@@ -40,6 +40,7 @@ from .invoices.invoice_services import InvoiceClient
 from .leads.lead_bitrix_services import LeadBitrixClient
 from .leads.lead_repository import LeadRepository
 from .leads.lead_services import LeadClient
+from .products.product_bitrix_services import ProductBitrixClient
 from .timeline_comments.timeline_comment_bitrix_services import (
     TimeLineCommentBitrixClient,
 )
@@ -285,6 +286,10 @@ async def create_timeline_comment_repository() -> TimelineCommentRepository:
     )
 
 
+async def create_product_bitrix_client() -> ProductBitrixClient:
+    return ProductBitrixClient(await create_bitrix_client())
+
+
 async def get_service(service_name: str) -> Any:
     """Получает сервис из реестра или создает новый"""
     cache = _services_cache_ctx.get()
@@ -415,6 +420,11 @@ async def get_timeline_comment_bitrix_client_dep() -> (
 async def get_timeline_comment_repository_dep() -> TimelineCommentRepository:
     client = await get_service("timeline_comment_repository")
     return cast(TimelineCommentRepository, client)
+
+
+async def get_product_bitrix_client_dep() -> ProductBitrixClient:
+    client = await get_service("product_bitrix_client")
+    return cast(ProductBitrixClient, client)
 
 
 async def get_oauth_client() -> BitrixOAuthClient:

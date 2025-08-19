@@ -44,7 +44,7 @@ async def export_deals(
     except HTTPException as he:
         raise he
     except Exception as e:
-        logger.critical(f"Critical export error: {str(e)}", exc_info=True)
+        logger.error(f"Critical export error: {str(e)}", exc_info=True)
         if tmp_path and os.path.exists(tmp_path):
             cleanup_temp_file(tmp_path)
         raise HTTPException(

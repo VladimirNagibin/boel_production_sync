@@ -646,7 +646,9 @@ FIELDS_INVOICE_ALT: dict[str, Any] = {
         "begindate",
         "closedate",
         "moved_time",
-        "last_call_time" "last_email_time" "last_imol_time",
+        "last_call_time",
+        "last_email_time",
+        "last_imol_time",
         "last_webform_time",
         "mgo_cc_create",
         "mgo_cc_end",
@@ -671,4 +673,71 @@ FIELDS_DELIVERY_ALT: dict[str, Any] = {}
 
 FIELDS_BILLING_ALT: dict[str, Any] = {}
 
-FIELDS_TIMELINE_COMMENT: dict[str, Any] = {}
+FIELDS_TIMELINE_COMMENT: dict[str, Any] = {}  # ???
+
+FIELDS_PRODUCT: dict[str, Any] = {
+    "bool_none": [  # Y / N
+        "taxIncluded",
+        "customized",
+        "active",
+        "vatIncluded",
+        "ACTIVE",
+        "VAT_INCLUDED",
+    ],
+    "dict_none": [
+        "PROPERTY_109",
+        "property109",
+        "PROPERTY_113",
+        "property113",
+        "PROPERTY_115",
+        "property115",
+        "PROPERTY_117",
+        "property117",
+        "PROPERTY_119",
+        "property119",
+        "PROPERTY_121",
+        "property121",
+        "PROPERTY_123",
+        "property123",
+        "PROPERTY_127",
+        "property127",
+        "PROPERTY_129",
+        "property129",
+        "PROPERTY_131",
+        "property131",
+        "PROPERTY_151",
+        "property151",
+    ],
+    "datetime_none": [
+        "DATE_CREATE",
+        "dateCreate",
+        "TIMESTAMP_X",
+        "TIMESTAMP_X",
+    ],
+}
+
+FIELDS_PRODUCT_ALT: dict[str, Any] = {
+    "bool_none": [  # Y / N
+        "tax_included",
+        "customized",
+        "active",
+        "vat_included",
+    ],
+    "dict_none": [
+        "article",
+        "remains_spb",
+        "remains_kdr",
+        "remains_msk",
+        "remains_nsk",
+        "price_distributor",
+        "price_minimal",
+        "manufacturer",
+        "country",
+        "brand",
+        "incentive_tier",
+    ],
+    "datetime_none": [
+        "date_create",
+        "date_modify",
+    ],
+}

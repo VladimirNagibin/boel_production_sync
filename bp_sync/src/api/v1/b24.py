@@ -11,6 +11,7 @@ from fastapi.responses import JSONResponse
 from core.logger import logger
 from schemas.billing_schemas import BillingCreate
 from schemas.delivery_note_schemas import DeliveryNoteCreate
+from schemas.product_schemas import EntityTypeAbbr
 
 # from schemas.lead_schemas import LeadCreate
 from services.billings.billing_repository import BillingRepository
@@ -33,6 +34,7 @@ from services.dependencies import (
     get_invoice_bitrix_client_dep,
     get_invoice_client_dep,
     get_oauth_client,
+    get_product_bitrix_client_dep,
     get_timeline_comment_bitrix_client_dep,
     get_timeline_comment_repository_dep,
     request_context,
@@ -44,6 +46,7 @@ from services.entities.department_services import (
 from services.exceptions import BitrixAuthError, ConflictException
 from services.invoices.invoice_bitrix_services import InvoiceBitrixClient
 from services.invoices.invoice_services import InvoiceClient
+from services.products.product_bitrix_services import ProductBitrixClient
 from services.rabbitmq_client import RabbitMQClient, get_rabbitmq
 from services.timeline_comments.timeline_comment_bitrix_services import (
     TimeLineCommentBitrixClient,
@@ -346,6 +349,9 @@ async def load_deal_comments(
 )  # type: ignore
 async def check(
     department_client: DepartmentClient = Depends(get_department_client_dep),
+    product_bitrix_client: ProductBitrixClient = Depends(
+        get_product_bitrix_client_dep
+    ),
     # bitrix_client: BitrixAPIClient = Depends(get_bitrix_client),
     # deal_bitrix_client: DealBitrixClient = Depends(get_deal_bitrix_client),
     # user_bitrix_client: UserBitrixClient = Depends(get_user_bitrix_client),
@@ -366,9 +372,18 @@ async def check(
         get_timeline_comment_repository_dep
     ),
 ) -> JSONResponse:
-    deal_id = 48133
-    comm = await get_comm(deal_id, timeline_client, timeline_repo)
-    print(comm)
+    # deal_id = 48133
+    # comm = await get_comm(deal_id, timeline_client, timeline_repo)
+    products_deal = await product_bitrix_client.check_products_entity(
+        53813, EntityTypeAbbr.DEAL
+    )
+    # products_invoice = await product_bitrix_client.get_entity_products(
+    #    26309, EntityTypeAbbr.INVOICE)
+    print(f"{products_deal}------DEAL")
+    # print(f"{products_invoice}-------INVOICE")
+    # print(products_deal.equals_ignore_owner(products_invoice))
+    # product = await product_bitrix_client.get_product(1245)
+    # print(product)
     # lead = LeadCreate.get_defoult_entity(12345)
     # print(lead)
     # res = await deal_client.import_from_bitrix(50301)
