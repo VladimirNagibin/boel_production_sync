@@ -5,12 +5,6 @@ from schemas.invoice_schemas import InvoiceCreate, InvoiceUpdate
 
 from ..bitrix_services.base_bitrix_services import BaseBitrixEntityClient
 
-# from fastapi import Depends
-
-
-# from ..bitrix_services.bitrix_api_client import BitrixAPIClient
-# from ..dependencies import get_bitrix_client
-
 ENTITY_TYPE_ID = 31
 
 
@@ -22,22 +16,34 @@ class InvoiceBitrixClient(
     update_schema = InvoiceUpdate
 
     async def create(
-        self, data: InvoiceUpdate, entity_type_id: int | None = None
+        self,
+        data: InvoiceUpdate,
+        entity_type_id: int | None = None,
+        crm: bool = True,
     ) -> int | None:
         return await super().create(data, ENTITY_TYPE_ID)
 
     async def get(
-        self, entity_id: int | str, entity_type_id: int | None = None
+        self,
+        entity_id: int | str,
+        entity_type_id: int | None = None,
+        crm: bool = True,
     ) -> InvoiceCreate:
         return await super().get(entity_id, ENTITY_TYPE_ID)
 
     async def update(
-        self, data: InvoiceUpdate, entity_type_id: int | None = None
+        self,
+        data: InvoiceUpdate,
+        entity_type_id: int | None = None,
+        crm: bool = True,
     ) -> bool:
         return await super().update(data, ENTITY_TYPE_ID)
 
     async def delete(
-        self, entity_id: int | str, entity_type_id: int | None = None
+        self,
+        entity_id: int | str,
+        entity_type_id: int | None = None,
+        crm: bool = True,
     ) -> bool:
         return await super().delete(entity_id, ENTITY_TYPE_ID)
 
@@ -48,13 +54,8 @@ class InvoiceBitrixClient(
         order: dict[str, str] | None = None,
         start: int = 0,
         entity_type_id: int | None = None,
+        crm: bool = True,
     ) -> ListResponseSchema[InvoiceUpdate]:
         return await super().list(
             select, filter_entity, order, start, ENTITY_TYPE_ID
         )
-
-
-# def get_invoice_bitrix_client(
-#    bitrix_client: BitrixAPIClient = Depends(get_bitrix_client),
-# ) -> InvoiceBitrixClient:
-#    return InvoiceBitrixClient(bitrix_client)
