@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from services.dependencies import get_code_service
 from services.products.code_services import CodeService
 
-upload_codes_router = APIRouter(tags=["Product Codes"])
+upload_codes_router = APIRouter()  # tags=["Product Codes"]
 
 
 @upload_codes_router.post(  # type: ignore[misc]
