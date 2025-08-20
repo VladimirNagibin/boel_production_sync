@@ -40,6 +40,7 @@ from .invoices.invoice_services import InvoiceClient
 from .leads.lead_bitrix_services import LeadBitrixClient
 from .leads.lead_repository import LeadRepository
 from .leads.lead_services import LeadClient
+from .products.code_services import CodeService
 from .products.product_bitrix_services import ProductBitrixClient
 from .timeline_comments.timeline_comment_bitrix_services import (
     TimeLineCommentBitrixClient,
@@ -425,6 +426,10 @@ async def get_timeline_comment_repository_dep() -> TimelineCommentRepository:
 async def get_product_bitrix_client_dep() -> ProductBitrixClient:
     client = await get_service("product_bitrix_client")
     return cast(ProductBitrixClient, client)
+
+
+async def get_code_service() -> CodeService:
+    return CodeService()
 
 
 async def get_oauth_client() -> BitrixOAuthClient:
