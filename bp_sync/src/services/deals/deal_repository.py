@@ -128,6 +128,9 @@ class DealRepository(BaseRepository[DealDB, DealCreate, DealUpdate, int]):
             .options(
                 # Загрузка отношений для Deal
                 selectinload(DealDB.assigned_user),
+                selectinload(DealDB.assigned_user).selectinload(
+                    UserDB.department
+                ),
                 selectinload(DealDB.created_user),
                 selectinload(DealDB.type),
                 selectinload(DealDB.stage),
@@ -137,6 +140,7 @@ class DealRepository(BaseRepository[DealDB, DealCreate, DealUpdate, int]):
                 selectinload(DealDB.timeline_comments).selectinload(
                     TimelineComment.author
                 ),
+                selectinload(DealDB.company),
                 # Загрузка отношений для Lead
                 selectinload(DealDB.lead).selectinload(LeadDB.assigned_user),
                 selectinload(DealDB.lead).selectinload(LeadDB.created_user),
@@ -193,9 +197,22 @@ class DealRepository(BaseRepository[DealDB, DealCreate, DealUpdate, int]):
             "ИД сделки": deal.external_id,
             "Дата сделки": deal.date_create,
             "Название сделки": deal.title,
+            "Отдел": self.get_name(deal.assigned_user.department),
             "Ответственный по сделке": self.get_name(deal.assigned_user),
             "Создатель сделки": self.get_name(deal.created_user),
+            "Клиент": self.get_name(deal.company),
             "Сумма сделки": deal.opportunity,
+            "Дата создания клиента": (
+                deal.company.date_create if deal.company else ""
+            ),
+            "Разница дат создания клиента и сделки": (
+                (deal.date_create - deal.company.date_create).days
+                if deal.company
+                else ""
+            ),
+            "Сумма отгрузок за год": (
+                deal.company.revenue if deal.company else ""
+            ),
             "Тип созд. сделки": self.get_name(deal.creation_source),
             "Тип создания новый (авто/ручной)": "",
             "Источник сделки": self.get_name(deal.source),
