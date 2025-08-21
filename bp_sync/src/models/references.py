@@ -669,3 +669,26 @@ class Department(NameIntIdEntity):
     users: Mapped[list["User"]] = relationship(
         "User", back_populates="department"
     )
+
+
+MEASURE_VALUES = [
+    (1, "м", 6),
+    (3, "л.", 112),
+    (5, "г", 163),
+    (7, "кг", 166),
+    (9, "шт", 796),
+    (11, "упак", 778),
+]
+
+
+class Measure(NameIntIdEntity):
+    """
+    Единицы измерения:
+    (предзаполнить)
+    """
+
+    __tablename__ = "measures"
+
+    measure_code: Mapped[int] = mapped_column(
+        comment="Код единицы измерения"
+    )  # MEASURE_CODE
