@@ -33,6 +33,7 @@ from .deals.deal_repository import DealRepository
 from .deals.deal_services import DealClient
 from .delivery_notes.delivery_note_repository import DeliveryNoteRepository
 from .entities.department_services import DepartmentClient
+from .entities.measure_repository import MeasureRepository
 from .entities.source_services import SourceClient
 from .invoices.invoice_bitrix_services import InvoiceBitrixClient
 from .invoices.invoice_repository import InvoiceRepository
@@ -291,6 +292,10 @@ async def create_product_bitrix_client() -> ProductBitrixClient:
     return ProductBitrixClient(await create_bitrix_client())
 
 
+async def create_measure_repository() -> MeasureRepository:
+    return MeasureRepository(get_session_context())
+
+
 async def get_service(service_name: str) -> Any:
     """Получает сервис из реестра или создает новый"""
     cache = _services_cache_ctx.get()
@@ -426,6 +431,11 @@ async def get_timeline_comment_repository_dep() -> TimelineCommentRepository:
 async def get_product_bitrix_client_dep() -> ProductBitrixClient:
     client = await get_service("product_bitrix_client")
     return cast(ProductBitrixClient, client)
+
+
+async def get_measure_repository_dep() -> MeasureRepository:
+    client = await get_service("measure_repository")
+    return cast(MeasureRepository, client)
 
 
 async def get_code_service() -> CodeService:

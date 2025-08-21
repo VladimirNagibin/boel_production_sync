@@ -11,9 +11,8 @@ from typing import Sequence, Union
 import sqlalchemy as sa
 from alembic import op
 
+from migration.helpers import get_query_for_bulk_insert
 from models.references import MEASURE_VALUES
-
-from .helpers import get_query_for_bulk_insert
 
 # revision identifiers, used by Alembic.
 revision: str = "9e493c09e9f8"

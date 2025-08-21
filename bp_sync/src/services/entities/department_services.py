@@ -1,16 +1,11 @@
-# from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.logger import logger
-
-# from db.postgres import get_session
 from models.references import Department as DepartDB
 from schemas.department_schemas import Department
 
 from ..base_repositories.base_repository import BaseRepository
 from ..bitrix_services.bitrix_api_client import BitrixAPIClient
-
-# from ..dependencies import get_bitrix_client
 from ..exceptions import ConflictException
 
 
@@ -57,10 +52,3 @@ class DepartmentClient(BaseRepository[DepartDB, Department, Department, int]):
             return []
 
         return [Department(**dept) for dept in response["result"]]
-
-
-# def get_department_client(
-#    bitrix_client: BitrixAPIClient = Depends(get_bitrix_client),
-#    session: AsyncSession = Depends(get_session),
-# ) -> DepartmentClient:
-#    return DepartmentClient(bitrix_client, session)

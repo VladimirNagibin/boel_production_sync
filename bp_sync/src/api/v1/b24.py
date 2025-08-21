@@ -11,7 +11,6 @@ from fastapi.responses import JSONResponse
 from core.logger import logger
 from schemas.billing_schemas import BillingCreate
 from schemas.delivery_note_schemas import DeliveryNoteCreate
-from schemas.product_schemas import EntityTypeAbbr
 
 # from schemas.lead_schemas import LeadCreate
 from services.billings.billing_repository import BillingRepository
@@ -33,6 +32,7 @@ from services.dependencies import (
     get_department_client_dep,
     get_invoice_bitrix_client_dep,
     get_invoice_client_dep,
+    get_measure_repository_dep,
     get_oauth_client,
     get_product_bitrix_client_dep,
     get_timeline_comment_bitrix_client_dep,
@@ -43,6 +43,7 @@ from services.dependencies import (
 from services.entities.department_services import (
     DepartmentClient,
 )
+from services.entities.measure_repository import MeasureRepository
 from services.exceptions import BitrixAuthError, ConflictException
 from services.invoices.invoice_bitrix_services import InvoiceBitrixClient
 from services.invoices.invoice_services import InvoiceClient
@@ -54,6 +55,9 @@ from services.timeline_comments.timeline_comment_bitrix_services import (
 from services.timeline_comments.timeline_comment_repository import (
     TimelineCommentRepository,
 )
+
+# from schemas.product_schemas import EntityTypeAbbr
+
 
 # from services.bitrix_api_client import BitrixAPIClient
 # from schemas.contact_schemas import ContactUpdate
@@ -348,7 +352,7 @@ async def load_deal_comments(
     description="Information about persistency redis.",
 )  # type: ignore
 async def check(
-    department_client: DepartmentClient = Depends(get_department_client_dep),
+    measure_repo: MeasureRepository = Depends(get_measure_repository_dep),
     product_bitrix_client: ProductBitrixClient = Depends(
         get_product_bitrix_client_dep
     ),
@@ -374,12 +378,16 @@ async def check(
 ) -> JSONResponse:
     # deal_id = 48133
     # comm = await get_comm(deal_id, timeline_client, timeline_repo)
-    products_deal = await product_bitrix_client.check_products_entity(
-        53813, EntityTypeAbbr.DEAL
-    )
+    # products_deal = await product_bitrix_client.check_products_entity(
+    #    53813, EntityTypeAbbr.DEAL
+    # )
     # products_invoice = await product_bitrix_client.get_entity_products(
     #    26309, EntityTypeAbbr.INVOICE)
-    print(f"{products_deal}------DEAL")
+    measure = await measure_repo.get_entity(13)
+    if measure:
+        print(f"{measure}------MEASURE")
+    else:
+        print("NOT FOUND")
     # print(f"{products_invoice}-------INVOICE")
     # print(products_deal.equals_ignore_owner(products_invoice))
     # product = await product_bitrix_client.get_product(1245)

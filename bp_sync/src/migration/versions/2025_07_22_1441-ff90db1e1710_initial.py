@@ -12,6 +12,7 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
+from migration.helpers import get_query_for_bulk_insert
 from models.references import (
     CATEGORY_VALUES,
     CONTACT_TYPE_VALUES,
@@ -30,8 +31,6 @@ from models.references import (
     SOURCE_VALUES,
     WAREHOUSE_VALUES,
 )
-
-from .helpers import get_query_for_bulk_insert
 
 
 def bulk_insert(
