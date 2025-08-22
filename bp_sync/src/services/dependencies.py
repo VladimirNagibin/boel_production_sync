@@ -289,7 +289,11 @@ async def create_timeline_comment_repository() -> TimelineCommentRepository:
 
 
 async def create_product_bitrix_client() -> ProductBitrixClient:
-    return ProductBitrixClient(await create_bitrix_client())
+    return ProductBitrixClient(
+        await create_bitrix_client(),
+        await get_code_service(),
+        await create_measure_repository(),
+    )
 
 
 async def create_measure_repository() -> MeasureRepository:

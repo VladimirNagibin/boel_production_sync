@@ -72,8 +72,10 @@ class CodeService:
             )
             return False
 
-    def is_valid_code(self, code: str) -> bool:
+    def is_valid_code(self, code: str | None) -> bool:
         """Проверяет, существует ли код в списке валидных кодов"""
+        if code is None:
+            return False
         is_valid = code in self.valid_codes
         if not is_valid:
             logger.debug(f"Код не найден в списке валидных: {code}")

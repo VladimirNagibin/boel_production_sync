@@ -740,4 +740,16 @@ FIELDS_PRODUCT_ALT: dict[str, Any] = {
         "date_create",
         "date_modify",
     ],
+    "exclude_b24": [
+        "ownerId",
+        "ownerType",
+        "internal_id",
+        "created_at",
+        "updated_at",
+        "is_deleted_in_bitrix",
+        "external_id",
+        "sort",
+        "type",
+        "store_id",
+    ],
 }

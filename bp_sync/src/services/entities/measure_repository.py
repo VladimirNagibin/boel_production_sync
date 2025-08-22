@@ -18,7 +18,7 @@ class MeasureRepository(
                 created_at=measure_db.created_at,
                 updated_at=measure_db.updated_at,
                 is_deleted_in_bitrix=measure_db.is_deleted_in_bitrix,
-                ID=measure_db.external_id,
+                id=measure_db.external_id,
                 name=measure_db.name,
                 measure_code=measure_db.measure_code,
             )

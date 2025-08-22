@@ -11,6 +11,7 @@ from fastapi.responses import JSONResponse
 from core.logger import logger
 from schemas.billing_schemas import BillingCreate
 from schemas.delivery_note_schemas import DeliveryNoteCreate
+from schemas.product_schemas import EntityTypeAbbr
 
 # from schemas.lead_schemas import LeadCreate
 from services.billings.billing_repository import BillingRepository
@@ -55,9 +56,6 @@ from services.timeline_comments.timeline_comment_bitrix_services import (
 from services.timeline_comments.timeline_comment_repository import (
     TimelineCommentRepository,
 )
-
-# from schemas.product_schemas import EntityTypeAbbr
-
 
 # from services.bitrix_api_client import BitrixAPIClient
 # from schemas.contact_schemas import ContactUpdate
@@ -376,18 +374,15 @@ async def check(
         get_timeline_comment_repository_dep
     ),
 ) -> JSONResponse:
-    # deal_id = 48133
+    deal_id = 54195
     # comm = await get_comm(deal_id, timeline_client, timeline_repo)
-    # products_deal = await product_bitrix_client.check_products_entity(
-    #    53813, EntityTypeAbbr.DEAL
-    # )
+    result = await product_bitrix_client.check_update_products_entity(
+        deal_id, EntityTypeAbbr.DEAL
+    )
+    print(f"{result}-------DEAL--UPDATE")
+    # print(f"{products_deal}-------DEAL")
     # products_invoice = await product_bitrix_client.get_entity_products(
     #    26309, EntityTypeAbbr.INVOICE)
-    measure = await measure_repo.get_entity(13)
-    if measure:
-        print(f"{measure}------MEASURE")
-    else:
-        print("NOT FOUND")
     # print(f"{products_invoice}-------INVOICE")
     # print(products_deal.equals_ignore_owner(products_invoice))
     # product = await product_bitrix_client.get_product(1245)
