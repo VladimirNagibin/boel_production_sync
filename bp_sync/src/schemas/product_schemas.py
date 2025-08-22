@@ -1,6 +1,6 @@
 from datetime import datetime
 from enum import StrEnum
-from typing import ClassVar
+from typing import Any, ClassVar
 
 from pydantic import (
     AliasChoices,
@@ -11,7 +11,7 @@ from pydantic import (
 )
 
 from .base_schemas import CommonFieldMixin, EntityAwareSchema
-from .fields import FIELDS_PRODUCT
+from .fields import FIELDS_PRODUCT, FIELDS_PRODUCT_ALT
 
 
 class EntityTypeAbbr(StrEnum):
@@ -88,18 +88,7 @@ class BaseProductEntity(CommonFieldMixin):
         fields_meta = self.__class__.model_fields
 
         for field_name in fields_meta:
-            if field_name in [
-                "owner_id",
-                "owner_type",
-                "external_id",
-                "sort",
-                "store_id",
-                "internal_id",
-                "created_at",
-                "updated_at",
-                "is_deleted_in_bitrix",
-                "type",
-            ]:
+            if field_name in FIELDS_PRODUCT_ALT["exclude_b24"]:
                 continue
 
             value1 = getattr(self, field_name)
@@ -112,6 +101,27 @@ class BaseProductEntity(CommonFieldMixin):
                 return False
 
         return True
+
+    def to_bitrix_dict(self) -> dict[str, Any]:
+        """Преобразует модель в словарь для Bitrix API"""
+        data = self.model_dump(
+            by_alias=True,
+            exclude_none=True,
+            exclude_unset=True,  # опционально: исключить неустановленные поля
+        )
+
+        # Дополнительные преобразования
+        result: dict[str, Any] = {}
+        for alias, value in data.items():
+            if alias in FIELDS_PRODUCT_ALT["exclude_b24"]:
+                continue
+            elif isinstance(value, bool):
+                # Булёвы значения -> "Y"/"N"
+                result[alias] = "Y" if value else "N"
+            else:
+                # Остальные значения без изменений (проверка ссылочных полей)
+                result[alias] = value
+        return result
 
 
 class ProductEntityCreate(BaseProductEntity, EntityAwareSchema):
@@ -153,6 +163,11 @@ class ListProductEntity(BaseModel):  # type: ignore[misc]
             item1.equals_ignore_owner(item2)
             for item1, item2 in zip(self.result, other.result)
         )
+
+    def to_bitrix_dict(self) -> list[dict[str, Any]]:
+        return [
+            product_entity.to_bitrix_dict() for product_entity in self.result
+        ]
 
 
 class BaseProduct(CommonFieldMixin):

@@ -38,6 +38,7 @@ from models.references import (  # noqa: F401
     DefectType,
     Department,
     Emploees,
+    Measure,
 )
 from models.timeline_comment_models import TimelineComment  # noqa: F401
 from models.user_models import User  # noqa: F401

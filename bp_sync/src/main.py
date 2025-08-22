@@ -15,6 +15,7 @@ from admin.authenticate import BasicAuthBackend
 # from api.v1.products import product_router
 from api.v1.b24 import b24_router
 from api.v1.reports import reports_router
+from api.v1.upload_product_codes import upload_codes_router
 from core.logger import LOGGING, logger
 from core.settings import settings
 from db import redis
@@ -70,6 +71,7 @@ app = FastAPI(
 
 app.include_router(b24_router, prefix="/api/v1/b24", tags=["b24"])
 app.include_router(reports_router, prefix="/api/v1/reports", tags=["reports"])
+app.include_router(upload_codes_router, prefix="/api/v1/codes", tags=["codes"])
 # app.include_router(health_router, prefix="/api/v1/health", tags=["health"])
 # app.include_router(producths_router, prefix="/api/v1/hs", tags=["hs"])
 auth_backend = BasicAuthBackend()

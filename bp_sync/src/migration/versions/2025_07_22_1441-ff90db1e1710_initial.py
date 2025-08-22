@@ -12,6 +12,7 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
+from migration.helpers import get_query_for_bulk_insert
 from models.references import (
     CATEGORY_VALUES,
     CONTACT_TYPE_VALUES,
@@ -41,23 +42,7 @@ def bulk_insert(
     :param columns: Список колонок
     :param data: Итерируемый объект с кортежами данных
     """
-    rows: list[str] = []
-    for row in data:
-        formatted_values: list[str] = []
-        for value in row:
-            if value is None:
-                formatted_values.append("NULL")
-            elif isinstance(value, (int, float)):
-                formatted_values.append(str(value))
-            else:
-                # Экранирование одинарных кавычек и оборачивание строк
-                escaped = str(value).replace("'", "''")
-                formatted_values.append(f"'{escaped}'")
-        rows.append(f"({', '.join(formatted_values)})")
-
-    values_str = ", ".join(rows)
-    columns_str = ", ".join([f'"{col}"' for col in columns])
-    query = f"INSERT INTO {table_name} ({columns_str}) VALUES {values_str}"
+    query = get_query_for_bulk_insert(table_name, columns, data)
     op.execute(sa.text(query))
 
 

@@ -33,6 +33,7 @@ from .deals.deal_repository import DealRepository
 from .deals.deal_services import DealClient
 from .delivery_notes.delivery_note_repository import DeliveryNoteRepository
 from .entities.department_services import DepartmentClient
+from .entities.measure_repository import MeasureRepository
 from .entities.source_services import SourceClient
 from .invoices.invoice_bitrix_services import InvoiceBitrixClient
 from .invoices.invoice_repository import InvoiceRepository
@@ -40,6 +41,7 @@ from .invoices.invoice_services import InvoiceClient
 from .leads.lead_bitrix_services import LeadBitrixClient
 from .leads.lead_repository import LeadRepository
 from .leads.lead_services import LeadClient
+from .products.code_services import CodeService
 from .products.product_bitrix_services import ProductBitrixClient
 from .timeline_comments.timeline_comment_bitrix_services import (
     TimeLineCommentBitrixClient,
@@ -287,7 +289,15 @@ async def create_timeline_comment_repository() -> TimelineCommentRepository:
 
 
 async def create_product_bitrix_client() -> ProductBitrixClient:
-    return ProductBitrixClient(await create_bitrix_client())
+    return ProductBitrixClient(
+        await create_bitrix_client(),
+        await get_code_service(),
+        await create_measure_repository(),
+    )
+
+
+async def create_measure_repository() -> MeasureRepository:
+    return MeasureRepository(get_session_context())
 
 
 async def get_service(service_name: str) -> Any:
@@ -425,6 +435,15 @@ async def get_timeline_comment_repository_dep() -> TimelineCommentRepository:
 async def get_product_bitrix_client_dep() -> ProductBitrixClient:
     client = await get_service("product_bitrix_client")
     return cast(ProductBitrixClient, client)
+
+
+async def get_measure_repository_dep() -> MeasureRepository:
+    client = await get_service("measure_repository")
+    return cast(MeasureRepository, client)
+
+
+async def get_code_service() -> CodeService:
+    return CodeService()
 
 
 async def get_oauth_client() -> BitrixOAuthClient:
