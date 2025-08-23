@@ -11,7 +11,6 @@ from fastapi.responses import JSONResponse
 from core.logger import logger
 from schemas.billing_schemas import BillingCreate
 from schemas.delivery_note_schemas import DeliveryNoteCreate
-from schemas.product_schemas import EntityTypeAbbr
 
 # from schemas.lead_schemas import LeadCreate
 from services.billings.billing_repository import BillingRepository
@@ -56,6 +55,9 @@ from services.timeline_comments.timeline_comment_bitrix_services import (
 from services.timeline_comments.timeline_comment_repository import (
     TimelineCommentRepository,
 )
+
+# from schemas.product_schemas import EntityTypeAbbr
+
 
 # from services.bitrix_api_client import BitrixAPIClient
 # from schemas.contact_schemas import ContactUpdate
@@ -374,11 +376,12 @@ async def check(
         get_timeline_comment_repository_dep
     ),
 ) -> JSONResponse:
-    deal_id = 54195
+    # deal_id = 54195
     # comm = await get_comm(deal_id, timeline_client, timeline_repo)
-    result = await product_bitrix_client.check_update_products_entity(
-        deal_id, EntityTypeAbbr.DEAL
-    )
+    # result = await product_bitrix_client.check_update_products_entity(
+    #    deal_id, EntityTypeAbbr.DEAL
+    # )
+    result = await product_bitrix_client.send_message_b24(215, "TEST")
     print(f"{result}-------DEAL--UPDATE")
     # print(f"{products_deal}-------DEAL")
     # products_invoice = await product_bitrix_client.get_entity_products(
