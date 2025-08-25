@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from enum import Enum
 from typing import Any, ClassVar, Generic, Optional, Type, TypeVar, cast
 from uuid import UUID
@@ -10,6 +10,7 @@ from pydantic import (
     Field,
     model_validator,
 )
+from typing_extensions import Self
 
 from models.enums import DualTypePaymentEnum, DualTypeShipmentEnum
 
@@ -43,6 +44,74 @@ class CommonFieldMixin(BaseModel):  # type: ignore[misc]
     @id.setter
     def id(self, value: UUID) -> None:
         self.internal_id = value
+
+    def get_changes(
+        self, entity: Self, exclude_fields: set[str] | None = None
+    ) -> dict[str, dict[str, Any]]:
+        if exclude_fields is None:
+            exclude_fields = {
+                "internal_id",
+                "created_at",
+                "updated_at",
+                "is_deleted_in_bitrix",
+            }
+
+        differences: dict[str, dict[str, Any]] = {}
+
+        # Получаем все поля модели
+        fields = self.model_fields
+
+        for field_name in fields:
+            # Пропускаем исключенные поля
+            if field_name in exclude_fields:
+                continue
+
+            old_value = getattr(self, field_name)
+            new_value = getattr(entity, field_name)
+
+            # Сравниваем значения
+            if not self._are_values_equal(old_value, new_value):
+                differences[field_name] = {
+                    "internal": old_value,
+                    "external": new_value,
+                }
+
+        return differences
+
+    def _are_values_equal(self, value1: Any, value2: Any) -> bool:
+        """
+        Сравнивает два значения с учетом специальных типов данных.
+        """
+        # Оба значения None
+        if value1 is None and value2 is None:
+            return True
+
+        # Одно из значений None
+        if value1 is None or value2 is None:
+            return False
+
+        # Для дат и времени сравниваем как строки в ISO формате
+        if isinstance(value1, (datetime, date)) and isinstance(
+            value2, (datetime, date)
+        ):
+            return value1.isoformat() == value2.isoformat()
+
+        # Для Enum сравниваем значения
+        if hasattr(value1, "value") and hasattr(value2, "value"):
+            return bool(value1.value == value2.value)
+
+        # Для Pydantic моделей рекурсивно сравниваем все поля
+        if isinstance(value1, BaseModel) and isinstance(value2, BaseModel):
+            return bool(value1.model_dump() == value2.model_dump())
+
+        # Для списков и словарей сравниваем содержимое
+        if isinstance(value1, (list, dict)) and isinstance(
+            value2, (list, dict)
+        ):
+            return bool(value1 == value2)
+
+        # Стандартное сравнение
+        return bool(value1 == value2)
 
 
 class BaseFieldMixin:
