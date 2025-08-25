@@ -4,6 +4,8 @@ from sqlalchemy import CheckConstraint, DateTime, ForeignKey
 from sqlalchemy.dialects.postgresql import ENUM as PgEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from schemas.deal_schemas import DealCreate
+
 from .bases import BusinessEntity, EntityType
 from .company_models import Company
 from .contact_models import Contact
@@ -48,6 +50,7 @@ class Deal(BusinessEntity):
         ),
         CheckConstraint("external_id > 0", name="external_id_positive"),
     )
+    _schema_class = DealCreate
 
     @property
     def entity_type(self) -> EntityType:

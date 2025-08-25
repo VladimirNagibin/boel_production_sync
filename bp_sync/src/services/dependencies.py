@@ -442,6 +442,11 @@ async def get_measure_repository_dep() -> MeasureRepository:
     return cast(MeasureRepository, client)
 
 
+async def get_deal_repository_dep() -> DealRepository:
+    client = await get_service("deal_repository")
+    return cast(DealRepository, client)
+
+
 async def get_code_service() -> CodeService:
     return CodeService()
 

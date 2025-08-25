@@ -6,6 +6,8 @@ from sqlalchemy import DateTime, ForeignKey
 # from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from schemas.contact_schemas import ContactCreate
+
 from .bases import CommunicationIntIdEntity, EntityType
 from .references import (  # AdditionalResponsible,
     ContactType,
@@ -31,6 +33,7 @@ class Contact(CommunicationIntIdEntity):
     # __table_args__ = (
     #    CheckConstraint("opportunity >= 0", name="non_negative_opportunity"),
     # )
+    _schema_class = ContactCreate
 
     @property
     def entity_type(self) -> EntityType:

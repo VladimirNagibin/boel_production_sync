@@ -10,6 +10,8 @@ from sqlalchemy.orm import (  # declared_attr,; foreign,
     relationship,
 )
 
+from schemas.company_schemas import CompanyCreate
+
 from .bases import CommunicationIntIdEntity, EntityType
 from .deal_documents import Contract
 from .references import (  # AdditionalResponsible,
@@ -41,6 +43,7 @@ class Company(CommunicationIntIdEntity):
     # __table_args__ = (
     #    CheckConstraint("opportunity >= 0", name="non_negative_opportunity"),
     # )
+    _schema_class = CompanyCreate
 
     @property
     def entity_type(self) -> EntityType:
