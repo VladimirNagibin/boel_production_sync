@@ -149,7 +149,7 @@ class BaseRepository(
                 ),
             ) from e
 
-    async def get(self, external_id: ExternalIdType) -> Optional[ModelType]:
+    async def get(self, external_id: ExternalIdType) -> ModelType | None:
         try:
 
             field_type = self.model.external_id.type
@@ -159,7 +159,6 @@ class BaseRepository(
                     external_id = int(external_id)  # type: ignore[assignment]
                 except ValueError:
                     raise ValueError("ID is not correct type")
-
             stmt = select(self.model).where(
                 self.model.external_id == external_id
             )

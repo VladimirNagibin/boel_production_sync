@@ -5,6 +5,8 @@ from sqlalchemy import CheckConstraint, DateTime, ForeignKey
 from sqlalchemy.dialects.postgresql import ENUM as PgEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from schemas.lead_schemas import LeadCreate
+
 from .bases import CommunicationIntIdEntity, EntityType
 from .enums import StageSemanticEnum
 from .references import (
@@ -32,6 +34,7 @@ class Lead(CommunicationIntIdEntity):
     __table_args__ = (
         CheckConstraint("opportunity >= 0", name="non_negative_opportunity"),
     )
+    _schema_class = LeadCreate
 
     @property
     def entity_type(self) -> EntityType:

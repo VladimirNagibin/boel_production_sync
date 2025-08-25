@@ -4,6 +4,8 @@ from typing import TYPE_CHECKING
 from sqlalchemy import DateTime, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from schemas.user_schemas import UserCreate
+
 from .bases import EntityType, IntIdEntity
 from .references import Department
 
@@ -23,6 +25,7 @@ class User(IntIdEntity):
     """
 
     __tablename__ = "users"
+    _schema_class = UserCreate
 
     @property
     def entity_type(self) -> EntityType:

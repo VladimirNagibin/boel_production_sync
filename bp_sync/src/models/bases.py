@@ -1,12 +1,13 @@
 from datetime import datetime
 from enum import StrEnum, auto
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar, Type, TypeVar
 
 from sqlalchemy import DateTime, ForeignKey
 from sqlalchemy.ext.declarative import declared_attr
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, class_mapper, mapped_column, relationship
 
 from db.postgres import Base
+from schemas.base_schemas import CommonFieldMixin
 
 if TYPE_CHECKING:
     from .communications import CommunicationChannel
@@ -42,15 +43,95 @@ COMMUNICATION_TYPES = {
     "link": CommunicationType.LINK,
 }
 
+T = TypeVar("T", bound=CommonFieldMixin)
+
 
 class IntIdEntity(Base):
     """Базовый класс для сущностей с внешними ID"""
+
+    _schema_class: ClassVar[Type[CommonFieldMixin] | None] = None
 
     __abstract__ = True
     external_id: Mapped[int] = mapped_column(
         unique=True,
         comment="ID во внешней системе",
     )
+
+    @classmethod
+    def _get_schema_class(cls) -> Type[CommonFieldMixin] | None:
+        """Автоматически определяет класс схемы на основе имени модели"""
+        if cls._schema_class:
+            return cls._schema_class
+
+        # Попытка автоматического определения имени схемы
+        model_name = cls.__name__
+        schema_name = f"{model_name}Create"
+        try:
+            # Импортируем модуль схем (замените на ваш реальный импорт)
+            import schemas  # import schemas.deal_schemas
+
+            schema_class = getattr(schemas, schema_name, None)
+            if schema_class and issubclass(schema_class, CommonFieldMixin):
+                assert isinstance(schema_class, type)
+                cls._schema_class = schema_class
+                return schema_class
+        except (ImportError, AttributeError):
+            pass
+
+        return None
+
+    def to_pydantic(
+        self,
+        schema_class: Type[T] | None = None,
+        exclude_relationships: bool = True,
+    ) -> T:
+        """
+        Преобразует объект SQLAlchemy в Pydantic схему
+
+        Args:
+            schema_class: Класс Pydantic схемы
+            exclude_relationships: Исключать ли связи из преобразования
+
+        Returns:
+            Экземпляр Pydantic схемы
+        """
+        if schema_class is None:
+            schema_class = self._get_schema_class()
+            if schema_class is None:
+                raise ValueError(
+                    "Cannot automatically determine schema class for "
+                    f"{self.__class__.__name__}. Please provide schema_class "
+                    "parameter or set _schema_class."
+                )
+        data = {}
+
+        # Получаем все поля схемы
+        for field_name in schema_class.model_fields:
+            # Пропускаем поля, которые являются связями и должны быть исключены
+            if exclude_relationships and self._is_relationship_field(
+                field_name
+            ):
+                continue
+
+            if hasattr(self, field_name):
+                value = getattr(self, field_name)
+
+                # Особые обработки для определенных полей
+                if field_name == "external_id" and value:
+                    data["ID"] = value
+                else:
+                    data[field_name] = value
+        if hasattr(self, "id"):
+            data["internal_id"] = self.id
+        return schema_class(**data)
+
+    def _is_relationship_field(self, field_name: str) -> bool:
+        """Проверяет, является ли поле связью"""
+        try:
+            mapper = class_mapper(self.__class__)
+            return field_name in mapper.relationships
+        except Exception:
+            return False
 
 
 class NameIntIdEntity(IntIdEntity):

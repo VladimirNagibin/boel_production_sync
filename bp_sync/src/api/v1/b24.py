@@ -18,6 +18,7 @@ from services.bitrix_services.bitrix_oauth_client import BitrixOAuthClient
 from services.deals.deal_bitrix_services import (
     DealBitrixClient,
 )
+from services.deals.deal_repository import DealRepository
 from services.deals.deal_services import (
     DealClient,
 )
@@ -28,6 +29,7 @@ from services.dependencies import (
     get_billing_repository_dep,
     get_deal_bitrix_client_dep,
     get_deal_client_dep,
+    get_deal_repository_dep,
     get_delivery_note_repository_dep,
     get_department_client_dep,
     get_invoice_bitrix_client_dep,
@@ -358,7 +360,7 @@ async def check(
     ),
     # bitrix_client: BitrixAPIClient = Depends(get_bitrix_client),
     # deal_bitrix_client: DealBitrixClient = Depends(get_deal_bitrix_client),
-    # user_bitrix_client: UserBitrixClient = Depends(get_user_bitrix_client),
+    deal_repo: DealRepository = Depends(get_deal_repository_dep),
     # invoice_bitrix_client: InvoiceBitrixClient = Depends(
     #    get_invoice_bitrix_client
     # ),
@@ -376,13 +378,12 @@ async def check(
         get_timeline_comment_repository_dep
     ),
 ) -> JSONResponse:
-    # deal_id = 54195
+    deal_id = 52675
     # comm = await get_comm(deal_id, timeline_client, timeline_repo)
-    # result = await product_bitrix_client.check_update_products_entity(
-    #    deal_id, EntityTypeAbbr.DEAL
-    # )
-    result = await product_bitrix_client.send_message_b24(215, "TEST")
-    print(f"{result}-------DEAL--UPDATE")
+    result = await deal_repo.get(deal_id)
+    # result = await product_bitrix_client.send_message_b24(215, "TEST")
+    if result:
+        print(f"{result.to_pydantic()}-------DEAL--UPDATE")
     # print(f"{products_deal}-------DEAL")
     # products_invoice = await product_bitrix_client.get_entity_products(
     #    26309, EntityTypeAbbr.INVOICE)
