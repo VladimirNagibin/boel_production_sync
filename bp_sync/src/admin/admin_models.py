@@ -224,6 +224,65 @@ class SourceAdmin(BaseAdmin, model=Source):  # type: ignore[call-arg]
     icon = "fa-solid fa-location-arrow"
 
 
+class CreationSourceAdmin(
+    BaseAdmin, model=CreationSource
+):  # type: ignore[call-arg]
+    name = "Сводные источники"
+    column_list = [  # Поля в списке
+        "external_id",
+        "name",
+        "ext_alt_id",
+    ]
+    column_labels = {  # Надписи полей в списке
+        "external_id": "Внешний код",
+        "name": "Название",
+        "ext_alt_id": "id для связи со счётом",
+    }
+    column_default_sort = [("external_id", True)]  # Сортировка по умолчанию
+    column_sortable_list = [  # Список полей по которым возможна сортировка
+        "external_id",
+        "name",
+    ]
+    column_searchable_list = [  # Список полей по которым возможен поиск
+        "name",
+        "external_id",
+    ]
+    form_columns = [  # Поля на форме
+        "external_id",
+        "name",
+        "ext_alt_id",
+    ]
+    column_details_list = ["name", "id", "created_at"]  #
+    icon = "fa-solid fa-location-arrow"
+
+
+class DealTypeAdmin(BaseAdmin, model=DealType):  # type: ignore[call-arg]
+    name = "Тип сделки"
+    column_list = [  # Поля в списке
+        "external_id",
+        "name",
+    ]
+    column_labels = {  # Надписи полей в списке
+        "external_id": "Внешний код",
+        "name": "Название",
+    }
+    column_default_sort = [("external_id", True)]  # Сортировка по умолчанию
+    column_sortable_list = [  # Список полей по которым возможна сортировка
+        "external_id",
+        "name",
+    ]
+    column_searchable_list = [  # Список полей по которым возможен поиск
+        "name",
+        "external_id",
+    ]
+    form_columns = [  # Поля на форме
+        "external_id",
+        "name",
+    ]
+    column_details_list = ["name", "id", "created_at"]  #
+    icon = "fa-solid fa-location-arrow"
+
+
 class ShippingCompanyAdmin(
     BaseAdmin, model=ShippingCompany
 ):  # type: ignore[call-arg]
@@ -443,6 +502,8 @@ def register_models(admin: Admin) -> None:
     admin.add_view(BillingAdmin)
     admin.add_view(DeliveryNoteAdmin)
     admin.add_view(TimelineCommentAdmin)
+    admin.add_view(CreationSourceAdmin)
+    admin.add_view(DealTypeAdmin)
 
     """
     admin.add_view(ContactAdmin(Contact, name="Контакты"))
