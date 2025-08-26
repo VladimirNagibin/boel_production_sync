@@ -364,7 +364,7 @@ async def check(
     # invoice_bitrix_client: InvoiceBitrixClient = Depends(
     #    get_invoice_bitrix_client
     # ),
-    # deal_client: DealClient = Depends(get_deal_client),
+    deal_client: DealClient = Depends(get_deal_client_dep),
     # lead_client: DealClient = Depends(get_lead_client),
     # lead_bitrix_client: LeadBitrixClient = Depends(get_lead_bitrix_client),
     # contact_bitrix_client: ContactBitrixClient = Depends(
@@ -378,12 +378,12 @@ async def check(
         get_timeline_comment_repository_dep
     ),
 ) -> JSONResponse:
-    deal_id = 52675
+    deal_id = 49419  # 49935
     # comm = await get_comm(deal_id, timeline_client, timeline_repo)
-    result = await deal_repo.get(deal_id)
+    await deal_client.handler_deal(deal_id)
+    result = ""
     # result = await product_bitrix_client.send_message_b24(215, "TEST")
-    if result:
-        print(f"{result.to_pydantic()}-------DEAL--UPDATE")
+    print(f"{result}-------DEAL--UPDATE")
     # print(f"{products_deal}-------DEAL")
     # products_invoice = await product_bitrix_client.get_entity_products(
     #    26309, EntityTypeAbbr.INVOICE)

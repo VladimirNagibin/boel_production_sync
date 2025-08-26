@@ -50,6 +50,11 @@ class RepositoryProtocol(Protocol):
         """Помечает сущность как удаленную в Bitrix"""
         ...
 
+    @abstractmethod
+    async def get(self, external_id: Any) -> Any | None:
+        """Получает сущность по ID"""
+        ...
+
 
 T = TypeVar("T", bound=IntIdEntity)  # Тип для сущности базы данных
 R = TypeVar("R", bound=RepositoryProtocol)  # Тип для репозитория
@@ -201,3 +206,41 @@ class BaseEntityClient(ABC, Generic[T, R, C]):
             )
         except Exception:
             return False
+
+    async def get_changes_b24_db(
+        self, entity_id: ExternalIdType, entity_type_id: int | None = None
+    ) -> tuple[Any, Any, dict[str, dict[str, Any]] | None]:
+        schema_b24 = await self.bitrix_client.get(entity_id, entity_type_id)
+        schema_db = await self.repo.get(entity_id)
+
+        if schema_db is None:
+            return schema_b24, schema_db, None
+
+        if not hasattr(schema_db, "to_pydantic"):
+            logger.warning(
+                f"Entity {schema_db} does not have to_pydantic method"
+            )
+            raise AttributeError(
+                f"Missing 'to_pydantic' method on {type(schema_db).__name__}"
+            )
+
+        # Проверяем, что schema_b24 имеет метод get_changes
+        if not hasattr(schema_b24, "get_changes"):
+            logger.warning(
+                f"Schema {schema_b24} does not have get_changes method"
+            )
+            raise AttributeError(
+                f"Missing 'get_changes' method on {type(schema_b24).__name__}"
+            )
+
+        pydantic_db = schema_db.to_pydantic()
+
+        # Проверяем, что pydantic_db того же типа, что и schema_b24
+        if not isinstance(pydantic_db, type(schema_b24)):
+            logger.warning("Type mismatch between Bitrix schema and DB entity")
+            raise TypeError(
+                f"Type mismatch: expected {type(schema_b24).__name__}, "
+                f"got {type(pydantic_db).__name__}"
+            )
+
+        return schema_b24, schema_db, schema_b24.get_changes(pydantic_db)

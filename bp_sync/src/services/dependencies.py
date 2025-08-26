@@ -223,6 +223,9 @@ async def create_deal_client() -> DealClient:
     return DealClient(
         deal_bitrix_client=await create_deal_bitrix_client(),
         deal_repo=await create_deal_repository(),
+        timeline_comments_bitrix_client=(
+            await create_timeline_comment_bitrix_client()
+        ),
     )
 
 

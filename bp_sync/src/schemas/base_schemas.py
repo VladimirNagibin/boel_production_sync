@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import datetime
 from enum import Enum
 from typing import Any, ClassVar, Generic, Optional, Type, TypeVar, cast
 from uuid import UUID
@@ -54,12 +54,13 @@ class CommonFieldMixin(BaseModel):  # type: ignore[misc]
                 "created_at",
                 "updated_at",
                 "is_deleted_in_bitrix",
+                "parent_deal_id",
             }
 
         differences: dict[str, dict[str, Any]] = {}
 
-        # Получаем все поля модели
-        fields = self.model_fields
+        model_class = self.__class__
+        fields = model_class.model_fields
 
         for field_name in fields:
             # Пропускаем исключенные поля
@@ -70,7 +71,7 @@ class CommonFieldMixin(BaseModel):  # type: ignore[misc]
             new_value = getattr(entity, field_name)
 
             # Сравниваем значения
-            if not self._are_values_equal(old_value, new_value):
+            if not self._are_values_equal(field_name, old_value, new_value):
                 differences[field_name] = {
                     "internal": old_value,
                     "external": new_value,
@@ -78,7 +79,9 @@ class CommonFieldMixin(BaseModel):  # type: ignore[misc]
 
         return differences
 
-    def _are_values_equal(self, value1: Any, value2: Any) -> bool:
+    def _are_values_equal(
+        self, field_name: str, value1: Any, value2: Any
+    ) -> bool:
         """
         Сравнивает два значения с учетом специальных типов данных.
         """
@@ -86,15 +89,24 @@ class CommonFieldMixin(BaseModel):  # type: ignore[misc]
         if value1 is None and value2 is None:
             return True
 
+        if field_name == "company_id":
+            if value1 in (0, None) and value2 in (0, None):
+                return True
+
+        if field_name in ("defects", "related_deals"):
+            if value1 in ([], None) and value2 in ([], None):
+                return True
+            return False
+
         # Одно из значений None
         if value1 is None or value2 is None:
             return False
 
         # Для дат и времени сравниваем как строки в ISO формате
-        if isinstance(value1, (datetime, date)) and isinstance(
-            value2, (datetime, date)
-        ):
-            return value1.isoformat() == value2.isoformat()
+        # if isinstance(value1, (datetime, date)) and isinstance(
+        #    value2, (datetime, date)
+        # ):
+        #    return value1.isoformat() == value2.isoformat()
 
         # Для Enum сравниваем значения
         if hasattr(value1, "value") and hasattr(value2, "value"):
