@@ -169,6 +169,10 @@ class ListProductEntity(BaseModel):  # type: ignore[misc]
             product_entity.to_bitrix_dict() for product_entity in self.result
         ]
 
+    @property
+    def count_products(self) -> int:
+        return len(self.result)
+
 
 class BaseProduct(CommonFieldMixin):
     """

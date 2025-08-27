@@ -1,4 +1,4 @@
-from typing import Awaitable, Callable
+from typing import Any, Awaitable, Callable
 
 from core.logger import logger
 from schemas.company_schemas import CompanyCreate
@@ -24,6 +24,7 @@ async def identify_source(
     lead: LeadCreate | None = None,
     company: CompanyCreate | None = None,
     comments_: str | None = None,
+    context: dict[str, Any] | None = None,
 ) -> tuple[CreationSourceEnum, DealTypeEnum, DealSourceEnum]:
     """
     Определяет источник, тип и канал сделки на основе различных критериев
@@ -61,6 +62,7 @@ async def identify_source(
             get_comments,
             company,
             comments_,
+            context,
         )
 
     # Если лида нет, используем стандартную логику
@@ -99,6 +101,7 @@ async def _identify_source_from_lead(
     get_comments: GetCommentsFunc | None = None,
     company: CompanyCreate | None = None,
     comments_: str | None = None,
+    context: dict[str, Any] | None = None,
 ) -> tuple[CreationSourceEnum, DealTypeEnum, DealSourceEnum]:
     """Определяет источник сделки на основе данных лида"""
     title_lead = lead.title
@@ -201,7 +204,7 @@ async def _identify_source_from_lead(
 
     # Если не подошли другие условия, проверяем компанию
     return await _identify_company_source(
-        deal_b24, base_deal_type, get_company, company
+        deal_b24, base_deal_type, get_company, company, context
     )
 
 
@@ -266,10 +269,12 @@ async def _identify_company_source(
     base_deal_type: DealTypeEnum,
     get_company: GetCompanyFunc | None,
     company: CompanyCreate | None,
+    context: dict[str, Any] | None = None,
 ) -> tuple[CreationSourceEnum, DealTypeEnum, DealSourceEnum]:
     """Определяет источник сделки на основе данных компании"""
     company_data = await _get_company_data(deal_b24, get_company, company)
-
+    if context is not None and company_data:
+        context["company"] = company_data
     if not company_data:
         return (
             CreationSourceEnum.MANUAL,

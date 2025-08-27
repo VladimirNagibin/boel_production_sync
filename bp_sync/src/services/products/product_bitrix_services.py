@@ -308,7 +308,7 @@ class ProductBitrixClient(
         owner_id: int,
         owner_type: EntityTypeAbbr,
         products: ListProductEntity,
-    ) -> dict[str, Any]:
+    ) -> ListProductEntity:
         """
         Устанавливает товарные позиции в сущность CRM.
         Перезаписывает все существующие товарные позиции.
@@ -333,7 +333,10 @@ class ProductBitrixClient(
         )
 
         # Проверяем ответ
-        if not response.get("result"):
+        if (
+            not (entity_data := response.get("result"))
+            or "productRows" not in entity_data
+        ):
             logger.error(
                 f"Failed to set product rows for owner type:{owner_type} "
                 f"ID={owner_id}"
@@ -345,27 +348,43 @@ class ProductBitrixClient(
                     f"ID={owner_id}"
                 ),
             )
-        return response
+        return ListProductEntity(result=entity_data["productRows"])
 
     async def check_update_products_entity(
         self, owner_id: int, owner_type: EntityTypeAbbr
-    ) -> bool:
-        """Основной метод проверки и обновления продуктов сущности"""
+    ) -> ListProductEntity | None:
+        """
+        Проверяет и обновляет продукты сущности при необходимости.
+
+        Args:
+            owner_id: ID сущности-владельца
+            owner_type: Тип сущности-владельца
+
+        Returns:
+            Кортеж (успех_операции, данные_продуктов)
+        """
         try:
             products, needs_update = await self._check_products_entity(
                 owner_id, owner_type
             )
-
-            if needs_update:
-                response = await self._set_product_rows(
-                    owner_id, owner_type, products
+            if not needs_update:
+                logger.info(
+                    f"No product update needed for {owner_type.value} "
+                    f"{owner_id}"
                 )
-                return response.get(  # type: ignore[no-any-return]
-                    "result", False
-                )
-
-            return True
+                return products
+            products_upd = await self._set_product_rows(
+                owner_id, owner_type, products
+            )
+            logger.info(
+                f"Successfully updated products for {owner_type.value} "
+                f"{owner_id}"
+            )
+            return products_upd
 
         except Exception as e:
-            logger.error(f"Error updating products: {str(e)}")
-            return False
+            logger.error(
+                f"Error updating products for {owner_type.value} {owner_id}: "
+                f"{str(e)}"
+            )
+            return None

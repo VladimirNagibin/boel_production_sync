@@ -15,20 +15,20 @@ class CreationSourceEnum(IntEnum):
         return display_names.get(value, "Неизвестно")
 
 
-class DealTypeEnum(IntEnum):
-    DIRECT_SALES = 1  # Прямые продажи
-    MARKETPLACE = 4  # Маркетплейс
-    ONLINE_SALES = 5  # Интернет продажа
-    FOREIGN_TRADE = 7  # ВЭД
+class DealTypeEnum(StrEnum):
+    DIRECT_SALES = "1"  # Прямые продажи
+    MARKETPLACE = "4"  # Маркетплейс
+    ONLINE_SALES = "5"  # Интернет продажа
+    FOREIGN_TRADE = "7"  # ВЭД
 
     @classmethod
-    def get_display_name(cls, value: int) -> str:
+    def get_display_name(cls, value: str) -> str:
         """Get display name by value"""
         display_names = {
-            1: "Прямые продажи",
-            4: "Маркетплейс",
-            5: "Интернет продажа",
-            7: "ВЭД",
+            "1": "Прямые продажи",
+            "4": "Маркетплейс",
+            "5": "Интернет продажа",
+            "7": "ВЭД",
         }
         return display_names.get(value, "Неизвестно")
 
