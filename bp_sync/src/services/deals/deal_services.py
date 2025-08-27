@@ -6,10 +6,13 @@ from fastapi import HTTPException
 from core.logger import logger
 from models.deal_models import Deal as DealDB
 from schemas.company_schemas import CompanyCreate
+from schemas.contact_schemas import ContactCreate
 from schemas.deal_schemas import DealCreate, DealUpdate
 from schemas.lead_schemas import LeadCreate
+from schemas.product_schemas import EntityTypeAbbr, ListProductEntity
 
 from ..base_services.base_service import BaseEntityClient
+from ..products.product_bitrix_services import ProductBitrixClient
 from ..timeline_comments.timeline_comment_bitrix_services import (
     TimeLineCommentBitrixClient,
 )
@@ -32,10 +35,12 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
         deal_bitrix_client: DealBitrixClient,
         deal_repo: DealRepository,
         timeline_comments_bitrix_client: TimeLineCommentBitrixClient,
+        product_bitrix_client: ProductBitrixClient,
     ):
         self._bitrix_client = deal_bitrix_client
         self._repo = deal_repo
         self.timeline_comments_bitrix_client = timeline_comments_bitrix_client
+        self.product_bitrix_client = product_bitrix_client
 
     @property
     def entity_name(self) -> str:
@@ -86,6 +91,9 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
     async def handler_deal(self, external_id: int) -> None:
         """Обработчик сделки"""
         try:
+            self._cached_company: CompanyCreate | None = None
+            self._cached_contact: ContactCreate | None = None
+            self._cached_products: ListProductEntity | None = None
             deal_update = DealUpdate()
             deal_b24, deal_db, changes = await self.get_changes_b24_db(
                 external_id
@@ -94,6 +102,12 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
             needs_update = await self._check_source(
                 deal_b24, deal_db, deal_update
             )
+            products = (
+                await self.product_bitrix_client.check_update_products_entity(
+                    external_id, EntityTypeAbbr.DEAL
+                )
+            )
+            self._cached_products = products
             if deal_db is None:  # not in database
                 needs_update = (
                     await self._handle_new_deal(deal_b24, deal_update)
@@ -113,6 +127,10 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
         except Exception as e:
             logger.error(f"Error processing deal {external_id}: {str(e)}")
             raise
+        finally:
+            self._cached_company = None
+            self._cached_contact = None
+            self._cached_product = None
 
     async def _synchronize_deal_data(
         self,
@@ -173,10 +191,16 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
             creation_source_id = deal_b24.creation_source_id
             source_id = deal_b24.source_id
             type_id = deal_b24.type_id
-
+            context: dict[str, Any] = {}
             result = await identify_source(
-                deal_b24, self._get_lead, self._get_company, self._get_comments
+                deal_b24,
+                self._get_lead,
+                self._get_company,
+                self._get_comments,
+                context=context,
             )
+            if "company" in context:
+                self._cached_company = context["company"]
             creation_source_corr, type_correct, source_correct = result
             logger.info(
                 f"{CreationSourceEnum.get_display_name(creation_source_corr)}"
@@ -295,6 +319,18 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
             logger.error(f"Failed to get company {company_id}: {str(e)}")
             return None
 
+    async def _get_contact(
+        self,
+        contact_id: int,
+    ) -> ContactCreate | None:
+        """Получение контакта по ID"""
+        try:
+            contact_service = await self.repo.get_contact_client()
+            return await contact_service.bitrix_client.get(contact_id)
+        except Exception as e:
+            logger.error(f"Failed to get contact {contact_id}: {str(e)}")
+            return None
+
     async def _get_comments(
         self,
         deal_id: int,
@@ -318,3 +354,155 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
         """Проверка активных менеджеров"""
         # TODO: Реализовать логику проверки активных менеджеров
         return True
+
+    async def _check_available_stage(self, deal_b24: DealCreate) -> int:
+        """
+        Определяет доступную стадию сделки на основе заполненных данных.
+
+        Стадии:
+        1 - базовая стадия
+        2 - заполнены контактные данные (компания или контакт)
+        3 - заполнены товары, основная деятельность и город
+        4 - заполнены компания покупателя и фирма отгрузки
+        5 - наличие договора с компанией по фирме отгрузки
+
+        Args:
+            deal_b24: Данные сделки
+
+        Returns:
+            Номер доступной стадии (1-4)
+        """
+        # Стадия 1: Базовая стадия
+        available_stage = 1
+
+        # Проверяем условия для перехода на стадию 2
+        if await self._has_contact_details(deal_b24):
+            available_stage = 2
+        else:
+            return available_stage
+
+        # Проверяем условия для перехода на стадию 3
+        if not await self._has_required_stage3_data(deal_b24):
+            return available_stage
+
+        available_stage = 3
+
+        # Проверяем условия для перехода на стадию 4
+        if not await self._has_required_stage4_data(deal_b24):
+            return available_stage
+
+        available_stage = 4
+
+        # Проверяем условия для перехода на стадию 5
+        if await self._has_required_stage5_data(deal_b24):
+            available_stage = 5
+
+        return available_stage
+
+    async def _has_contact_details(self, deal_b24: DealCreate) -> bool:
+        """
+        Проверяет наличие контактных данных (email или телефон)
+        в компании или контакте.
+        """
+        # Получаем данные компании
+        company = await self._get_company_data(deal_b24)
+
+        # Проверяем контактные данные компании
+        if company and (company.has_email or company.has_phone):
+            return True
+
+        # Проверяем контактные данные контакта
+        contact = await self._get_contact_data(deal_b24)
+        if contact and (contact.has_email or contact.has_phone):
+            return True
+
+        return False
+
+    async def _get_company_data(
+        self, deal_b24: DealCreate
+    ) -> CompanyCreate | None:
+        """
+        Получает данные компании из кэша или запрашивает при необходимости.
+        """
+        if self._cached_company:
+            return self._cached_company
+
+        if deal_b24.company_id:
+            company = await self._get_company(deal_b24.company_id)
+            if company:
+                self._cached_company = company
+                return company
+
+        return None
+
+    async def _get_contact_data(
+        self, deal_b24: DealCreate
+    ) -> ContactCreate | None:
+        """
+        Получает данные контакта из кэша или запрашивает при необходимости.
+        """
+        if self._cached_contact:
+            return self._cached_contact
+
+        if deal_b24.contact_id:
+            contact = await self._get_contact(deal_b24.contact_id)
+            if contact:
+                self._cached_contact = contact
+                return contact
+
+        return None
+
+    async def _has_required_stage3_data(self, deal_b24: DealCreate) -> bool:
+        """
+        Проверяет наличие данных для перехода на стадию 3:
+        - Товары
+        - Основная деятельность клиента
+        - Город клиента
+        """
+        # Проверяем наличие товаров
+        if not (
+            self._cached_products and self._cached_products.count_products > 0
+        ):
+            return False
+
+        # Получаем данные компании
+        company = await self._get_company_data(deal_b24)
+
+        # Проверяем основную деятельность
+        if not (
+            deal_b24.main_activity_id or (company and company.main_activity_id)
+        ):
+            # TODO: Если основная деятельность есть в компании и нет в сделке
+            # - записать в сделку
+            return False
+
+        # Проверяем город
+        if not deal_b24.city and not (company and company.city):
+            # TODO: Если город есть в компании и нет в сделке записать в сделку
+            return False
+
+        return True
+
+    async def _has_required_stage4_data(self, deal_b24: DealCreate) -> bool:
+        """
+        Проверяет наличие данных для перехода на стадию 4:
+        - Компания покупателя
+        - Фирма отгрузки
+        """
+        # Получаем данные компании
+        company = await self._get_company_data(deal_b24)
+
+        # Проверяем наличие компании и фирмы отгрузки
+        return bool(company and deal_b24.shipping_company_id)
+
+    async def _has_required_stage5_data(self, deal_b24: DealCreate) -> bool:
+        """
+        Проверяет наличие данных для перехода на стадию 5:
+        - наличие договора с компанией по фирме отгрузки
+        - обработка разных фирм отгрузки
+        """
+        # Получаем данные компании
+        company = await self._get_company_data(deal_b24)
+
+        # Проверяем наличие компании и фирмы отгрузки
+        return bool(company and deal_b24.shipping_company_id)
