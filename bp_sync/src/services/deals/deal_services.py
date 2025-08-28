@@ -26,6 +26,8 @@ from .report_helpers import (
     process_deal_row_report,
 )
 
+BLACK_SYSTEM = 439
+
 
 class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
     """Клиент для работы со сделками"""
@@ -352,8 +354,12 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
 
     async def _check_active_manager(self, manager_id: int) -> bool:
         """Проверка активных менеджеров"""
-        # TODO: Реализовать логику проверки активных менеджеров
-        return True
+        try:
+            user_service = await self.repo.get_user_client()
+            return await user_service.repo.is_activity_manager(manager_id)
+        except Exception as e:
+            logger.error(f"Failed to check manager {manager_id}: {str(e)}")
+            return False
 
     async def _check_available_stage(self, deal_b24: DealCreate) -> int:
         """
@@ -469,16 +475,23 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
         company = await self._get_company_data(deal_b24)
 
         # Проверяем основную деятельность
+        if (
+            (not deal_b24.main_activity_id)
+            and company
+            and company.main_activity_id
+        ):
+            deal_b24.main_activity_id = company.main_activity_id
+            # TODO: добавить флаг обновления и обновить deal_update
         if not (
             deal_b24.main_activity_id or (company and company.main_activity_id)
         ):
-            # TODO: Если основная деятельность есть в компании и нет в сделке
-            # - записать в сделку
             return False
 
         # Проверяем город
+        if not deal_b24.city and company and company.city:
+            deal_b24.city = company.city
+            # TODO: добавить флаг обновления и обновить deal_update
         if not deal_b24.city and not (company and company.city):
-            # TODO: Если город есть в компании и нет в сделке записать в сделку
             return False
 
         return True
@@ -492,6 +505,34 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
         # Получаем данные компании
         company = await self._get_company_data(deal_b24)
 
+        if not company:
+            contact = await self._get_contact_data(deal_b24)
+            if contact and contact.company_id:
+                company = await self._get_company(contact.company_id)
+                if company:
+                    deal_b24.company_id = contact.company_id
+                    # TODO: добавить флаг обновления и обновить deal_update
+                    self._cached_company = company
+
+        if (
+            (not company)
+            and deal_b24.shipping_company_id
+            and deal_b24.shipping_company_id == BLACK_SYSTEM
+        ):
+            company_id = await self._get_default_company(
+                deal_b24.assigned_by_id
+            )
+            if company_id:
+                company = await self._get_company(company_id)
+            if company:
+                deal_b24.company_id = company_id
+                if self._cached_contact:
+                    await self._add_contact_comment(
+                        self._cached_contact, deal_b24
+                    )
+                # TODO: добавить флаг обновления и обновить deal_update
+                self._cached_company = company
+
         # Проверяем наличие компании и фирмы отгрузки
         return bool(company and deal_b24.shipping_company_id)
 
@@ -501,8 +542,67 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
         - наличие договора с компанией по фирме отгрузки
         - обработка разных фирм отгрузки
         """
-        # Получаем данные компании
-        company = await self._get_company_data(deal_b24)
+        # company = self._cached_company
+        # shipping_company_id = deal_b24.shipping_company_id
+        # TODO: реализовать проверку наличие договора
+        return True
 
-        # Проверяем наличие компании и фирмы отгрузки
-        return bool(company and deal_b24.shipping_company_id)
+    async def _get_default_company(self, user_id: int) -> int | None:
+        try:
+            user_service = await self.repo.get_user_client()
+            return await user_service.repo.get_default_company_manager(user_id)
+        except Exception as e:
+            logger.error(
+                f"Failed to get default company manager {user_id}: {str(e)}"
+            )
+            return None
+
+    async def _add_contact_comment(
+        self, contact: ContactCreate, deal_b24: DealCreate
+    ) -> None:
+        comment = await self._get_contact_comment(contact)
+        if comment:
+            await self._update_comment(comment, deal_b24)
+
+    async def _update_comment(
+        self, comment: str, deal_b24: DealCreate
+    ) -> bool:
+        comments_deal = deal_b24.comments
+        if not comments_deal:
+            deal_b24.comments = comment
+            # TODO: добавить флаг обновления и обновить deal_update
+            return True
+        if comment in comments_deal:
+            return False
+        deal_b24.comments = (
+            f"<div>{comments_deal}</div><div>{comment}<br></div>"
+        )
+        # TODO: добавить флаг обновления и обновить deal_update
+        return True
+
+    async def _get_contact_comment(self, contact: ContactCreate) -> str | None:
+        phone_values: list[str] = []
+        email_values: list[str] = []
+        if contact.has_phone:
+            phones = contact.phone
+            if phones:
+                for phone in phones:
+                    phone_values.append(phone.value)
+        if contact.has_email:
+            emails = contact.email
+            if emails:
+                for email in emails:
+                    email_values.append(email.value)
+        phone_str = (
+            f"<div>Телефон {', '.join(phone_values)}<br></div>"
+            if phone_values
+            else ""
+        )
+        email_str = (
+            f"<div>E-mail {', '.join(email_values)}<br></div>"
+            if email_values
+            else ""
+        )
+        if phone_str or email_str:
+            return f"{phone_str}{email_str}"
+        return None

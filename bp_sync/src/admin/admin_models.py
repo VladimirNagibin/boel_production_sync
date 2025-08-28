@@ -9,7 +9,7 @@ from models.communications import (  # noqa: F401
 from models.company_models import Company  # noqa: F401
 from models.contact_models import Contact  # noqa: F401
 from models.deal_documents import Billing, Contract  # noqa: F401
-from models.deal_models import Deal  # noqa: F401
+from models.deal_models import AdditionalInfo, Deal  # noqa: F401
 from models.delivery_note_models import DeliveryNote  # noqa: F401
 from models.invoice_models import Invoice  # noqa: F401
 from models.lead_models import Lead  # noqa: F401
@@ -34,10 +34,12 @@ from models.references import (  # noqa: F401
     Warehouse,
 )
 from models.timeline_comment_models import TimelineComment
-from models.user_models import User  # noqa: F401
+from models.user_models import Manager, User  # noqa: F401
 
 # from wtforms import Form, StringField
 # from wtforms.validators import Optional
+# from sqlalchemy.ext.asyncio import AsyncSession
+# from db.postgres import get_session
 
 
 # Базовые модели
@@ -418,6 +420,134 @@ class TimelineCommentAdmin(
     icon = "fa-solid fa-location-arrow"
 
 
+class ManagerAdmin(BaseAdmin, model=Manager):  # type: ignore[call-arg]
+    name = "Менеджер"
+    column_list = [  # Поля в списке
+        "user_id",
+        "is_active",
+        "default_company_id",
+    ]
+    column_labels = {  # Надписи полей в списке
+        "user_id": "Код пользователя",
+        "is_active": "Менеджер активный",
+        "default_company_id": "Компания по умолчанию",
+    }
+    column_default_sort = [("user_id", True)]  # Сортировка по умолчанию
+    column_sortable_list = [  # Список полей по которым возможна сортировка
+        "user_id",
+        "is_active",
+    ]
+    column_searchable_list = [  # Список полей по которым возможен поиск
+        "user_id",
+        "is_active",
+        "default_company_id",
+    ]
+    form_columns = [
+        "user",
+        "is_active",
+        "default_company",
+    ]
+    form_ajax_refs = {
+        "user": {
+            "fields": ("name",),
+            "order_by": "name",
+        },
+        "default_company": {
+            "fields": ("title",),
+            "order_by": "title",
+        },
+    }
+    column_details_list = [
+        "user_id",
+        "is_active",
+        "default_company_id",
+    ]  #
+    icon = "fa-solid fa-tags"
+
+    """
+    async def insert_model(
+        self, request: Request, data: dict[str, Any]
+    ) -> Any:
+        # Обработка данных перед сохранением
+        session: AsyncSession = get_session()
+        if 'user_id' in data:
+            # Преобразование external_id в id
+            user = await session.get(User, data['user_id'])
+            if user:
+                data['user_id'] = user.id
+
+        return await super().insert_model(request, data)
+    """
+
+
+class AddInfoAdmin(BaseAdmin, model=AdditionalInfo):  # type: ignore[call-arg]
+    name = "Доп информация сделки"
+    column_list = [  # Поля в списке
+        "deal_id",
+        "comment",
+    ]
+    column_labels = {  # Надписи полей в списке
+        "deal_id": "ID сделки",
+        "comment": "Дополнительная информация",
+    }
+    column_default_sort = [("deal_id", True)]  # Сортировка по умолчанию
+    column_sortable_list = [  # Список полей по которым возможна сортировка
+        "deal_id",
+        "comment",
+    ]
+    column_searchable_list = [  # Список полей по которым возможен поиск
+        "deal_id",
+        "comment",
+    ]
+    form_columns = [  # Поля на форме
+        # "external_id",
+        "comment",
+        "deal",
+    ]
+    column_details_list = ["deal_id", "comment", "created_at"]  #
+    icon = "fa-solid fa-location-arrow"
+
+
+class UserAdmin(BaseAdmin, model=User):  # type: ignore[call-arg]
+    name = "Пользователь"
+    column_list = [  # Поля в списке
+        "external_id",
+        "full_name",
+    ]
+    column_labels = {  # Надписи полей в списке
+        "external_id": "Код пользователя",
+        "full_name": "Имя",
+    }
+    column_default_sort = [("external_id", True)]  # Сортировка по умолчанию
+    column_sortable_list = [  # Список полей по которым возможна сортировка
+        "external_id",
+        "full_name",
+    ]
+    column_searchable_list = [  # Список полей по которым возможен поиск
+        "name",
+        "full_name",
+    ]
+    form_columns = [
+        "external_id",
+        "full_name",
+    ]
+    # form_ajax_refs = {
+    #    "user": {
+    #        "fields": ("full_name",),
+    #        "order_by": "username",
+    #    },
+    #    "default_company": {
+    #        "fields": ("title",),
+    #        "order_by": "title",
+    #    }
+    # }
+    column_details_list = [
+        "external_id",
+        "full_name",
+    ]  #
+    icon = "fa-solid fa-tags"
+
+
 """
 class ContactAdmin(BaseAdmin):
     column_list = ["name", "last_name", "post", "company", "created_at"]
@@ -504,7 +634,9 @@ def register_models(admin: Admin) -> None:
     admin.add_view(TimelineCommentAdmin)
     admin.add_view(CreationSourceAdmin)
     admin.add_view(DealTypeAdmin)
-
+    admin.add_view(ManagerAdmin)
+    admin.add_view(AddInfoAdmin)
+    admin.add_view(UserAdmin)
     """
     admin.add_view(ContactAdmin(Contact, name="Контакты"))
     admin.add_view(DealAdmin(Deal, name="Сделки"))

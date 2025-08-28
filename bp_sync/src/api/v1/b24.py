@@ -11,11 +11,12 @@ from fastapi.responses import JSONResponse
 from core.logger import logger
 from schemas.billing_schemas import BillingCreate
 from schemas.delivery_note_schemas import DeliveryNoteCreate
-from schemas.product_schemas import EntityTypeAbbr
 
 # from schemas.lead_schemas import LeadCreate
 from services.billings.billing_repository import BillingRepository
 from services.bitrix_services.bitrix_oauth_client import BitrixOAuthClient
+from services.companies.company_bitrix_services import CompanyBitrixClient
+from services.contacts.contact_bitrix_services import ContactBitrixClient
 from services.deals.deal_bitrix_services import (
     DealBitrixClient,
 )
@@ -28,6 +29,8 @@ from services.delivery_notes.delivery_note_repository import (
 )
 from services.dependencies import (
     get_billing_repository_dep,
+    get_company_bitrix_client_dep,
+    get_contact_bitrix_client_dep,
     get_deal_bitrix_client_dep,
     get_deal_client_dep,
     get_deal_repository_dep,
@@ -58,6 +61,9 @@ from services.timeline_comments.timeline_comment_bitrix_services import (
 from services.timeline_comments.timeline_comment_repository import (
     TimelineCommentRepository,
 )
+
+# from schemas.product_schemas import EntityTypeAbbr
+
 
 # from schemas.product_schemas import EntityTypeAbbr
 
@@ -359,7 +365,12 @@ async def check(
     product_bitrix_client: ProductBitrixClient = Depends(
         get_product_bitrix_client_dep
     ),
-    # bitrix_client: BitrixAPIClient = Depends(get_bitrix_client),
+    company_bitrix_client: CompanyBitrixClient = Depends(
+        get_company_bitrix_client_dep
+    ),
+    contact_bitrix_client: ContactBitrixClient = Depends(
+        get_contact_bitrix_client_dep
+    ),
     # deal_bitrix_client: DealBitrixClient = Depends(get_deal_bitrix_client),
     deal_repo: DealRepository = Depends(get_deal_repository_dep),
     # invoice_bitrix_client: InvoiceBitrixClient = Depends(
@@ -379,15 +390,14 @@ async def check(
         get_timeline_comment_repository_dep
     ),
 ) -> JSONResponse:
-    deal_id = 54195  # 49935
+    # deal_id = 54195  # 49935
     # comm = await get_comm(deal_id, timeline_client, timeline_repo)
     # await deal_client.handler_deal(deal_id)
     # result = ""
-    result = await product_bitrix_client.check_update_products_entity(
-        deal_id, EntityTypeAbbr.DEAL
-    )
+    result = await company_bitrix_client.get(6533)
+    # result = await contact_bitrix_client.get(18281)
     if result:
-        print(f"{result.count_products}-------DEAL--UPDATE")
+        print(f"{result}-------DEAL--UPDATE")
     # print(f"{products_deal}-------DEAL")
     # products_invoice = await product_bitrix_client.get_entity_products(
     #    26309, EntityTypeAbbr.INVOICE)

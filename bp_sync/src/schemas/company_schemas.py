@@ -7,6 +7,7 @@ from .base_schemas import (
     AddressMixin,
     BaseCreateSchema,
     BaseUpdateSchema,
+    CommonFieldMixin,
     CommunicationChannel,
     HasCommunicationCreateMixin,
     HasCommunicationUpdateMixin,
@@ -172,3 +173,17 @@ class CompanyUpdate(
 
     # Статусы и флаги
     is_my_company: bool | None = Field(None, alias="IS_MY_COMPANY")
+
+
+class ShippingCompanyCreate(CommonFieldMixin):
+    """Модель для создания менеджеров"""
+
+    name: str
+    ext_alt_id: int
+
+
+class ShippingCompanyUpdate(CommonFieldMixin):
+    """Модель для частичного обновления менеджеров"""
+
+    name: str | None = Field(default=None)
+    ext_alt_id: int | None = Field(default=None)
