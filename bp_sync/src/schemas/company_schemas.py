@@ -58,6 +58,9 @@ class BaseCompany:
     shipping_company_id: int | None = Field(
         None, alias="UF_CRM_1631941968"
     )  # "UF_CRM_1631903199"ссылка на объект компании отгрузки.
+    shipping_company_obj: int | None = Field(
+        None, alias="UF_CRM_1631903199"
+    )  # ссылка на объект компании отгрузки.
     # Дубль со ссылкой на ИД компании отгрузки.
     industry_id: str | None = Field(None, alias="INDUSTRY")
     employees_id: str | None = Field(None, alias="EMPLOYEES")

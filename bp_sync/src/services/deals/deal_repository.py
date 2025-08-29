@@ -122,7 +122,7 @@ class DealRepository(BaseRepository[DealDB, DealCreate, DealUpdate, int]):
     async def fetch_deals(
         self, start_date: datetime, end_date: datetime
     ) -> Any:
-        """Асинхронно получает сделки с связанными данными"""
+        """Асинхронно получает сделки со связанными данными"""
         # Рассчитываем конец периода как начало следующего дня
         end_date_plus_one = end_date + timedelta(days=1)
         try:

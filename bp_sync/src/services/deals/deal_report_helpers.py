@@ -14,8 +14,8 @@ from core.logger import logger
 from models.deal_models import Deal as DealDB
 from schemas.deal_schemas import DealCreate
 
+from .deal_source_classifier import identify_source
 from .enums import CreationSourceEnum, DealSourceEnum, DealTypeEnum
-from .handling_helpers import identify_source
 
 
 async def create_dataframe(data: list[dict[str, Any]]) -> pd.DataFrame:
