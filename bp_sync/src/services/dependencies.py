@@ -451,6 +451,16 @@ async def get_deal_repository_dep() -> DealRepository:
     return cast(DealRepository, client)
 
 
+async def get_company_bitrix_client_dep() -> CompanyBitrixClient:
+    client = await get_service("company_bitrix_client")
+    return cast(CompanyBitrixClient, client)
+
+
+async def get_contact_bitrix_client_dep() -> ContactBitrixClient:
+    client = await get_service("contact_bitrix_client")
+    return cast(ContactBitrixClient, client)
+
+
 async def get_code_service() -> CodeService:
     return CodeService()
 

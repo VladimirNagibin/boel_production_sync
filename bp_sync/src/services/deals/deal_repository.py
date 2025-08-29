@@ -1,7 +1,8 @@
 from datetime import datetime, timedelta
-from typing import Any, Callable, Coroutine, Type
+from typing import Any, Callable, Coroutine, Sequence, Type
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -10,6 +11,7 @@ from db.postgres import Base
 from models.bases import EntityType
 from models.company_models import Company as CompanyDB
 from models.contact_models import Contact as ContactDB
+from models.deal_models import AdditionalInfo as AddInfoDB
 from models.deal_models import Deal as DealDB
 from models.delivery_note_models import DeliveryNote
 from models.invoice_models import Invoice as InvoiceDB
@@ -29,7 +31,12 @@ from models.references import (
 )
 from models.timeline_comment_models import TimelineComment
 from models.user_models import User as UserDB
-from schemas.deal_schemas import DealCreate, DealUpdate
+from schemas.deal_schemas import (
+    AddInfoCreate,
+    AddInfoUpdate,
+    DealCreate,
+    DealUpdate,
+)
 
 from ..base_repositories.base_repository import BaseRepository
 from ..companies.company_services import CompanyClient
@@ -115,7 +122,7 @@ class DealRepository(BaseRepository[DealDB, DealCreate, DealUpdate, int]):
     async def fetch_deals(
         self, start_date: datetime, end_date: datetime
     ) -> Any:
-        """Асинхронно получает сделки с связанными данными"""
+        """Асинхронно получает сделки со связанными данными"""
         # Рассчитываем конец периода как начало следующего дня
         end_date_plus_one = end_date + timedelta(days=1)
         try:
@@ -184,4 +191,188 @@ class DealRepository(BaseRepository[DealDB, DealCreate, DealUpdate, int]):
         except Exception as e:
             # Логируем ошибку и пробрасываем дальше
             logger.error(f"Error fetching deals: {str(e)}")
+            raise
+
+    async def get_add_info_by_deal_id(self, deal_id: int) -> AddInfoDB | None:
+        """Получить дополнительную информацию по ID сделки"""
+        try:
+            query = (
+                select(AddInfoDB)
+                .where(AddInfoDB.deal_id == deal_id)
+                .options(selectinload(AddInfoDB.deal))
+            )
+            result = await self.session.execute(query)
+            return result.scalar_one_or_none()  # type: ignore[no-any-return]
+        except SQLAlchemyError as e:
+            logger.error(
+                "Ошибка при получении дополнительной информации для сделки "
+                f"{deal_id}: {e}"
+            )
+            raise RuntimeError(
+                "Не удалось получить дополнительную информацию для сделки "
+                f"{deal_id}"
+            ) from e
+
+    async def get_all_add_info(
+        self, skip: int = 0, limit: int = 100
+    ) -> Sequence[AddInfoDB]:
+        """Получить всю дополнительную информацию с пагинацией"""
+        try:
+            query = (
+                select(AddInfoDB)
+                .offset(skip)
+                .limit(limit)
+                .options(selectinload(AddInfoDB.deal))
+            )
+            result = await self.session.execute(query)
+            return result.scalars().all()  # type: ignore[no-any-return]
+        except SQLAlchemyError as e:
+            logger.error(
+                f"Ошибка при получении списка дополнительной информации: {e}"
+            )
+            raise RuntimeError(
+                "Не удалось получить список дополнительной информации"
+            ) from e
+
+    async def create_add_info(self, add_info_data: AddInfoCreate) -> AddInfoDB:
+        """Создать новую дополнительную информацию"""
+        try:
+            # Проверяем, существует ли уже информация для этой сделки
+            existing_info = await self.get_add_info_by_deal_id(
+                add_info_data.deal_id
+            )
+            if existing_info:
+                raise ValueError(
+                    "Дополнительная информация для сделки "
+                    f"{add_info_data.deal_id} уже существует"
+                )
+
+            additional_info = AddInfoDB(
+                deal_id=add_info_data.deal_id, comment=add_info_data.comment
+            )
+
+            self.session.add(additional_info)
+            await self.session.commit()
+            await self.session.refresh(additional_info)
+
+            # Загружаем связанные данные
+            await self.session.refresh(additional_info, ["deal"])
+
+            return additional_info
+        except IntegrityError as e:
+            await self.session.rollback()
+            logger.error(
+                "Ошибка целостности при создании дополнительной информации "
+                f"для сделки {add_info_data.deal_id}: {e}"
+            )
+            raise ValueError(
+                "Нарушение целостности данных при создании дополнительной "
+                "информации"
+            ) from e
+        except (ValueError, RuntimeError) as e:
+            await self.session.rollback()
+            logger.error(
+                "Ошибка при создании дополнительной информации для сделки "
+                f"{add_info_data.deal_id}: {e}"
+            )
+            raise
+        except SQLAlchemyError as e:
+            await self.session.rollback()
+            logger.error(
+                "Ошибка базы данных при создании дополнительной информации "
+                f"для сделки {add_info_data.deal_id}: {e}"
+            )
+            raise RuntimeError(
+                "Не удалось создать дополнительную информацию из-за ошибки "
+                "базы данных"
+            ) from e
+
+    async def update_add_info(
+        self, deal_id: int, add_info_data: AddInfoUpdate
+    ) -> AddInfoDB | None:
+        """Обновить дополнительную информацию для сделки"""
+        try:
+            # Получаем текущие данные
+            additional_info = await self.get_add_info_by_deal_id(deal_id)
+            if not additional_info:
+                return None
+
+            # Обновляем только переданные поля
+            update_data = add_info_data.model_dump(exclude_unset=True)
+            for field, value in update_data.items():
+                setattr(additional_info, field, value)
+
+            await self.session.commit()
+            await self.session.refresh(additional_info)
+
+            # Загружаем связанные данные
+            await self.session.refresh(additional_info, ["deal"])
+
+            return additional_info
+        except IntegrityError as e:
+            await self.session.rollback()
+            logger.error(
+                "Ошибка целостности при обновлении дополнительной информации "
+                f"для сделки {deal_id}: {e}"
+            )
+            raise ValueError(
+                "Нарушение целостности данных при обновлении дополнительной "
+                "информации"
+            ) from e
+        except SQLAlchemyError as e:
+            await self.session.rollback()
+            logger.error(
+                "Ошибка базы данных при обновлении дополнительной информации "
+                f"для сделки {deal_id}: {e}"
+            )
+            raise RuntimeError(
+                "Не удалось обновить дополнительную информацию из-за ошибки "
+                "базы данных"
+            ) from e
+
+    async def delete_add_info(self, deal_id: int) -> bool:
+        """Удалить дополнительную информацию для сделки"""
+        try:
+            additional_info = await self.get_add_info_by_deal_id(deal_id)
+            if not additional_info:
+                return False
+
+            await self.session.delete(additional_info)
+            await self.session.commit()
+            return True
+        except SQLAlchemyError as e:
+            await self.session.rollback()
+            logger.error(
+                "Ошибка базы данных при удалении дополнительной информации "
+                f"для сделки {deal_id}: {e}"
+            )
+            raise RuntimeError(
+                "Не удалось удалить дополнительную информацию из-за ошибки "
+                "базы данных"
+            ) from e
+
+    async def upsert_add_info(
+        self, add_info_data: AddInfoCreate
+    ) -> AddInfoDB | None:
+        """Создать или обновить дополнительную информацию"""
+        try:
+            # Проверяем, существует ли уже информация для этой сделки
+            existing_info = await self.get_add_info_by_deal_id(
+                add_info_data.deal_id
+            )
+
+            if existing_info:
+                # Обновляем существующую запись
+                return await self.update_add_info(
+                    add_info_data.deal_id,
+                    AddInfoUpdate(comment=add_info_data.comment),
+                )
+            else:
+                # Создаем новую запись
+                return await self.create_add_info(add_info_data)
+        except (ValueError, RuntimeError) as e:
+            logger.error(
+                "Ошибка при создании/обновлении дополнительной информации для "
+                f"сделки {add_info_data.deal_id}: {e}"
+            )
             raise

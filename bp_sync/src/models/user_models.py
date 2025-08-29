@@ -4,7 +4,8 @@ from typing import TYPE_CHECKING
 from sqlalchemy import DateTime, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from schemas.user_schemas import UserCreate
+from db.postgres import Base
+from schemas.user_schemas import ManagerCreate, UserCreate
 
 from .bases import EntityType, IntIdEntity
 from .references import Department
@@ -42,6 +43,9 @@ class User(IntIdEntity):
     @property
     def full_name(self) -> str:
         return f"{self.name} {self.last_name}"
+
+    def __str__(self) -> str:
+        return self.full_name
 
     # Идентификаторы и основные данные
     xml_id: Mapped[str | None] = mapped_column(
@@ -252,3 +256,51 @@ class User(IntIdEntity):
         back_populates="author",
         foreign_keys="[TimelineComment.author_id]",
     )
+    manager: Mapped["Manager"] = relationship(
+        back_populates="user", uselist=False
+    )
+
+
+MANAGER_VALUES: list[tuple[int, bool, int | None, int | None]] = [
+    (171, True, None, 19447),  # Admin
+    (121, True, 16079, 19439),  # Ярославцева
+    (29, True, 7925, 19419),  # Гузиков
+    (905, True, 22095, 50427),  # Машаров
+    (923, True, 17709, 53239),  # Михайлов
+    (1039, True, 18453, 86617),  # Горбунов
+    (319, True, 18845, 19469),  # Коротких
+    (1865, True, 20631, 1),  # Ширяев
+    (3231, True, 21063, 245681),  # Лукьянец
+    (5747, True, None, 334643),  # Горбатько
+    (9637, True, None, 449449),  # Ведешкин 23793
+    (5095, True, None, 2),  # Internet
+    (11077, True, None, 492127),  # Кулюхин 21859
+    (227, True, None, 19451),  # Галанова
+    (9023, True, None, 3),  # ВЭД
+]
+
+
+class Manager(Base):
+    """
+    Менеджеры
+    """
+
+    __tablename__ = "managers"
+    _schema_class = ManagerCreate
+
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.external_id"),
+        unique=True,
+        comment="ИД сотрудника",
+    )
+    user: Mapped["User"] = relationship("User", back_populates="manager")
+    is_active: Mapped[bool] = mapped_column(
+        default=False, comment="Менеджер активный"
+    )
+    default_company_id: Mapped[int | None] = mapped_column(
+        ForeignKey("companies.external_id")
+    )
+    default_company: Mapped["Company"] = relationship(
+        "Company", back_populates="default_manager"
+    )
+    disk_id: Mapped[int | None] = mapped_column(comment="ИД диска")

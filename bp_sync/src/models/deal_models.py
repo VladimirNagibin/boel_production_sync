@@ -4,6 +4,7 @@ from sqlalchemy import CheckConstraint, DateTime, ForeignKey
 from sqlalchemy.dialects.postgresql import ENUM as PgEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from db.postgres import Base
 from schemas.deal_schemas import DealCreate
 
 from .bases import BusinessEntity, EntityType
@@ -63,6 +64,9 @@ class Deal(BusinessEntity):
     @property
     def tablename(self) -> str:
         return self.__tablename__
+
+    def __str__(self) -> str:
+        return str(self.title)
 
     # Идентификаторы и основные данные
     title: Mapped[str] = mapped_column(
@@ -310,6 +314,9 @@ class Deal(BusinessEntity):
     defect_expert: Mapped["User"] = relationship(
         "User", foreign_keys=[defect_expert_id], back_populates="defect_deals"
     )
+    add_info: Mapped["AdditionalInfo"] = relationship(
+        back_populates="deal", uselist=False
+    )
 
     # Поля сервисных сделок
     # defects: Mapped["DefectType"] = relationship(
@@ -374,3 +381,21 @@ class Deal(BusinessEntity):
 
     "UF_CRM_1657360424": html ссылка
     """
+
+
+class AdditionalInfo(Base):
+    """
+    Дополнительная информация сделки
+    """
+
+    __tablename__ = "additional_info"
+
+    deal_id: Mapped[int] = mapped_column(
+        ForeignKey("deals.external_id"),
+        unique=True,
+        comment="ID сделки",
+    )
+    deal: Mapped["Deal"] = relationship("Deal", back_populates="add_info")
+    comment: Mapped[str] = mapped_column(
+        default="", comment="Дополнительная информация"
+    )

@@ -32,6 +32,7 @@ if TYPE_CHECKING:
     from .delivery_note_models import DeliveryNote
     from .invoice_models import Invoice
     from .lead_models import Lead
+    from .user_models import Manager
 
 
 class Company(CommunicationIntIdEntity):
@@ -56,6 +57,9 @@ class Company(CommunicationIntIdEntity):
     @property
     def tablename(self) -> str:
         return self.__tablename__
+
+    def __str__(self) -> str:
+        return str(self.title)
 
     # Идентификаторы и основные данные
     title: Mapped[str] = mapped_column(
@@ -190,6 +194,9 @@ class Company(CommunicationIntIdEntity):
     )  # EMPLOYEES : Численность сотрудников
     employees: Mapped["Emploees"] = relationship(
         "Emploees", back_populates="companies"
+    )
+    default_manager: Mapped[list["Manager"]] = relationship(
+        back_populates="default_company"
     )
 
     parent_company_id: Mapped[int | None] = mapped_column(

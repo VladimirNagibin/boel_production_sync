@@ -7,9 +7,9 @@ from core.logger import logger
 from models.deal_models import Deal as DealDB
 from schemas.company_schemas import CompanyCreate
 from schemas.contact_schemas import ContactCreate
-from schemas.deal_schemas import DealCreate, DealUpdate
+from schemas.deal_schemas import DealCreate
 from schemas.lead_schemas import LeadCreate
-from schemas.product_schemas import EntityTypeAbbr, ListProductEntity
+from schemas.product_schemas import EntityTypeAbbr
 
 from ..base_services.base_service import BaseEntityClient
 from ..products.product_bitrix_services import ProductBitrixClient
@@ -17,14 +17,17 @@ from ..timeline_comments.timeline_comment_bitrix_services import (
     TimeLineCommentBitrixClient,
 )
 from .deal_bitrix_services import DealBitrixClient
-from .deal_repository import DealRepository
-from .enums import CreationSourceEnum, DealSourceEnum, DealTypeEnum
-from .handling_helpers import WEBSITE_CREATOR, identify_source
-from .report_helpers import (
+from .deal_data_provider import DealDataProvider
+from .deal_report_helpers import (
     create_dataframe,
     create_excel_file,
     process_deal_row_report,
 )
+from .deal_repository import DealRepository
+from .deal_source_classifier import WEBSITE_CREATOR, identify_source
+from .deal_stage_handler import DealStageHandler
+from .deal_update_tracker import DealUpdateTracker
+from .enums import CreationSourceEnum, DealSourceEnum, DealTypeEnum
 
 
 class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
@@ -41,6 +44,10 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
         self._repo = deal_repo
         self.timeline_comments_bitrix_client = timeline_comments_bitrix_client
         self.product_bitrix_client = product_bitrix_client
+
+        self.stage_handler = DealStageHandler(self)
+        self.data_provider = DealDataProvider(self)
+        self.update_tracker = DealUpdateTracker()
 
     @property
     def entity_name(self) -> str:
@@ -91,55 +98,47 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
     async def handler_deal(self, external_id: int) -> None:
         """Обработчик сделки"""
         try:
-            self._cached_company: CompanyCreate | None = None
-            self._cached_contact: ContactCreate | None = None
-            self._cached_products: ListProductEntity | None = None
-            deal_update = DealUpdate()
+            self.update_tracker.reset()
+            self.data_provider.clear_cache()
+            self.update_tracker.init_deal(external_id)
+
             deal_b24, deal_db, changes = await self.get_changes_b24_db(
                 external_id
             )
             logger.debug(f"Changes detected for deal {external_id}: {changes}")
-            needs_update = await self._check_source(
-                deal_b24, deal_db, deal_update
-            )
+
+            await self._check_source(deal_b24, deal_db)
+
             products = (
                 await self.product_bitrix_client.check_update_products_entity(
                     external_id, EntityTypeAbbr.DEAL
                 )
             )
-            self._cached_products = products
+            if products:
+                self.data_provider.set_cached_products(products)
+
             if deal_db is None:  # not in database
-                needs_update = (
-                    await self._handle_new_deal(deal_b24, deal_update)
-                    or needs_update
-                )
+                await self._handle_new_deal(deal_b24)
             else:
-                needs_update = (
-                    await self._handle_exist_deal(
-                        deal_b24, deal_db, deal_update
-                    )
-                    or needs_update
-                )
-            if needs_update:
-                await self._synchronize_deal_data(
-                    deal_b24, deal_db, deal_update
-                )
+                await self._handle_exist_deal(deal_b24, deal_db)
+
+            if self.update_tracker.has_changes():
+                await self._synchronize_deal_data(deal_b24, deal_db)
         except Exception as e:
             logger.error(f"Error processing deal {external_id}: {str(e)}")
             raise
         finally:
-            self._cached_company = None
-            self._cached_contact = None
-            self._cached_product = None
+            self.data_provider.clear_cache()
+            self.update_tracker.reset()
 
     async def _synchronize_deal_data(
         self,
         deal_b24: DealCreate,
         deal_db: DealCreate | None,
-        deal_update: DealUpdate,
     ) -> None:
         """Синхронизирует данные сделки между Bitrix24 и базой данных"""
         try:
+            deal_update = self.update_tracker.get_deal_update()
             # Обновляем данные в Bitrix24
             await self.bitrix_client.update(deal_update)
 
@@ -161,7 +160,6 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
     async def _handle_new_deal(
         self,
         deal_b24: DealCreate,
-        deal_update: DealUpdate,
     ) -> bool:
         """Обработка новой сделки"""
         # TODO: Реализовать логику обработки новой сделки
@@ -172,7 +170,6 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
         self,
         deal_b24: DealCreate,
         deal_db: DealCreate,
-        deal_update: DealUpdate,
     ) -> bool:
         """Обработка существующей сделки"""
         # TODO: Реализовать логику обработки существующей сделки
@@ -183,7 +180,6 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
         self,
         deal_b24: DealCreate,
         deal_db: DealCreate | None,
-        deal_update: DealUpdate,
     ) -> bool:
         """Проверка и определение источника сделки"""
         try:
@@ -194,15 +190,16 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
             context: dict[str, Any] = {}
             result = await identify_source(
                 deal_b24,
-                self._get_lead,
-                self._get_company,
-                self._get_comments,
+                self.get_lead,
+                self.get_company,
+                self.get_comments,
                 context=context,
             )
             if "company" in context:
-                self._cached_company = context["company"]
+                self.data_provider.set_cached_company(context["company"])
             creation_source_corr, type_correct, source_correct = result
             logger.info(
+                f"{deal_b24.title} - comparison of source changes:"
                 f"{CreationSourceEnum.get_display_name(creation_source_corr)}"
                 f":{creation_source_id}, "
                 f"{DealTypeEnum.get_display_name(type_correct)}:{type_id}, "
@@ -213,7 +210,6 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
             if deal_db is None:  # new deal
                 needs_update |= await self._update_field_if_needed(
                     deal_b24,
-                    deal_update,
                     "creation_source_id",
                     creation_source_id,
                     creation_source_corr.value,
@@ -221,7 +217,6 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
 
                 needs_update |= await self._update_field_if_needed(
                     deal_b24,
-                    deal_update,
                     "source_id",
                     source_id,
                     source_correct.value,
@@ -229,13 +224,12 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
 
                 needs_update |= await self._update_field_if_needed(
                     deal_b24,
-                    deal_update,
                     "type_id",
                     type_id,
                     type_correct.value,
                 )
                 needs_update |= await self._handle_assignment(
-                    deal_b24, deal_update, creation_source_corr
+                    deal_b24, creation_source_corr
                 )
                 return needs_update
             # TODO: Реализовать логику обработки источников существующей сделки
@@ -250,7 +244,6 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
     async def _update_field_if_needed(
         self,
         deal_b24: DealCreate,
-        deal_update: DealUpdate,
         field_name: str,
         current_value: Any,
         correct_value: Any,
@@ -259,8 +252,9 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
         Обновляет поле сделки, если текущее значение отличается от корректного
         """
         if current_value != correct_value:
-            setattr(deal_b24, field_name, correct_value)
-            setattr(deal_update, field_name, correct_value)
+            self.update_tracker.update_field(
+                field_name, correct_value, deal_b24
+            )
             logger.info(
                 f"Updated {field_name} from {current_value} to {correct_value}"
             )
@@ -270,7 +264,6 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
     async def _handle_assignment(
         self,
         deal_b24: DealCreate,
-        deal_update: DealUpdate,
         creation_source: CreationSourceEnum,
     ) -> bool:
         """
@@ -281,24 +274,33 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
 
         if creation_source == CreationSourceEnum.AUTO:
             if deal_b24.assigned_by_id != WEBSITE_CREATOR:
-                deal_b24.assigned_by_id = WEBSITE_CREATOR
-                deal_update.assigned_by_id = WEBSITE_CREATOR
-                needs_update = True
+                self.update_tracker.update_field(
+                    "assigned_by_id", WEBSITE_CREATOR, deal_b24
+                )
                 logger.info(
                     "Assigned to website creator for auto-created deal"
                 )
         else:
             if not await self._check_active_manager(deal_b24.assigned_by_id):
-                deal_b24.assigned_by_id = WEBSITE_CREATOR
-                deal_update.assigned_by_id = WEBSITE_CREATOR
-                needs_update = True
+                self.update_tracker.update_field(
+                    "assigned_by_id", WEBSITE_CREATOR, deal_b24
+                )
                 logger.info(
                     "Reassigned to website creator due to inactive manager"
                 )
 
         return needs_update
 
-    async def _get_lead(self, lead_id: int) -> LeadCreate | None:
+    async def _check_active_manager(self, manager_id: int) -> bool:
+        """Проверка активных менеджеров"""
+        try:
+            user_service = await self.repo.get_user_client()
+            return await user_service.repo.is_activity_manager(manager_id)
+        except Exception as e:
+            logger.error(f"Failed to check manager {manager_id}: {str(e)}")
+            return False
+
+    async def get_lead(self, lead_id: int) -> LeadCreate | None:
         """Получение лида по ID"""
         try:
             lead_service = await self.repo.get_lead_client()
@@ -307,10 +309,7 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
             logger.error(f"Failed to get lead {lead_id}: {str(e)}")
             return None
 
-    async def _get_company(
-        self,
-        company_id: int,
-    ) -> CompanyCreate | None:
+    async def get_company(self, company_id: int) -> CompanyCreate | None:
         """Получение компании по ID"""
         try:
             company_service = await self.repo.get_company_client()
@@ -319,10 +318,7 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
             logger.error(f"Failed to get company {company_id}: {str(e)}")
             return None
 
-    async def _get_contact(
-        self,
-        contact_id: int,
-    ) -> ContactCreate | None:
+    async def get_contact(self, contact_id: int) -> ContactCreate | None:
         """Получение контакта по ID"""
         try:
             contact_service = await self.repo.get_contact_client()
@@ -331,10 +327,7 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
             logger.error(f"Failed to get contact {contact_id}: {str(e)}")
             return None
 
-    async def _get_comments(
-        self,
-        deal_id: int,
-    ) -> str:
+    async def get_comments(self, deal_id: int) -> str:
         try:
             timeline_client = self.timeline_comments_bitrix_client
             comments_result = await timeline_client.get_comments_by_entity(
@@ -350,159 +343,20 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
             logger.error(f"Failed to get comments deal {deal_id}: {str(e)}")
             return ""
 
-    async def _check_active_manager(self, manager_id: int) -> bool:
-        """Проверка активных менеджеров"""
-        # TODO: Реализовать логику проверки активных менеджеров
-        return True
-
-    async def _check_available_stage(self, deal_b24: DealCreate) -> int:
-        """
-        Определяет доступную стадию сделки на основе заполненных данных.
-
-        Стадии:
-        1 - базовая стадия
-        2 - заполнены контактные данные (компания или контакт)
-        3 - заполнены товары, основная деятельность и город
-        4 - заполнены компания покупателя и фирма отгрузки
-        5 - наличие договора с компанией по фирме отгрузки
-
-        Args:
-            deal_b24: Данные сделки
-
-        Returns:
-            Номер доступной стадии (1-4)
-        """
-        # Стадия 1: Базовая стадия
-        available_stage = 1
-
-        # Проверяем условия для перехода на стадию 2
-        if await self._has_contact_details(deal_b24):
-            available_stage = 2
+    async def update_comments(
+        self, comment: str, deal_b24: DealCreate
+    ) -> bool:
+        comments_deal = deal_b24.comments
+        comments_new = None
+        if not comments_deal:
+            comments_new = comment
         else:
-            return available_stage
-
-        # Проверяем условия для перехода на стадию 3
-        if not await self._has_required_stage3_data(deal_b24):
-            return available_stage
-
-        available_stage = 3
-
-        # Проверяем условия для перехода на стадию 4
-        if not await self._has_required_stage4_data(deal_b24):
-            return available_stage
-
-        available_stage = 4
-
-        # Проверяем условия для перехода на стадию 5
-        if await self._has_required_stage5_data(deal_b24):
-            available_stage = 5
-
-        return available_stage
-
-    async def _has_contact_details(self, deal_b24: DealCreate) -> bool:
-        """
-        Проверяет наличие контактных данных (email или телефон)
-        в компании или контакте.
-        """
-        # Получаем данные компании
-        company = await self._get_company_data(deal_b24)
-
-        # Проверяем контактные данные компании
-        if company and (company.has_email or company.has_phone):
-            return True
-
-        # Проверяем контактные данные контакта
-        contact = await self._get_contact_data(deal_b24)
-        if contact and (contact.has_email or contact.has_phone):
-            return True
-
-        return False
-
-    async def _get_company_data(
-        self, deal_b24: DealCreate
-    ) -> CompanyCreate | None:
-        """
-        Получает данные компании из кэша или запрашивает при необходимости.
-        """
-        if self._cached_company:
-            return self._cached_company
-
-        if deal_b24.company_id:
-            company = await self._get_company(deal_b24.company_id)
-            if company:
-                self._cached_company = company
-                return company
-
-        return None
-
-    async def _get_contact_data(
-        self, deal_b24: DealCreate
-    ) -> ContactCreate | None:
-        """
-        Получает данные контакта из кэша или запрашивает при необходимости.
-        """
-        if self._cached_contact:
-            return self._cached_contact
-
-        if deal_b24.contact_id:
-            contact = await self._get_contact(deal_b24.contact_id)
-            if contact:
-                self._cached_contact = contact
-                return contact
-
-        return None
-
-    async def _has_required_stage3_data(self, deal_b24: DealCreate) -> bool:
-        """
-        Проверяет наличие данных для перехода на стадию 3:
-        - Товары
-        - Основная деятельность клиента
-        - Город клиента
-        """
-        # Проверяем наличие товаров
-        if not (
-            self._cached_products and self._cached_products.count_products > 0
-        ):
-            return False
-
-        # Получаем данные компании
-        company = await self._get_company_data(deal_b24)
-
-        # Проверяем основную деятельность
-        if not (
-            deal_b24.main_activity_id or (company and company.main_activity_id)
-        ):
-            # TODO: Если основная деятельность есть в компании и нет в сделке
-            # - записать в сделку
-            return False
-
-        # Проверяем город
-        if not deal_b24.city and not (company and company.city):
-            # TODO: Если город есть в компании и нет в сделке записать в сделку
-            return False
-
+            if comment in comments_deal:
+                return False
+            comments_new = (
+                f"<div>{comments_deal}</div><div>{comment}<br></div>"
+            )
+            self.update_tracker.update_field(
+                "comments", comments_new, deal_b24
+            )
         return True
-
-    async def _has_required_stage4_data(self, deal_b24: DealCreate) -> bool:
-        """
-        Проверяет наличие данных для перехода на стадию 4:
-        - Компания покупателя
-        - Фирма отгрузки
-        """
-        # Получаем данные компании
-        company = await self._get_company_data(deal_b24)
-
-        # Проверяем наличие компании и фирмы отгрузки
-        return bool(company and deal_b24.shipping_company_id)
-
-    async def _has_required_stage5_data(self, deal_b24: DealCreate) -> bool:
-        """
-        Проверяет наличие данных для перехода на стадию 5:
-        - наличие договора с компанией по фирме отгрузки
-        - обработка разных фирм отгрузки
-        """
-        # Получаем данные компании
-        company = await self._get_company_data(deal_b24)
-
-        # Проверяем наличие компании и фирмы отгрузки
-        return bool(company and deal_b24.shipping_company_id)

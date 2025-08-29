@@ -28,9 +28,9 @@ class CommonFieldMixin(BaseModel):  # type: ignore[misc]
         exclude=True,
         init_var=False,
     )
-    created_at: Optional[datetime] = Field(None)
-    updated_at: Optional[datetime] = Field(None)
-    is_deleted_in_bitrix: Optional[bool] = Field(None)
+    created_at: Optional[datetime] = Field(default=None)
+    updated_at: Optional[datetime] = Field(default=None)
+    is_deleted_in_bitrix: Optional[bool] = Field(default=None)
 
     external_id: Optional[int | str] = Field(
         None,
@@ -404,7 +404,7 @@ class BaseUpdateSchema(
 ):
     """Базовая схема для обновления сущностей"""
 
-    opened: Optional[bool] = Field(None, alias="OPENED")
+    opened: Optional[bool] = Field(default=None, alias="OPENED")
 
 
 class ListResponseSchema(BaseModel, Generic[T]):  # type: ignore[misc]

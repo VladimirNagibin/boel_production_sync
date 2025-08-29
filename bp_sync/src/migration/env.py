@@ -15,7 +15,7 @@ from models.communications import (  # noqa: F401
 from models.company_models import Company  # noqa: F401
 from models.contact_models import Contact  # noqa: F401
 from models.deal_documents import Billing, Contract  # noqa: F401
-from models.deal_models import Deal  # noqa: F401
+from models.deal_models import AdditionalInfo, Deal  # noqa: F401
 from models.delivery_note_models import DeliveryNote  # noqa: F401
 from models.invoice_models import Invoice  # noqa: F401
 from models.lead_models import Lead  # noqa: F401
@@ -41,7 +41,7 @@ from models.references import (  # noqa: F401
     Measure,
 )
 from models.timeline_comment_models import TimelineComment  # noqa: F401
-from models.user_models import User  # noqa: F401
+from models.user_models import Manager, User  # noqa: F401
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

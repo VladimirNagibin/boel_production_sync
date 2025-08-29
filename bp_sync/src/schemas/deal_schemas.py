@@ -10,7 +10,12 @@ from models.enums import (
     StageSemanticEnum,
 )
 
-from .base_schemas import BaseCreateSchema, BaseUpdateSchema, BitrixValidators
+from .base_schemas import (
+    BaseCreateSchema,
+    BaseUpdateSchema,
+    BitrixValidators,
+    CommonFieldMixin,
+)
 
 
 class BaseDeal:
@@ -271,3 +276,17 @@ class DealUpdate(BaseUpdateSchema, BaseDeal):
         return BitrixValidators.convert_enum(
             v, ProcessingStatusEnum, ProcessingStatusEnum.NOT_DEFINE
         )
+
+
+class AddInfoCreate(CommonFieldMixin):
+    """Модель для создания менеджеров"""
+
+    deal_id: int
+    comment: str
+
+
+class AddInfoUpdate(CommonFieldMixin):
+    """Модель для частичного обновления менеджеров"""
+
+    deal_id: int | None = Field(default=None)
+    comment: str | None = Field(default=None)

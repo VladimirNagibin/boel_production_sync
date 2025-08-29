@@ -7,6 +7,7 @@ from .base_schemas import (
     AddressMixin,
     BaseCreateSchema,
     BaseUpdateSchema,
+    CommonFieldMixin,
     CommunicationChannel,
     HasCommunicationCreateMixin,
     HasCommunicationUpdateMixin,
@@ -57,6 +58,9 @@ class BaseCompany:
     shipping_company_id: int | None = Field(
         None, alias="UF_CRM_1631941968"
     )  # "UF_CRM_1631903199"ссылка на объект компании отгрузки.
+    shipping_company_obj: int | None = Field(
+        None, alias="UF_CRM_1631903199"
+    )  # ссылка на объект компании отгрузки.
     # Дубль со ссылкой на ИД компании отгрузки.
     industry_id: str | None = Field(None, alias="INDUSTRY")
     employees_id: str | None = Field(None, alias="EMPLOYEES")
@@ -165,10 +169,24 @@ class CompanyUpdate(
     """Модель для частичного обновления контактов"""
 
     # Идентификаторы и основные данные
-    title: str | None = Field(None, alias="TITLE")
+    title: str | None = Field(default=None, alias="TITLE")
 
     # Финансы
-    revenue: float | None = Field(None, alias="REVENUE")
+    revenue: float | None = Field(default=None, alias="REVENUE")
 
     # Статусы и флаги
-    is_my_company: bool | None = Field(None, alias="IS_MY_COMPANY")
+    is_my_company: bool | None = Field(default=None, alias="IS_MY_COMPANY")
+
+
+class ShippingCompanyCreate(CommonFieldMixin):
+    """Модель для создания менеджеров"""
+
+    name: str
+    ext_alt_id: int
+
+
+class ShippingCompanyUpdate(CommonFieldMixin):
+    """Модель для частичного обновления менеджеров"""
+
+    name: str | None = Field(default=None)
+    ext_alt_id: int | None = Field(default=None)
