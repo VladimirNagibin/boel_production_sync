@@ -169,13 +169,13 @@ class CompanyUpdate(
     """Модель для частичного обновления контактов"""
 
     # Идентификаторы и основные данные
-    title: str | None = Field(None, alias="TITLE")
+    title: str | None = Field(default=None, alias="TITLE")
 
     # Финансы
-    revenue: float | None = Field(None, alias="REVENUE")
+    revenue: float | None = Field(default=None, alias="REVENUE")
 
     # Статусы и флаги
-    is_my_company: bool | None = Field(None, alias="IS_MY_COMPANY")
+    is_my_company: bool | None = Field(default=None, alias="IS_MY_COMPANY")
 
 
 class ShippingCompanyCreate(CommonFieldMixin):

@@ -1,5 +1,6 @@
 import re
 from datetime import datetime
+from typing import Any
 
 from core.logger import logger
 from models.enums import DualTypePaymentEnum
@@ -121,12 +122,14 @@ class DealContractHandler:
         contract: str,
         company_b24: CompanyCreate,
     ) -> bool:
-        company_update = CompanyUpdate(
-            external_id=company_b24.external_id,
-            shipping_company_id=shipping_company_id,
-            shipping_company_obj=shipping_company_id,
-            current_contract=contract,
-        )
+        update_data: dict[str, Any] = {
+            "external_id": company_b24.external_id,
+            "shipping_company_id": shipping_company_id,
+            "shipping_company_obj": shipping_company_id,
+            "current_contract": contract,
+        }
+        company_update = CompanyUpdate(**update_data)
+
         company_service = await self.deal_client.repo.get_company_client()
         await company_service.bitrix_client.update(company_update)
         setattr(company_b24, "shipping_company_id", shipping_company_id)
