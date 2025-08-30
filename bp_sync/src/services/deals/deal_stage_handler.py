@@ -4,8 +4,10 @@ from core.logger import logger
 from schemas.contact_schemas import ContactCreate
 from schemas.deal_schemas import DealCreate
 
+from .deal_contract_handler import DealContractHandler
+
 if TYPE_CHECKING:
-    from .deal_contract_handler import DealContractHandler
+
     from .deal_services import DealClient
 
 BLACK_SYSTEM = 439

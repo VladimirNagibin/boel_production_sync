@@ -376,3 +376,39 @@ class DealRepository(BaseRepository[DealDB, DealCreate, DealUpdate, int]):
                 f"сделки {add_info_data.deal_id}: {e}"
             )
             raise
+
+    async def get_external_id_by_sort_order_stage(
+        self, sort_order: int
+    ) -> str | None:
+        """Получить external_id стадии сделки по порядковому номеру"""
+        try:
+            stmt = select(DealStage.external_id).where(
+                DealStage.sort_order == sort_order
+            )
+            result = await self.session.execute(stmt)
+            return result.scalar_one_or_none()  # type: ignore[no-any-return]
+        except Exception as e:
+            # Логирование ошибки
+            print(
+                "Ошибка при получении external_id по sort_order "
+                f"{sort_order}: {e}"
+            )
+            return None
+
+    async def get_sort_order_by_external_id_stage(
+        self, external_id: str
+    ) -> int | None:
+        """Получить порядковый номер стадии сделки по external_id"""
+        try:
+            stmt = select(DealStage.sort_order).where(
+                DealStage.external_id == external_id
+            )
+            result = await self.session.execute(stmt)
+            return result.scalar_one_or_none()  # type: ignore[no-any-return]
+        except Exception as e:
+            # Логирование ошибки
+            print(
+                "Ошибка при получении sort_order по external_id "
+                f"{external_id}: {e}"
+            )
+            return None

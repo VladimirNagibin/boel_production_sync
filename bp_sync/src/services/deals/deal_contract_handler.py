@@ -1,15 +1,16 @@
 import re
 from datetime import datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from core.logger import logger
 from models.enums import DualTypePaymentEnum
 from schemas.company_schemas import CompanyCreate, CompanyUpdate
 from schemas.deal_schemas import DealCreate
 
-from .deal_services import DealClient
-from .deal_stage_handler import BLACK_SYSTEM
+if TYPE_CHECKING:
+    from .deal_services import DealClient
 
+BLACK_SYSTEM = 439
 BLACK_SYSTEM_DB = 8923
 BLACK_SYSTEM_CONTRACT = "Договор   от "
 OFFER_COMPANIES = (445, 447, 773)
@@ -19,7 +20,7 @@ OFFER_COMPANY_CONTRACT = "Счет-оферта"
 class DealContractHandler:
     """Обработчик договоров для сделок"""
 
-    def __init__(self, deal_client: DealClient):
+    def __init__(self, deal_client: "DealClient"):
         self.deal_client = deal_client
 
     async def process_contracts(
