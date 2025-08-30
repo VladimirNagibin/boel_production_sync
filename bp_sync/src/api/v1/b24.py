@@ -10,9 +10,9 @@ from fastapi.responses import JSONResponse
 
 from core.logger import logger
 from schemas.billing_schemas import BillingCreate
-from schemas.delivery_note_schemas import DeliveryNoteCreate
 
-# from schemas.lead_schemas import LeadCreate
+# from schemas.company_schemas import CompanyUpdate
+from schemas.delivery_note_schemas import DeliveryNoteCreate
 from services.billings.billing_repository import BillingRepository
 from services.bitrix_services.bitrix_oauth_client import BitrixOAuthClient
 from services.companies.company_bitrix_services import CompanyBitrixClient
@@ -390,13 +390,15 @@ async def check(
         get_timeline_comment_repository_dep
     ),
 ) -> JSONResponse:
-    # deal_id = 54195  # 49935
+
+    deal_id = 54195  # 49935
     # comm = await get_comm(deal_id, timeline_client, timeline_repo)
-    # await deal_client.handler_deal(deal_id)
+    await deal_client.handler_deal(deal_id)
     # result = ""
     result = await company_bitrix_client.get(6533)
     # result = await contact_bitrix_client.get(18281)
     if result:
+        ...
         print(f"{result}-------DEAL--UPDATE")
     # print(f"{products_deal}-------DEAL")
     # products_invoice = await product_bitrix_client.get_entity_products(

@@ -107,18 +107,31 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
             )
             logger.debug(f"Changes detected for deal {external_id}: {changes}")
 
-            await self._check_source(deal_b24, deal_db)
+            # new deal BOELSHOP.ru - upd
 
-            products = (
-                await self.product_bitrix_client.check_update_products_entity(
-                    external_id, EntityTypeAbbr.DEAL
+            current_stage_name = deal_b24.stage_id
+            current_stage = (
+                await self.repo.get_sort_order_by_external_id_stage(
+                    current_stage_name
                 )
             )
-            if products:
-                self.data_provider.set_cached_products(products)
+            if current_stage and current_stage < 5:
+                await self._check_source(deal_b24, deal_db)
+                product_client = self.product_bitrix_client
+                products = await product_client.check_update_products_entity(
+                    external_id, EntityTypeAbbr.DEAL
+                )
+                if products:
+                    self.data_provider.set_cached_products(products)
+
+            available_stage = await self.stage_handler.check_available_stage(
+                deal_b24
+            )
 
             if deal_db is None:  # not in database
-                await self._handle_new_deal(deal_b24)
+                await self._handle_new_deal(
+                    deal_b24, current_stage, available_stage
+                )
             else:
                 await self._handle_exist_deal(deal_b24, deal_db)
 
@@ -144,9 +157,9 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
 
             # Обновляем или создаем запись в базе данных
             if deal_db:
-                await self.repo.update(deal_update)
+                await self.repo.update_entity(deal_update)
             else:
-                await self.repo.create(deal_b24)
+                await self.repo.create_entity(deal_b24)
 
             logger.info(
                 f"Successfully synchronized deal {deal_b24.external_id}"
@@ -160,10 +173,21 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
     async def _handle_new_deal(
         self,
         deal_b24: DealCreate,
+        current_stage: int | None,
+        available_stage: int | None,
     ) -> bool:
         """Обработка новой сделки"""
         # TODO: Реализовать логику обработки новой сделки
         logger.info(f"Processing new deal: {deal_b24.external_id}")
+        if (
+            current_stage
+            and available_stage
+            and current_stage != available_stage
+        ):
+            stage_id = await self.repo.get_external_id_by_sort_order_stage(
+                available_stage
+            )
+            self.update_tracker.update_field("stage_id", stage_id, deal_b24)
         return True
 
     async def _handle_exist_deal(
