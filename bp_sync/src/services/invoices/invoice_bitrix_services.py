@@ -59,3 +59,16 @@ class InvoiceBitrixClient(
         return await super().list(
             select, filter_entity, order, start, ENTITY_TYPE_ID
         )
+
+    async def get_invoice_by_deal_id(
+        self,
+        deal_id: int,
+    ) -> InvoiceCreate | None:
+        invoices = await self.list(
+            select=["id"], filter_entity={"parentId2": deal_id}
+        )
+        if invoices and invoices.result:
+            id_invoice = invoices.result[0].external_id
+            if id_invoice:
+                return await self.get(id_invoice)
+        return None

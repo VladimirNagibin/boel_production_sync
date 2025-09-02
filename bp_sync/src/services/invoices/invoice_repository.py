@@ -1,4 +1,4 @@
-from typing import Any, Callable, Coroutine, Type
+from typing import TYPE_CHECKING, Any, Callable, Coroutine, Type
 
 # from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -26,9 +26,11 @@ from schemas.invoice_schemas import InvoiceCreate, InvoiceUpdate
 from ..base_repositories.base_repository import BaseRepository
 from ..companies.company_services import CompanyClient  # , get_company_client
 from ..contacts.contact_services import ContactClient  # , get_contact_client
-from ..deals.deal_services import DealClient  # , get_deal_client
 from ..entities.source_services import SourceClient
 from ..users.user_services import UserClient  # , get_user_client
+
+if TYPE_CHECKING:
+    from ..deals.deal_services import DealClient  # , get_deal_client
 
 
 class InvoiceRepository(
@@ -47,7 +49,7 @@ class InvoiceRepository(
         # user_client: UserClient,
         get_company_client: Callable[[], Coroutine[Any, Any, CompanyClient]],
         get_contact_client: Callable[[], Coroutine[Any, Any, ContactClient]],
-        get_deal_client: Callable[[], Coroutine[Any, Any, DealClient]],
+        get_deal_client: Callable[[], Coroutine[Any, Any, "DealClient"]],
         get_user_client: Callable[[], Coroutine[Any, Any, UserClient]],
         get_source_client: Callable[[], Coroutine[Any, Any, SourceClient]],
     ):

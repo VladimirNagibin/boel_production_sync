@@ -394,8 +394,8 @@ async def check(
     deal_id = 54195  # 49935
     # comm = await get_comm(deal_id, timeline_client, timeline_repo)
     await deal_client.handler_deal(deal_id)
-    # result = ""
-    result = await company_bitrix_client.get(6533)
+    result = ""
+    # result = await company_bitrix_client.get(6533)
     # result = await contact_bitrix_client.get(18281)
     if result:
         ...

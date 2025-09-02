@@ -1,17 +1,20 @@
 from datetime import datetime
 from typing import Any
 
-from fastapi import HTTPException
+from fastapi import HTTPException, status
 
 from core.logger import logger
 from models.deal_models import Deal as DealDB
+from models.enums import StageSemanticEnum
 from schemas.company_schemas import CompanyCreate
 from schemas.contact_schemas import ContactCreate
 from schemas.deal_schemas import DealCreate
+from schemas.invoice_schemas import InvoiceCreate
 from schemas.lead_schemas import LeadCreate
 from schemas.product_schemas import EntityTypeAbbr
 
 from ..base_services.base_service import BaseEntityClient
+from ..exceptions import BitrixApiError
 from ..products.product_bitrix_services import ProductBitrixClient
 from ..timeline_comments.timeline_comment_bitrix_services import (
     TimeLineCommentBitrixClient,
@@ -95,7 +98,7 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
             ) from e
 
     # handling deal
-    async def handler_deal(self, external_id: int) -> None:
+    async def handler_deal(self, external_id: int) -> bool | None:
         """Обработчик сделки"""
         try:
             self.update_tracker.reset()
@@ -107,42 +110,123 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
             )
             logger.debug(f"Changes detected for deal {external_id}: {changes}")
 
-            # new deal BOELSHOP.ru - upd
-
-            current_stage_name = deal_b24.stage_id
-            current_stage = (
-                await self.repo.get_sort_order_by_external_id_stage(
-                    current_stage_name
+            if not deal_b24:
+                raise BitrixApiError(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    error=f"Deal with id={external_id} not found",
                 )
-            )
-            if current_stage and current_stage < 5:
-                await self._check_source(deal_b24, deal_db)
-                product_client = self.product_bitrix_client
-                products = await product_client.check_update_products_entity(
-                    external_id, EntityTypeAbbr.DEAL
-                )
-                if products:
-                    self.data_provider.set_cached_products(products)
 
-            available_stage = await self.stage_handler.check_available_stage(
-                deal_b24
-            )
+            invoice = await self.data_provider.get_invoice_data(deal_b24)
 
-            if deal_db is None:  # not in database
-                await self._handle_new_deal(
-                    deal_b24, current_stage, available_stage
+            if deal_b24.stage_semantic_id == StageSemanticEnum.FAIL:
+                return await self._handle_fail_stage_deal(
+                    deal_b24, invoice, changes
                 )
+
+            if deal_db and deal_db.is_frozen:
+                return await self._handle_frozen_deal(deal_b24, deal_db)
+
+            if invoice is None:
+                await self._handle_deal_without_invoice(deal_b24, deal_db)
             else:
-                await self._handle_exist_deal(deal_b24, deal_db)
+                await self._handle_deal_with_invoice(
+                    deal_b24, deal_db, invoice
+                )
 
             if self.update_tracker.has_changes():
                 await self._synchronize_deal_data(deal_b24, deal_db)
+            return None
         except Exception as e:
             logger.error(f"Error processing deal {external_id}: {str(e)}")
             raise
         finally:
             self.data_provider.clear_cache()
             self.update_tracker.reset()
+
+    async def _handle_fail_stage_deal(
+        self,
+        deal_b24: DealCreate,
+        invoice: InvoiceCreate | None,
+        changes: dict[str, dict[str, Any]] | None,
+    ) -> bool:
+        """Обработка провала сделки"""
+        # TODO: Реализовать логику обработки провала сделки
+        # Если current_stage_id != stage_id - обновить
+        # Если есть изменения в сделке - обновить
+        # Если есть счёт и не на стадии провал - перевести в провал.
+        # Отправить сигнал в 1С на удаление счёта.
+        logger.info(f"Processing fail deal: {deal_b24.external_id}")
+
+        return True
+
+    async def _handle_frozen_deal(
+        self,
+        deal_b24: DealCreate,
+        deal_db: DealCreate | None,
+    ) -> bool:
+        """Обработка замороженной сделки"""
+        # TODO: Реализовать логику обработки замороженной сделки
+        # Откат сделки к данным в БД
+        logger.info(f"Processing frozen deal: {deal_b24.external_id}")
+
+        return True
+
+    async def _handle_deal_without_invoice(
+        self,
+        deal_b24: DealCreate,
+        deal_db: DealCreate,
+    ) -> bool:
+        """Обработка новой сделки"""
+        # TODO: Реализовать логику обработки новой сделки
+        logger.info(f"Processing new deal: {deal_b24.external_id}")
+
+        external_id = self._get_external_id(deal_b24)
+        if external_id is None:
+            return False
+        current_stage_name = deal_b24.stage_id
+        current_stage = await self.repo.get_sort_order_by_external_id_stage(
+            current_stage_name
+        )
+        if current_stage and current_stage < 5:
+            await self._check_source(deal_b24, deal_db)
+            product_client = self.product_bitrix_client
+
+            products = await product_client.check_update_products_entity(
+                external_id, EntityTypeAbbr.DEAL
+            )
+            if products:
+                self.data_provider.set_cached_products(products)
+
+        available_stage = await self.stage_handler.check_available_stage(
+            deal_b24
+        )
+        if (
+            current_stage
+            and available_stage
+            and current_stage != available_stage
+        ):
+            stage_id = await self.repo.get_external_id_by_sort_order_stage(
+                available_stage
+            )
+            self.update_tracker.update_field("stage_id", stage_id, deal_b24)
+        return True
+
+    def _get_external_id(self, deal_b24: DealCreate) -> int | None:
+        if not deal_b24.external_id:
+            return None
+        return int(deal_b24.external_id)
+
+    async def _handle_deal_with_invoice(
+        self,
+        deal_b24: DealCreate,
+        deal_db: DealCreate,
+        invoice: InvoiceCreate,
+    ) -> bool:
+        """Обработка сделки с выставленным счётом"""
+        # TODO: Реализовать логику обработки сделки с выставленным счётом
+        logger.info(f"Processing existing deal: {deal_b24.external_id}")
+
+        return True
 
     async def _synchronize_deal_data(
         self,
@@ -169,36 +253,6 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
                 f"Failed to synchronize deal {deal_b24.external_id}: {str(e)}"
             )
             raise
-
-    async def _handle_new_deal(
-        self,
-        deal_b24: DealCreate,
-        current_stage: int | None,
-        available_stage: int | None,
-    ) -> bool:
-        """Обработка новой сделки"""
-        # TODO: Реализовать логику обработки новой сделки
-        logger.info(f"Processing new deal: {deal_b24.external_id}")
-        if (
-            current_stage
-            and available_stage
-            and current_stage != available_stage
-        ):
-            stage_id = await self.repo.get_external_id_by_sort_order_stage(
-                available_stage
-            )
-            self.update_tracker.update_field("stage_id", stage_id, deal_b24)
-        return True
-
-    async def _handle_exist_deal(
-        self,
-        deal_b24: DealCreate,
-        deal_db: DealCreate,
-    ) -> bool:
-        """Обработка существующей сделки"""
-        # TODO: Реализовать логику обработки существующей сделки
-        logger.info(f"Processing existing deal: {deal_b24.external_id}")
-        return True
 
     async def _check_source(
         self,
@@ -340,6 +394,17 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
             return await company_service.bitrix_client.get(company_id)
         except Exception as e:
             logger.error(f"Failed to get company {company_id}: {str(e)}")
+            return None
+
+    async def get_invoice(self, deal_id: int) -> InvoiceCreate | None:
+        """Получение компании по ID"""
+        try:
+            invoice_service = await self.repo.get_invoice_client()
+            return await invoice_service.bitrix_client.get_invoice_by_deal_id(
+                deal_id
+            )
+        except Exception as e:
+            logger.error(f"Failed to get invoice of deal {deal_id}: {str(e)}")
             return None
 
     async def get_contact(self, contact_id: int) -> ContactCreate | None:

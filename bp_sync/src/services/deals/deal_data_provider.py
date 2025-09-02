@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING
 from schemas.company_schemas import CompanyCreate
 from schemas.contact_schemas import ContactCreate
 from schemas.deal_schemas import DealCreate
+from schemas.invoice_schemas import InvoiceCreate
 from schemas.product_schemas import ListProductEntity
 
 if TYPE_CHECKING:
@@ -17,6 +18,7 @@ class DealDataProvider:
         self._cached_company: CompanyCreate | None = None
         self._cached_contact: ContactCreate | None = None
         self._cached_products: ListProductEntity | None = None
+        self._cached_invoice: InvoiceCreate | None = None
 
     async def get_company_data(
         self, deal_b24: DealCreate
@@ -48,6 +50,21 @@ class DealDataProvider:
 
         return None
 
+    async def get_invoice_data(
+        self, deal_b24: DealCreate
+    ) -> InvoiceCreate | None:
+        """Получает данные контакта"""
+        if self._cached_invoice:
+            return self._cached_invoice
+        if deal_b24.external_id is None:
+            return None
+        invoice = await self.deal_client.get_invoice(int(deal_b24.external_id))
+        if invoice:
+            self._cached_invoice = invoice
+            return invoice
+
+        return None
+
     async def get_products_data(self) -> ListProductEntity | None:
         """Получает товары сделки"""
         return self._cached_products
@@ -69,3 +86,4 @@ class DealDataProvider:
         self._cached_company = None
         self._cached_contact = None
         self._cached_products = None
+        self._cached_invoice = None

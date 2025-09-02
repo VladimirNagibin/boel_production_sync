@@ -120,6 +120,10 @@ class BaseDeal:
     wz_telegram_id: Optional[str] = Field(None, alias="UF_CRM_63A03182DFB0F")
     wz_avito: Optional[str] = Field(None, alias="UF_CRM_63ABEBD42730D")
 
+    # Вспомогательные флаги
+    is_frozen: Optional[bool] = Field(default=None)
+    is_setting_source: Optional[bool] = Field(default=None)
+
     @field_validator("external_id", mode="before")  # type: ignore[misc]
     @classmethod
     def convert_str_to_int(cls, value: str | int) -> int:

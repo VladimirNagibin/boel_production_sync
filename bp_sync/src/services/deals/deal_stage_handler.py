@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING
 
 from core.logger import logger
+from models.bases import EntityType
 from schemas.contact_schemas import ContactCreate
 from schemas.deal_schemas import DealCreate
 
@@ -15,6 +16,7 @@ BLACK_SYSTEM_DB = 8923
 BLACK_SYSTEM_CONTRACT = "Договор   от "
 OFFER_COMPANIES = (445, 447, 773)
 OFFER_COMPANY_CONTRACT = "Счет-оферта"
+INVOICE_SUCCESS_STAGE = "DT31_1:P"
 
 
 class DealStageHandler:
@@ -49,7 +51,6 @@ class DealStageHandler:
             available_stage = 2
         else:
             return available_stage
-
         # Проверяем условия для перехода на стадию 3
         if not await self._has_required_stage3_data(deal_b24):
             return available_stage
@@ -98,7 +99,6 @@ class DealStageHandler:
         products = await self.deal_client.data_provider.get_products_data()
         if not (products and products.count_products > 0):
             return False
-
         # Получаем данные компании
         company = await self.deal_client.data_provider.get_company_data(
             deal_b24
@@ -110,9 +110,17 @@ class DealStageHandler:
             and company
             and company.main_activity_id
         ):
-            self.deal_client.update_tracker.update_field(
-                "main_activity_id", company.main_activity_id, deal_b24
+            repo = self.deal_client.repo
+            main_activity = await repo.get_main_activity_by_entity(
+                EntityType.COMPANY, company.main_activity_id
             )
+
+            if main_activity:
+                self.deal_client.update_tracker.update_field(
+                    "main_activity_id",
+                    main_activity.get_id_entity(EntityType.DEAL),
+                    deal_b24,
+                )
         if not (
             deal_b24.main_activity_id or (company and company.main_activity_id)
         ):
@@ -135,6 +143,7 @@ class DealStageHandler:
         - Фирма отгрузки
         """
         # Получаем данные компании
+
         company = await self.deal_client.data_provider.get_company_data(
             deal_b24
         )
@@ -229,3 +238,16 @@ class DealStageHandler:
         - обработка разных фирм отгрузки
         """
         return await self.contract_handler.process_contracts(deal_b24)
+
+    async def _has_required_stage6_data(self, deal_b24: DealCreate) -> bool:
+        """
+        Проверяет наличие данных для перехода на стадию 6:
+        - наличие счёта
+        - счёт находится на стадии успешный
+        """
+        invoice = await self.deal_client.data_provider.get_invoice_data(
+            deal_b24
+        )
+        return bool(
+            invoice and invoice.invoice_stage_id == INVOICE_SUCCESS_STAGE
+        )
