@@ -97,7 +97,6 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
                 status_code=500, detail=f"Export error: {str(e)}"
             ) from e
 
-    # handling deal
     async def handler_deal(self, external_id: int) -> bool | None:
         """Обработчик сделки"""
         try:
@@ -116,25 +115,12 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
                     error=f"Deal with id={external_id} not found",
                 )
 
-            invoice = await self.data_provider.get_invoice_data(deal_b24)
-
-            if deal_b24.stage_semantic_id == StageSemanticEnum.FAIL:
-                return await self._handle_fail_stage_deal(
-                    deal_b24, invoice, changes
-                )
-
-            if deal_db and deal_db.is_frozen:
-                return await self._handle_frozen_deal(deal_b24, deal_db)
-
-            if invoice is None:
-                await self._handle_deal_without_invoice(deal_b24, deal_db)
-            else:
-                await self._handle_deal_with_invoice(
-                    deal_b24, deal_db, invoice
-                )
+            result = await self._handle_deal(deal_b24, deal_db, changes)
+            if not result:
+                return None
 
             if self.update_tracker.has_changes():
-                await self._synchronize_deal_data(deal_b24, deal_db)
+                return await self._synchronize_deal_data(deal_b24, deal_db)
             return None
         except Exception as e:
             logger.error(f"Error processing deal {external_id}: {str(e)}")
@@ -142,6 +128,53 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
         finally:
             self.data_provider.clear_cache()
             self.update_tracker.reset()
+
+    async def _handle_deal(
+        self,
+        deal_b24: DealCreate,
+        deal_db: DealCreate,
+        changes: dict[str, dict[str, Any]] | None,
+    ) -> bool | None:
+        """Обработка сделки"""
+        try:
+            invoice = await self.data_provider.get_invoice_data(deal_b24)
+
+            if deal_db and deal_db.is_frozen:
+                return await self._handle_frozen_deal(
+                    deal_b24, deal_db, invoice
+                )
+
+            if deal_b24.stage_semantic_id == StageSemanticEnum.FAIL:
+                return await self._handle_fail_stage_deal(
+                    deal_b24, invoice, changes
+                )
+
+            if invoice is None:
+                return await self._handle_deal_without_invoice(
+                    deal_b24, deal_db, changes
+                )
+            else:
+                return await self._handle_deal_with_invoice(
+                    deal_b24, deal_db, invoice, changes
+                )
+        except Exception as e:
+            logger.error(
+                f"Error processing deal {deal_b24:external_id}: {str(e)}"
+            )
+            raise
+
+    async def _handle_frozen_deal(
+        self,
+        deal_b24: DealCreate,
+        deal_db: DealCreate | None,
+        invoice: InvoiceCreate | None,
+    ) -> bool:
+        """Обработка замороженной сделки"""
+        # TODO: Реализовать логику обработки замороженной сделки
+        # Откат сделки к данным в БД
+        logger.info(f"Processing frozen deal: {deal_b24.external_id}")
+
+        return True
 
     async def _handle_fail_stage_deal(
         self,
@@ -159,26 +192,15 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
 
         return True
 
-    async def _handle_frozen_deal(
-        self,
-        deal_b24: DealCreate,
-        deal_db: DealCreate | None,
-    ) -> bool:
-        """Обработка замороженной сделки"""
-        # TODO: Реализовать логику обработки замороженной сделки
-        # Откат сделки к данным в БД
-        logger.info(f"Processing frozen deal: {deal_b24.external_id}")
-
-        return True
-
     async def _handle_deal_without_invoice(
         self,
         deal_b24: DealCreate,
         deal_db: DealCreate,
+        changes: dict[str, dict[str, Any]] | None,
     ) -> bool:
-        """Обработка новой сделки"""
-        # TODO: Реализовать логику обработки новой сделки
-        logger.info(f"Processing new deal: {deal_b24.external_id}")
+        """Обработка сделки без счёта"""
+        # TODO: Реализовать логику обработки сделки без счёта
+        logger.info(f"Processing deal without invoice: {deal_b24.external_id}")
 
         external_id = self._get_external_id(deal_b24)
         if external_id is None:
@@ -211,16 +233,30 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
             self.update_tracker.update_field("stage_id", stage_id, deal_b24)
         return True
 
-    def _get_external_id(self, deal_b24: DealCreate) -> int | None:
-        if not deal_b24.external_id:
+    async def _get_current_stage_info(
+        self, deal_b24: DealCreate
+    ) -> tuple[str, int] | None:
+        """Получает информацию о текущем этапе сделки"""
+        current_stage_name = deal_b24.stage_id
+        current_stage = await self.repo.get_sort_order_by_external_id_stage(
+            current_stage_name
+        )
+
+        if not current_stage:
+            logger.warning(
+                "Cannot find stage information for deal: "
+                f"{deal_b24.external_id}"
+            )
             return None
-        return int(deal_b24.external_id)
+
+        return current_stage_name, current_stage
 
     async def _handle_deal_with_invoice(
         self,
         deal_b24: DealCreate,
         deal_db: DealCreate,
         invoice: InvoiceCreate,
+        changes: dict[str, dict[str, Any]] | None,
     ) -> bool:
         """Обработка сделки с выставленным счётом"""
         # TODO: Реализовать логику обработки сделки с выставленным счётом
@@ -228,11 +264,20 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
 
         return True
 
+    def _get_external_id(self, deal_b24: DealCreate) -> int | None:
+        if not deal_b24.external_id:
+            return None
+        try:
+            return int(deal_b24.external_id)
+        except (ValueError, TypeError):
+            logger.error(f"Invalid external_id format: {deal_b24.external_id}")
+            return None
+
     async def _synchronize_deal_data(
         self,
         deal_b24: DealCreate,
         deal_db: DealCreate | None,
-    ) -> None:
+    ) -> bool:
         """Синхронизирует данные сделки между Bitrix24 и базой данных"""
         try:
             deal_update = self.update_tracker.get_deal_update()
@@ -248,11 +293,12 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
             logger.info(
                 f"Successfully synchronized deal {deal_b24.external_id}"
             )
+            return True
         except Exception as e:
             logger.error(
                 f"Failed to synchronize deal {deal_b24.external_id}: {str(e)}"
             )
-            raise
+            return False
 
     async def _check_source(
         self,
@@ -266,51 +312,55 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
             source_id = deal_b24.source_id
             type_id = deal_b24.type_id
             context: dict[str, Any] = {}
-            result = await identify_source(
+            if deal_db and deal_db.is_setting_source:
+                creation_corr = CreationSourceEnum.from_value(
+                    deal_db.creation_source_id
+                )
+                type_corr = DealTypeEnum.from_value(deal_db.type_id)
+                source_corr = DealSourceEnum.from_value(deal_db.source_id)
+            else:
+                result = await identify_source(
+                    deal_b24,
+                    self.get_lead,
+                    self.get_company,
+                    self.get_comments,
+                    context=context,
+                )
+                if "company" in context:
+                    self.data_provider.set_cached_company(context["company"])
+                creation_corr, type_corr, source_corr = result
+                logger.info(
+                    f"{deal_b24.title} - comparison of source changes:"
+                    f"{CreationSourceEnum.get_display_name(creation_corr)}"
+                    f":{creation_source_id}, "
+                    f"{DealTypeEnum.get_display_name(type_corr)}:{type_id}, "
+                    f"{DealSourceEnum.get_display_name(source_corr)}:"
+                    f"{source_id}"
+                )
+
+            needs_update |= await self._update_field_if_needed(
                 deal_b24,
-                self.get_lead,
-                self.get_company,
-                self.get_comments,
-                context=context,
-            )
-            if "company" in context:
-                self.data_provider.set_cached_company(context["company"])
-            creation_source_corr, type_correct, source_correct = result
-            logger.info(
-                f"{deal_b24.title} - comparison of source changes:"
-                f"{CreationSourceEnum.get_display_name(creation_source_corr)}"
-                f":{creation_source_id}, "
-                f"{DealTypeEnum.get_display_name(type_correct)}:{type_id}, "
-                f"{DealSourceEnum.get_display_name(source_correct)}:"
-                f"{source_id}"
+                "creation_source_id",
+                creation_source_id,
+                creation_corr.value,
             )
 
-            if deal_db is None:  # new deal
-                needs_update |= await self._update_field_if_needed(
-                    deal_b24,
-                    "creation_source_id",
-                    creation_source_id,
-                    creation_source_corr.value,
-                )
+            needs_update |= await self._update_field_if_needed(
+                deal_b24,
+                "source_id",
+                source_id,
+                source_corr.value,
+            )
 
-                needs_update |= await self._update_field_if_needed(
-                    deal_b24,
-                    "source_id",
-                    source_id,
-                    source_correct.value,
-                )
-
-                needs_update |= await self._update_field_if_needed(
-                    deal_b24,
-                    "type_id",
-                    type_id,
-                    type_correct.value,
-                )
-                needs_update |= await self._handle_assignment(
-                    deal_b24, creation_source_corr
-                )
-                return needs_update
-            # TODO: Реализовать логику обработки источников существующей сделки
+            needs_update |= await self._update_field_if_needed(
+                deal_b24,
+                "type_id",
+                type_id,
+                type_corr.value,
+            )
+            needs_update |= await self._handle_assignment(
+                deal_b24, creation_corr
+            )
             return needs_update
         except Exception as e:
             logger.error(
