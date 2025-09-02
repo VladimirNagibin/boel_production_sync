@@ -14,6 +14,14 @@ class CreationSourceEnum(IntEnum):
         }
         return display_names.get(value, "Неизвестно")
 
+    @classmethod
+    def from_value(cls, value: int | None) -> "CreationSourceEnum":
+        """Get enum member by value"""
+        for member in cls:
+            if member.value == value:
+                return member
+        raise ValueError(f"No matching enum member for value {value}")
+
 
 class DealTypeEnum(StrEnum):
     DIRECT_SALES = "1"  # Прямые продажи
@@ -31,6 +39,14 @@ class DealTypeEnum(StrEnum):
             "7": "ВЭД",
         }
         return display_names.get(value, "Неизвестно")
+
+    @classmethod
+    def from_value(cls, value: str | None) -> "DealTypeEnum":
+        """Get enum member by value"""
+        for member in cls:
+            if member.value == value:
+                return member
+        raise ValueError(f"No matching enum member for value {value}")
 
 
 class DealSourceEnum(StrEnum):
@@ -59,3 +75,11 @@ class DealSourceEnum(StrEnum):
             "23": "EMAIL",
         }
         return display_names.get(value, "Неизвестно")
+
+    @classmethod
+    def from_value(cls, value: str | None) -> "DealSourceEnum":
+        """Get enum member by value"""
+        for member in cls:
+            if member.value == value:
+                return member
+        raise ValueError(f"No matching enum member for value {value}")
