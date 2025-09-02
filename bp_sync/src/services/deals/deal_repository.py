@@ -43,6 +43,7 @@ from ..base_repositories.base_repository import BaseRepository
 from ..companies.company_services import CompanyClient
 from ..contacts.contact_services import ContactClient
 from ..entities.source_services import SourceClient
+from ..exceptions import ConflictException
 from ..invoices.invoice_services import InvoiceClient
 from ..leads.lead_services import LeadClient
 from ..users.user_services import UserClient
@@ -246,9 +247,9 @@ class DealRepository(BaseRepository[DealDB, DealCreate, DealUpdate, int]):
                 add_info_data.deal_id
             )
             if existing_info:
-                raise ValueError(
-                    "Дополнительная информация для сделки "
-                    f"{add_info_data.deal_id} уже существует"
+                raise ConflictException(
+                    entity="AdditionalInfo",
+                    external_id=add_info_data.deal_id,
                 )
 
             additional_info = AddInfoDB(
@@ -273,7 +274,7 @@ class DealRepository(BaseRepository[DealDB, DealCreate, DealUpdate, int]):
                 "Нарушение целостности данных при создании дополнительной "
                 "информации"
             ) from e
-        except (ValueError, RuntimeError) as e:
+        except (ValueError, RuntimeError, ConflictException) as e:
             await self.session.rollback()
             logger.error(
                 "Ошибка при создании дополнительной информации для сделки "
@@ -290,6 +291,21 @@ class DealRepository(BaseRepository[DealDB, DealCreate, DealUpdate, int]):
                 "Не удалось создать дополнительную информацию из-за ошибки "
                 "базы данных"
             ) from e
+
+    async def set_add_info_by_deal_id(
+        self, deal_id: int, comment: str
+    ) -> bool:
+        """Установить дополнительную информацию"""
+        try:
+            await self.create_add_info(
+                AddInfoCreate(deal_id=deal_id, comment=comment)
+            )
+            return True
+        except ConflictException:
+            await self.update_add_info(deal_id, AddInfoUpdate(comment=comment))
+            return True
+        except Exception:
+            return False
 
     async def update_add_info(
         self, deal_id: int, add_info_data: AddInfoUpdate
