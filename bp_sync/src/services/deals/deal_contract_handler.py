@@ -107,7 +107,8 @@ class DealContractHandler:
             return True
         if (
             shipping_company_id in OFFER_COMPANIES
-            and deal_b24.payment_type == DualTypePaymentEnum.PREPAYMENT
+            and isinstance(deal_b24.payment_type, tuple)
+            and deal_b24.payment_type == DualTypePaymentEnum.PREPAYMENT.value
         ):
             await self._update_contract_company(
                 shipp,

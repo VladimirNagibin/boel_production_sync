@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, false
 from sqlalchemy.dialects.postgresql import ENUM as PgEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -349,6 +349,18 @@ class Deal(BusinessEntity):
     yaclientid: Mapped[str | None] = mapped_column(
         comment="yaclientid"
     )  # UF_CRM_1739185983784 : yaclientid
+
+    # Вспомогательные флаги
+    is_frozen: Mapped[bool] = mapped_column(
+        default=False,
+        server_default=false(),
+        comment="Просроченная сделка заморожена",
+    )
+    is_setting_source: Mapped[bool] = mapped_column(
+        default=False,
+        server_default=false(),
+        comment="Источники установлены вручную",
+    )
 
     """ remaining fields:
     "TAX_VALUE": double, Ставка налога

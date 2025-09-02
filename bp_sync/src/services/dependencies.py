@@ -216,6 +216,7 @@ async def create_deal_repository() -> DealRepository:
         get_lead_client=lambda: locator.get("lead_client"),
         get_user_client=lambda: locator.get("user_client"),
         get_source_client=lambda: locator.get("source_client"),
+        get_invoice_client=lambda: locator.get("invoice_client"),
     )
 
 

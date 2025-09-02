@@ -33,7 +33,7 @@ class CommonFieldMixin(BaseModel):  # type: ignore[misc]
     is_deleted_in_bitrix: Optional[bool] = Field(default=None)
 
     external_id: Optional[int | str] = Field(
-        None,
+        default=None,
         validation_alias=AliasChoices("ID", "id"),
     )
 
@@ -288,6 +288,10 @@ class EntityAwareSchema(BaseModel):  # type: ignore[misc]
                 del data[key]
             except KeyError:
                 ...
+        try:
+            del data["shipping_company_obj"]  # TODO: crutch
+        except KeyError:
+            ...
         for key, value in data.items():
             if (
                 (key in self.FIELDS_BY_TYPE_ALT["str_none"] and not value)
@@ -336,7 +340,7 @@ class CoreUpdateSchema(
     CommonFieldMixin,
     TimestampsUpdateMixin,
     UserRelationsUpdateMixin,
-    BaseModel,  # type: ignore[misc]
+    EntityAwareSchema,
 ):
     """Базовая схема для обновления сущностей"""
 

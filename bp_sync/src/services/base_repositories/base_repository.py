@@ -421,6 +421,7 @@ class BaseRepository(
         self,
         data: SchemaTypeCreate | SchemaTypeUpdate,
         additional_checks: Optional[dict[str, tuple[Any, Any, bool]]] = None,
+        create: bool | None = False,
     ) -> None:
         from ..dependencies import (
             get_creation_cache,
@@ -444,7 +445,7 @@ class BaseRepository(
             value = getattr(data, field_name, None)
 
             if not value:
-                if required:
+                if required and create:
                     errors.append(f"Missing required field: {field_name}")
                 continue
 

@@ -37,11 +37,13 @@ from schemas.deal_schemas import (
     DealCreate,
     DealUpdate,
 )
+from schemas.main_activity_schemas import MainActivityCreate
 
 from ..base_repositories.base_repository import BaseRepository
 from ..companies.company_services import CompanyClient
 from ..contacts.contact_services import ContactClient
 from ..entities.source_services import SourceClient
+from ..invoices.invoice_services import InvoiceClient
 from ..leads.lead_services import LeadClient
 from ..users.user_services import UserClient
 
@@ -60,6 +62,7 @@ class DealRepository(BaseRepository[DealDB, DealCreate, DealUpdate, int]):
         get_lead_client: Callable[[], Coroutine[Any, Any, LeadClient]],
         get_user_client: Callable[[], Coroutine[Any, Any, UserClient]],
         get_source_client: Callable[[], Coroutine[Any, Any, SourceClient]],
+        get_invoice_client: Callable[[], Coroutine[Any, Any, InvoiceClient]],
     ):
         super().__init__(session)
         self.get_company_client = get_company_client
@@ -67,11 +70,12 @@ class DealRepository(BaseRepository[DealDB, DealCreate, DealUpdate, int]):
         self.get_lead_client = get_lead_client
         self.get_user_client = get_user_client
         self.get_source_client = get_source_client
+        self.get_invoice_client = get_invoice_client
 
     async def create_entity(self, data: DealCreate) -> DealDB:
         """Создает новую сделку с проверкой связанных объектов"""
         await self._check_related_objects(data)
-        await self._create_or_update_related(data)
+        await self._create_or_update_related(data, create=True)
         return await self.create(data=data)
 
     async def update_entity(self, data: DealUpdate | DealCreate) -> DealDB:
@@ -412,3 +416,44 @@ class DealRepository(BaseRepository[DealDB, DealCreate, DealUpdate, int]):
                 f"{external_id}: {e}"
             )
             return None
+
+    async def get_main_activity_by_entity(
+        self, entity_type: EntityType, value: int
+    ) -> MainActivityCreate | None:
+        # Определяем соответствие между типом сущности и полем в MainActivity
+        field_mapping = {
+            EntityType.DEAL: MainActivity.external_id,
+            EntityType.LEAD: MainActivity.ext_alt_id,
+            EntityType.CONTACT: MainActivity.ext_alt2_id,
+            EntityType.COMPANY: MainActivity.ext_alt3_id,
+            EntityType.INVOICE: MainActivity.ext_alt4_id,
+        }
+
+        # Выбираем поле для фильтрации based on entity type
+        filter_field = field_mapping.get(entity_type)
+        if filter_field is None:
+            return None
+
+        # Ищем запись в базе данных
+        query = select(MainActivity).where(filter_field == value)
+
+        # Выполняем запрос
+        result = await self.session.execute(query)
+
+        # Получаем первый результат
+        main_activity = result.scalars().first()
+
+        if main_activity is None:
+            return None
+
+        # Преобразуем SQLAlchemy модель в Pydantic модель
+        # return MainActivityCreate.model_validate(main_activity)
+        return MainActivityCreate(
+            internal_id=main_activity.id,
+            name=main_activity.name,
+            external_id=main_activity.external_id,
+            ext_alt_id=main_activity.ext_alt_id,
+            ext_alt2_id=main_activity.ext_alt2_id,
+            ext_alt3_id=main_activity.ext_alt3_id,
+            ext_alt4_id=main_activity.ext_alt4_id,
+        )
