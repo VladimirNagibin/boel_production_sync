@@ -30,6 +30,7 @@ from .deal_repository import DealRepository
 from .deal_source_classifier import WEBSITE_CREATOR, identify_source
 from .deal_stage_handler import DealStageHandler
 from .deal_update_tracker import DealUpdateTracker
+from .deal_with_invoice_handler import DealWithInvioceHandler
 from .enums import (
     EXCLUDE_FIELDS_FOR_COMPARE,
     CreationSourceEnum,
@@ -61,6 +62,7 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
         self.data_provider = DealDataProvider(self)
         self.update_tracker = DealUpdateTracker()
         self.site_order_handler = SiteOrderHandler(self)
+        self.deal_with_invoice_handler = DealWithInvioceHandler(self)
 
     @property
     def entity_name(self) -> str:
@@ -349,10 +351,11 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
         changes: dict[str, dict[str, Any]] | None,
     ) -> bool:
         """Обработка сделки с выставленным счётом"""
-        # TODO: Реализовать логику обработки сделки с выставленным счётом
         logger.info(f"Processing existing deal: {deal_b24.external_id}")
 
-        return True
+        return await self.deal_with_invoice_handler.handle_deal_with_invoice(
+            deal_b24, deal_db, invoice, changes
+        )
 
     def get_external_id(self, deal_b24: DealCreate) -> int | None:
         if not deal_b24.external_id:
