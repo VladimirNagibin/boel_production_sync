@@ -196,27 +196,27 @@ class InvoiceUpdate(BaseInvoice, CoreUpdateSchema):
     """Модель для частичного обновления счетов"""
 
     # Идентификаторы и основные данные
-    title: str | None = Field(None, alias="title")
+    title: str | None = Field(default=None, alias="title")
 
     # Финансовые данные
-    opportunity: float | None = Field(None, alias="opportunity")
+    opportunity: float | None = Field(default=None, alias="opportunity")
 
     # Статусы и флаги
     is_manual_opportunity: bool | None = Field(
-        None, alias="isManualOpportunity"
+        default=None, alias="isManualOpportunity"
     )
-    opened: bool | None = Field(None, alias="opened")
+    opened: bool | None = Field(default=None, alias="opened")
 
     # Перечисляемые типы
     payment_method: MethodPaymentEnum | None = Field(
-        None, alias="ufCrm_SMART_INVOICE_1651083629638"
+        default=None, alias="ufCrm_SMART_INVOICE_1651083629638"
     )
     payment_type: DualTypePaymentEnum | None = Field(
-        None,
+        default=None,
         alias="ufCrm_SMART_INVOICE_1651114959541",
     )
     shipment_type: DualTypeShipmentEnum | None = Field(
-        None, alias="ufCrm_62B53CC5A2EDF"
+        default=None, alias="ufCrm_62B53CC5A2EDF"
     )
 
     @field_validator("payment_method", mode="before")  # type: ignore[misc]

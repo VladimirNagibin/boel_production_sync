@@ -42,6 +42,8 @@ class SiteOrderHandler:
                 self.deal_client.update_tracker.update_field(
                     "stage_id", STAGE_NEW, deal_b24
                 )
+                # TODO: Для связанных Лида, Контакта и Компании установить
+                # ответственного Инет пользователя если менеджер не активен.
             return True
         except Exception as e:
             logger.error(

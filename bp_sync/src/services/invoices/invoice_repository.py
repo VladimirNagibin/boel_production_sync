@@ -1,9 +1,8 @@
 from typing import TYPE_CHECKING, Any, Callable, Coroutine, Type
 
-# from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from db.postgres import Base  # , get_session
+from db.postgres import Base
 from models.bases import EntityType
 from models.company_models import Company as CompanyDB
 from models.contact_models import Contact as ContactDB
@@ -24,13 +23,13 @@ from models.user_models import User as UserDB
 from schemas.invoice_schemas import InvoiceCreate, InvoiceUpdate
 
 from ..base_repositories.base_repository import BaseRepository
-from ..companies.company_services import CompanyClient  # , get_company_client
-from ..contacts.contact_services import ContactClient  # , get_contact_client
+from ..companies.company_services import CompanyClient
+from ..contacts.contact_services import ContactClient
 from ..entities.source_services import SourceClient
-from ..users.user_services import UserClient  # , get_user_client
+from ..users.user_services import UserClient
 
 if TYPE_CHECKING:
-    from ..deals.deal_services import DealClient  # , get_deal_client
+    from ..deals.deal_services import DealClient
 
 
 class InvoiceRepository(
@@ -43,10 +42,6 @@ class InvoiceRepository(
     def __init__(
         self,
         session: AsyncSession,
-        # company_client: "CompanyClient",
-        # contact_client: "ContactClient",
-        # deal_client: "DealClient",
-        # user_client: UserClient,
         get_company_client: Callable[[], Coroutine[Any, Any, CompanyClient]],
         get_contact_client: Callable[[], Coroutine[Any, Any, ContactClient]],
         get_deal_client: Callable[[], Coroutine[Any, Any, "DealClient"]],
@@ -109,20 +104,3 @@ class InvoiceRepository(
             "moved_by_id": (user_client, UserDB, False),
             "source_id": (source_client, Source, False),
         }
-
-
-# def get_invoice_repository(
-#    session: AsyncSession = Depends(get_session),
-#    company_client: CompanyClient = Depends(get_company_client),
-#    contact_client: ContactClient = Depends(get_contact_client),
-#    deal_client: DealClient = Depends(get_deal_client),
-#    user_client: UserClient = Depends(get_user_client),
-# ) -> InvoiceRepository:
-
-#    return InvoiceRepository(
-#        session=session,
-#        company_client=company_client,
-#        contact_client=contact_client,
-#        deal_client=deal_client,
-#        user_client=user_client,
-#    )

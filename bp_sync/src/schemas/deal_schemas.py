@@ -212,46 +212,46 @@ class DealUpdate(BaseUpdateSchema, BaseDeal):
     """Модель для частичного обновления сделок"""
 
     # Основные поля с алиасами (все необязательные)
-    title: Optional[str] = Field(None, alias="TITLE")
+    title: Optional[str] = Field(default=None, alias="TITLE")
 
     # Статусы и флаги
     is_manual_opportunity: Optional[bool] = Field(
-        None, alias="IS_MANUAL_OPPORTUNITY"
+        default=None, alias="IS_MANUAL_OPPORTUNITY"
     )
-    closed: Optional[bool] = Field(None, alias="CLOSED")
-    is_new: Optional[bool] = Field(None, alias="IS_NEW")
-    is_recurring: Optional[bool] = Field(None, alias="IS_RECURRING")
+    closed: Optional[bool] = Field(default=None, alias="CLOSED")
+    is_new: Optional[bool] = Field(default=None, alias="IS_NEW")
+    is_recurring: Optional[bool] = Field(default=None, alias="IS_RECURRING")
     is_return_customer: Optional[bool] = Field(
-        None, alias="IS_RETURN_CUSTOMER"
+        default=None, alias="IS_RETURN_CUSTOMER"
     )
     is_repeated_approach: Optional[bool] = Field(
-        None, alias="IS_REPEATED_APPROACH"
+        default=None, alias="IS_REPEATED_APPROACH"
     )
 
     # Финансовые данные
-    opportunity: Optional[float] = Field(None, alias="OPPORTUNITY")
+    opportunity: Optional[float] = Field(default=None, alias="OPPORTUNITY")
 
     # Временные метки
-    begindate: Optional[datetime] = Field(None, alias="BEGINDATE")
-    closedate: Optional[datetime] = Field(None, alias="CLOSEDATE")
+    begindate: Optional[datetime] = Field(default=None, alias="BEGINDATE")
+    closedate: Optional[datetime] = Field(default=None, alias="CLOSEDATE")
 
     # Перечисляемые типы
     stage_semantic_id: StageSemanticEnum | None = Field(
-        None, alias="STAGE_SEMANTIC_ID"
+        default=None, alias="STAGE_SEMANTIC_ID"
     )
     payment_type: DualTypePaymentEnum | None = Field(
-        None, alias="UF_CRM_1632738315"
+        default=None, alias="UF_CRM_1632738315"
     )
     shipment_type: DualTypeShipmentEnum | None = Field(
-        None, alias="UF_CRM_1655141630"
+        default=None, alias="UF_CRM_1655141630"
     )
     processing_status: ProcessingStatusEnum | None = Field(
-        None, alias="UF_CRM_1750571370"
+        default=None, alias="UF_CRM_1750571370"
     )
 
     # Связи с другими сущностями
-    stage_id: Optional[str] = Field(None, alias="STAGE_ID")
-    category_id: Optional[int] = Field(None, alias="CATEGORY_ID")
+    stage_id: Optional[str] = Field(default=None, alias="STAGE_ID")
+    category_id: Optional[int] = Field(default=None, alias="CATEGORY_ID")
 
     @field_validator("stage_semantic_id", mode="before")  # type: ignore[misc]
     @classmethod

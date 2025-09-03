@@ -8,8 +8,8 @@ from models.deal_models import Deal as DealDB
 from models.enums import StageSemanticEnum
 from schemas.company_schemas import CompanyCreate
 from schemas.contact_schemas import ContactCreate
-from schemas.deal_schemas import DealCreate
-from schemas.invoice_schemas import InvoiceCreate
+from schemas.deal_schemas import DealCreate, DealUpdate
+from schemas.invoice_schemas import InvoiceCreate, InvoiceUpdate
 from schemas.lead_schemas import LeadCreate
 from schemas.product_schemas import EntityTypeAbbr
 
@@ -30,10 +30,17 @@ from .deal_repository import DealRepository
 from .deal_source_classifier import WEBSITE_CREATOR, identify_source
 from .deal_stage_handler import DealStageHandler
 from .deal_update_tracker import DealUpdateTracker
-from .enums import CreationSourceEnum, DealSourceEnum, DealTypeEnum
+from .deal_with_invoice_handler import DealWithInvioceHandler
+from .enums import (
+    EXCLUDE_FIELDS_FOR_COMPARE,
+    CreationSourceEnum,
+    DealSourceEnum,
+    DealTypeEnum,
+)
 from .site_order_handler import SiteOrderHandler
 
 SOURCE_SITE_ORDER = "21"
+STAGE_INVOICE_FAIL = "DT31_1:D"
 
 
 class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
@@ -55,6 +62,7 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
         self.data_provider = DealDataProvider(self)
         self.update_tracker = DealUpdateTracker()
         self.site_order_handler = SiteOrderHandler(self)
+        self.deal_with_invoice_handler = DealWithInvioceHandler(self)
 
     @property
     def entity_name(self) -> str:
@@ -120,7 +128,7 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
             self.update_tracker.init_deal(external_id)
 
             deal_b24, deal_db, changes = await self.get_changes_b24_db(
-                external_id
+                external_id, exclude_fields=EXCLUDE_FIELDS_FOR_COMPARE
             )
             logger.debug(f"Changes detected for deal {external_id}: {changes}")
 
@@ -137,9 +145,9 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
                 logger.warning(f"Deal {external_id} processing returned False")
                 return None
 
-            if self.update_tracker.has_changes():
+            if self.update_tracker.has_changes() or changes:
                 sync_result = await self._synchronize_deal_data(
-                    deal_b24, deal_db
+                    deal_b24, deal_db, changes
                 )
                 logger.info(
                     f"Deal {external_id} synchronization "
@@ -172,14 +180,12 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
 
             if deal_db and deal_db.is_frozen:
                 logger.info(f"Deal {deal_b24.external_id} is frozen")
-                return await self._handle_frozen_deal(
-                    deal_b24, deal_db, invoice
-                )
+                return await self._handle_frozen_deal(deal_b24, changes)
 
             if deal_b24.stage_semantic_id == StageSemanticEnum.FAIL:
                 logger.info(f"Deal {deal_b24.external_id} is in FAIL stage")
                 return await self._handle_fail_stage_deal(
-                    deal_b24, invoice, changes
+                    deal_b24, deal_db, invoice, changes
                 )
 
             if invoice is None:
@@ -201,29 +207,64 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
     async def _handle_frozen_deal(
         self,
         deal_b24: DealCreate,
-        deal_db: DealCreate | None,
-        invoice: InvoiceCreate | None,
+        changes: dict[str, dict[str, Any]] | None,
     ) -> bool:
         """Обработка замороженной сделки"""
-        # TODO: Реализовать логику обработки замороженной сделки
-        # Откат сделки к данным в БД
+        # TODO: Реализовать логику обработки замороженной сделки: Откат товаров
         logger.info(f"Processing frozen deal: {deal_b24.external_id}")
-
+        if not changes:
+            return True
+        deal_update = DealUpdate(external_id=deal_b24.external_id)
+        for key, value in changes.items():
+            setattr(deal_update, key, value["external"])
+        await self.bitrix_client.update(deal_update)
         return True
 
     async def _handle_fail_stage_deal(
         self,
         deal_b24: DealCreate,
+        deal_db: DealCreate | None,
         invoice: InvoiceCreate | None,
         changes: dict[str, dict[str, Any]] | None,
     ) -> bool:
         """Обработка провала сделки"""
-        # TODO: Реализовать логику обработки провала сделки
-        # Если current_stage_id != stage_id - обновить
-        # Если есть изменения в сделке - обновить
-        # Если есть счёт и не на стадии провал - перевести в провал.
-        # Отправить сигнал в 1С на удаление счёта.
         logger.info(f"Processing fail deal: {deal_b24.external_id}")
+
+        await self._check_source(deal_b24, deal_db)
+
+        if deal_b24.stage_id != deal_b24.current_stage_id:
+            self.update_tracker.update_field(
+                "current_stage_id", deal_b24.stage_id, deal_b24
+            )
+        if invoice:
+            if (
+                invoice.invoice_stage_id != STAGE_INVOICE_FAIL
+                or invoice.current_stage_id != STAGE_INVOICE_FAIL
+            ):
+                invoice_update_data: dict[str, Any] = {
+                    "external_id": invoice.external_id,
+                    "stage_id": STAGE_INVOICE_FAIL,
+                    "current_stage_id": STAGE_INVOICE_FAIL,
+                }
+                invoice_update = InvoiceUpdate(**invoice_update_data)
+                try:
+                    invoice_service = await self.repo.get_invoice_client()
+                    await invoice_service.bitrix_client.update(invoice_update)
+                    if invoice.external_id and isinstance(
+                        invoice.external_id, int
+                    ):
+                        await invoice_service.import_from_bitrix(
+                            int(invoice.external_id)
+                        )
+                    if invoice.is_loaded:
+                        ...  # TODO: send in 1C to delete invoice
+                except Exception as e:
+                    logger.error(
+                        f"Failed to update invoice ID {invoice.external_id}: "
+                        f"{str(e)}"
+                    )
+                    ...
+                    # return False
 
         return True
 
@@ -259,6 +300,8 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
         products = await product_client.check_update_products_entity(
             external_id, EntityTypeAbbr.DEAL
         )
+        # TODO: Если товары заменялись, тогда сообщение ответственному,
+        # кроме заказов с сайта.
         if products:
             self.data_provider.set_cached_products(products)
             logger.debug(
@@ -308,10 +351,11 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
         changes: dict[str, dict[str, Any]] | None,
     ) -> bool:
         """Обработка сделки с выставленным счётом"""
-        # TODO: Реализовать логику обработки сделки с выставленным счётом
         logger.info(f"Processing existing deal: {deal_b24.external_id}")
 
-        return True
+        return await self.deal_with_invoice_handler.handle_deal_with_invoice(
+            deal_b24, deal_db, invoice, changes
+        )
 
     def get_external_id(self, deal_b24: DealCreate) -> int | None:
         if not deal_b24.external_id:
@@ -326,6 +370,7 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
         self,
         deal_b24: DealCreate,
         deal_db: DealCreate | None,
+        changes: dict[str, dict[str, Any]] | None,
     ) -> bool:
         """Синхронизирует данные сделки между Bitrix24 и базой данных"""
         logger.info(f"Synchronizing deal data for {deal_b24.external_id}")
@@ -335,6 +380,15 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
             await self.bitrix_client.update(deal_update)
 
             # Обновляем или создаем запись в базе данных
+            # Добавляем изменённые атрибуты.
+            if changes:
+                for key, change in changes.items():
+                    if getattr(deal_update, key) is None:
+                        setattr(deal_update, key, change["internal"])
+                        # self.update_tracker.update_field(
+                        #    key, change["internal"], deal_b24
+                        # )
+
             if deal_db:
                 await self.repo.update_entity(deal_update)
                 logger.debug(
