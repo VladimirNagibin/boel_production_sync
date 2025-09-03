@@ -208,7 +208,10 @@ class BaseEntityClient(ABC, Generic[T, R, C]):
             return False
 
     async def get_changes_b24_db(
-        self, entity_id: ExternalIdType, entity_type_id: int | None = None
+        self,
+        entity_id: ExternalIdType,
+        entity_type_id: int | None = None,
+        exclude_fields: set[str] | None = None,
     ) -> tuple[Any, Any, dict[str, dict[str, Any]] | None]:
         schema_b24 = await self.bitrix_client.get(entity_id, entity_type_id)
         schema_db = await self.repo.get(entity_id)
@@ -243,4 +246,8 @@ class BaseEntityClient(ABC, Generic[T, R, C]):
                 f"got {type(pydantic_db).__name__}"
             )
 
-        return schema_b24, schema_db, schema_b24.get_changes(pydantic_db)
+        return (
+            schema_b24,
+            schema_db,
+            schema_b24.get_changes(pydantic_db, exclude_fields=exclude_fields),
+        )

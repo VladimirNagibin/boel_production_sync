@@ -1,5 +1,15 @@
 from enum import IntEnum, StrEnum
 
+EXCLUDE_FIELDS_FOR_COMPARE = {
+    "internal_id",
+    "created_at",
+    "updated_at",
+    "is_deleted_in_bitrix",
+    "parent_deal_id",
+    "is_frozen",
+    "is_setting_source",
+}
+
 
 class CreationSourceEnum(IntEnum):
     AUTO = 805  # авто

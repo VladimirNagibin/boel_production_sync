@@ -54,7 +54,6 @@ class CommonFieldMixin(BaseModel):  # type: ignore[misc]
                 "created_at",
                 "updated_at",
                 "is_deleted_in_bitrix",
-                "parent_deal_id",
             }
 
         differences: dict[str, dict[str, Any]] = {}
