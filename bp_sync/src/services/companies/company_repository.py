@@ -161,3 +161,31 @@ class CompanyRepository(
             raise RuntimeError(
                 f"Не удалось найти компанию по ext_alt_id: {ext_alt_id}"
             ) from e
+
+    async def get_ext_alt_id_by_external_id(
+        self, external_id: int
+    ) -> int | None:
+        """
+        Получить ext_alt_id компании отгрузки по external_id
+
+        Args:
+            external_id: ID компании отгрузки
+
+        Returns:
+            ext_alt_id компании или None, если не найдена
+        """
+        try:
+            stmt = select(ShippingCompany.ext_alt_id).where(
+                ShippingCompany.external_id == external_id
+            )
+            result = await self.session.execute(stmt)
+            ext_alt_id = result.scalar_one_or_none()
+            return ext_alt_id  # type: ignore[no-any-return]
+        except SQLAlchemyError as e:
+            logger.error(
+                "Ошибка при поиске компании по ext_alt_id "
+                f"'{external_id}': {e}"
+            )
+            raise RuntimeError(
+                f"Не удалось найти компанию по ext_alt_id: {external_id}"
+            ) from e

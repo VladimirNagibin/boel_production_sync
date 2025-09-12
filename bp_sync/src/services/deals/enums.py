@@ -93,3 +93,10 @@ class DealSourceEnum(StrEnum):
             if member.value == value:
                 return member
         raise ValueError(f"No matching enum member for value {value}")
+
+
+class InvoiceStage(StrEnum):
+    NEW = "DT31_1:N"
+    SEND = "DT31_1:S"
+    SECCESS = "DT31_1:P"
+    FAIL = "DT31_1:D"
