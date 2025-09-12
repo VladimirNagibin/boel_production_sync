@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING, Any
 
 # from core.logger import logger
+from models.enums import StageSemanticEnum
 from schemas.deal_schemas import DealCreate
 from schemas.invoice_schemas import InvoiceCreate
 
@@ -8,6 +9,9 @@ from .enums import InvoiceStage
 
 if TYPE_CHECKING:
     from .deal_services import DealClient
+
+DEAL_STAGE_INVOICE = "FINAL_INVOICE"
+DEAL_STAGE_LOSE = "LOSE"
 
 
 class DealWithInvioceHandler:
@@ -75,6 +79,27 @@ class DealWithInvioceHandler:
             )
 
         if invoice.invoice_stage_id in (InvoiceStage.NEW, InvoiceStage.SEND):
+            if deal_b24.stage_id and deal_b24.stage_id != DEAL_STAGE_INVOICE:
+                self.deal_client.update_tracker.update_field(
+                    "stage_id", DEAL_STAGE_INVOICE, deal_b24
+                )
+
+        if invoice.invoice_stage_id == InvoiceStage.FAIL:
+            if deal_b24.stage_semantic_id and (
+                deal_b24.stage_semantic_id != StageSemanticEnum.FAIL
+            ):
+                self.deal_client.update_tracker.update_field(
+                    "stage_id", DEAL_STAGE_LOSE, deal_b24
+                )
+        product_client = self.deal_client.product_bitrix_client
+        if deal_b24.external_id and invoice.external_id:
+            if not await product_client.update_deal_product_from_invoice(
+                int(deal_b24.external_id), int(invoice.external_id)
+            ):
+                # TODO: unsuccessful processing of products
+                ...
+        if invoice.invoice_stage_id == InvoiceStage.SECCESS:
+            # TODO: handel seccess stage
             ...
 
         return True

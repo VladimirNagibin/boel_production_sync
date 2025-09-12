@@ -388,3 +388,43 @@ class ProductBitrixClient(
                 f"{str(e)}"
             )
             return None
+
+    async def update_deal_product_from_invoice(
+        self, deal_id: int, invoice_id: int
+    ) -> bool:
+        """
+        Проверяет и обновляет товары в сделке из счёта.
+
+        Args:
+            deal_id: ID сделки
+            invoice_id: ID счёта
+
+        Returns:
+            bool
+        """
+        try:
+            deal_products = await self._get_entity_products(
+                deal_id, EntityTypeAbbr.DEAL
+            )
+            invoice_products = await self._get_entity_products(
+                invoice_id, EntityTypeAbbr.INVOICE
+            )
+            if not deal_products.equals_ignore_owner(invoice_products):
+                logger.info(
+                    f"Products not equals deal:{deal_id}, invoice:{invoice_id}"
+                )
+                await self._set_product_rows(
+                    deal_id, EntityTypeAbbr.DEAL, invoice_products
+                )
+            logger.info(
+                f"Successfully updated products for deal:{deal_id} "
+                f"from invoice:{invoice_id}"
+            )
+            return True
+
+        except Exception as e:
+            logger.error(
+                f"Error updating products deal:{deal_id}, "
+                f"invoice:{invoice_id}. Error: {str(e)}"
+            )
+            return False
