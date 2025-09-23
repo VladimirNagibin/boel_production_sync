@@ -1,19 +1,21 @@
-from datetime import datetime
-from enum import Enum
-from typing import Any, Optional, TypeVar
+from datetime import datetime, timezone
+from typing import Any, Optional
 
 from pydantic import Field, field_validator
 
 from models.enums import (
+    DualTypePaymentEnum,
+    DualTypeShipmentEnum,
     ProcessingStatusEnum,
     StageSemanticEnum,
-    TypePaymentEnum,
-    TypeShipmentEnum,
 )
 
-from .base_schemas import BaseCreateSchema, BaseUpdateSchema, BitrixValidators
-
-EnumT = TypeVar("EnumT", bound=Enum)
+from .base_schemas import (
+    BaseCreateSchema,
+    BaseUpdateSchema,
+    BitrixValidators,
+    CommonFieldMixin,
+)
 
 
 class BaseDeal:
@@ -80,7 +82,7 @@ class BaseDeal:
 
     # Связанные сделки (доставка)
     parent_deal_id: Optional[int] = Field(None, alias="UF_CRM_1655891443")
-    chaild_deal_ids: list[int] | None = Field(None, alias="UF_CRM_1658467259")
+    related_deals: list[int] | None = Field(None, alias="UF_CRM_1658467259")
 
     # Маркетинговые метки
     mgo_cc_entry_id: Optional[str] = Field(
@@ -118,54 +120,17 @@ class BaseDeal:
     wz_telegram_id: Optional[str] = Field(None, alias="UF_CRM_63A03182DFB0F")
     wz_avito: Optional[str] = Field(None, alias="UF_CRM_63ABEBD42730D")
 
-    # Валидаторы
-    _validate_bool = field_validator(
-        "opened",
-        "is_shipment_approved",
-        "is_shipment_approved_invoice",
-        mode="before",
-    )(BitrixValidators.convert_to_bool)
+    # Вспомогательные флаги
+    is_frozen: Optional[bool] = Field(default=None)
+    is_setting_source: Optional[bool] = Field(default=None)
 
-    _validate_int = field_validator(
-        "external_id",
-        "assigned_by_id",
-        "created_by_id",
-        "modify_by_id",
-        "last_activity_by",
-        "address_loc_addr_id",
-        "probability",
-        "payment_grace_period",
-        "lead_id",
-        "company_id",
-        "contact_id",
-        "main_activity_id",
-        "shipping_company_id",
-        "creation_source_id",
-        "warehouse_id",
-        "deal_failure_reason_id",
-        "moved_by_id",
-        "defect_expert_id",
-        "parent_deal_id",
-        mode="before",
-        check_fields=False,
-    )(BitrixValidators.normalize_int)
-
-    _validate_datetime = field_validator(
-        "date_create",
-        "date_modify",
-        "last_activity_time",
-        "moved_time",
-        "payment_deadline",
-        "mgo_cc_create",
-        "mgo_cc_end",
-        mode="before",
-    )(BitrixValidators.normalize_datetime_fields)
-
-    _validate_list = field_validator(
-        "defects",
-        "chaild_deal_ids",
-        mode="before",
-    )(BitrixValidators.normalize_list)
+    @field_validator("external_id", mode="before")  # type: ignore[misc]
+    @classmethod
+    def convert_str_to_int(cls, value: str | int) -> int:
+        """Автоматическое преобразование строк в числа для ID"""
+        if isinstance(value, str) and value.isdigit():
+            return int(value)
+        return value  # type: ignore[return-value]
 
 
 class DealCreate(BaseCreateSchema, BaseDeal):
@@ -193,11 +158,11 @@ class DealCreate(BaseCreateSchema, BaseDeal):
     stage_semantic_id: StageSemanticEnum = Field(
         StageSemanticEnum.PROSPECTIVE, alias="STAGE_SEMANTIC_ID"
     )
-    payment_type: TypePaymentEnum = Field(
-        TypePaymentEnum.NOT_DEFINE, alias="UF_CRM_1632738315"
+    payment_type: DualTypePaymentEnum = Field(
+        DualTypePaymentEnum.NOT_DEFINE, alias="UF_CRM_1632738315"
     )
-    shipping_type: TypeShipmentEnum = Field(
-        TypeShipmentEnum.NOT_DEFINE, alias="UF_CRM_1655141630"
+    shipment_type: DualTypeShipmentEnum = Field(
+        DualTypeShipmentEnum.NOT_DEFINE, alias="UF_CRM_1655141630"
     )
     processing_status: ProcessingStatusEnum = Field(
         ProcessingStatusEnum.NOT_DEFINE, alias="UF_CRM_1750571370"
@@ -207,32 +172,6 @@ class DealCreate(BaseCreateSchema, BaseDeal):
     stage_id: str = Field(..., alias="STAGE_ID")
     category_id: int = Field(..., alias="CATEGORY_ID")
 
-    # Валидаторы
-    _validate_bool_extra = field_validator(
-        "is_manual_opportunity",
-        "closed",
-        "is_new",
-        "is_recurring",
-        "is_return_customer",
-        "is_repeated_approach",
-        mode="before",
-    )(BitrixValidators.convert_to_bool)
-
-    # _validate_int_extra = field_validator(
-    #    "category_id",
-    #    mode="before",
-    # )(BitrixValidators.normalize_int)
-
-    _validate_datetime_extra = field_validator(
-        "begindate",
-        "closedate",
-        mode="before",
-    )(BitrixValidators.normalize_datetime_fields)
-
-    _validate_float = field_validator("opportunity", mode="before")(
-        BitrixValidators.normalize_float
-    )
-
     @field_validator("stage_semantic_id", mode="before")  # type: ignore[misc]
     @classmethod
     def convert_stage_semantic_id(cls, v: Any) -> StageSemanticEnum:
@@ -242,16 +181,16 @@ class DealCreate(BaseCreateSchema, BaseDeal):
 
     @field_validator("payment_type", mode="before")  # type: ignore[misc]
     @classmethod
-    def convert_payment_type(cls, v: Any) -> TypePaymentEnum:
+    def convert_payment_type(cls, v: Any) -> DualTypePaymentEnum:
         return BitrixValidators.convert_enum(
-            v, TypePaymentEnum, TypePaymentEnum.NOT_DEFINE
+            v, DualTypePaymentEnum, DualTypePaymentEnum.NOT_DEFINE
         )
 
-    @field_validator("shipping_type", mode="before")  # type: ignore[misc]
+    @field_validator("shipment_type", mode="before")  # type: ignore[misc]
     @classmethod
-    def convert_shipping_type(cls, v: Any) -> TypeShipmentEnum:
+    def convert_shipment_type(cls, v: Any) -> DualTypeShipmentEnum:
         return BitrixValidators.convert_enum(
-            v, TypeShipmentEnum, TypeShipmentEnum.NOT_DEFINE
+            v, DualTypeShipmentEnum, DualTypeShipmentEnum.NOT_DEFINE
         )
 
     @field_validator("processing_status", mode="before")  # type: ignore[misc]
@@ -260,78 +199,59 @@ class DealCreate(BaseCreateSchema, BaseDeal):
         return BitrixValidators.convert_enum(
             v, ProcessingStatusEnum, ProcessingStatusEnum.NOT_DEFINE
         )
+
+    @field_validator("closedate", mode="before")  # type: ignore[misc]
+    @classmethod
+    def set_closedate_default(cls, value: datetime | None) -> datetime:
+        if value is None:
+            return datetime.now(timezone.utc)
+        return value
 
 
 class DealUpdate(BaseUpdateSchema, BaseDeal):
     """Модель для частичного обновления сделок"""
 
     # Основные поля с алиасами (все необязательные)
-    title: Optional[str] = Field(None, alias="TITLE")
+    title: Optional[str] = Field(default=None, alias="TITLE")
 
     # Статусы и флаги
     is_manual_opportunity: Optional[bool] = Field(
-        None, alias="IS_MANUAL_OPPORTUNITY"
+        default=None, alias="IS_MANUAL_OPPORTUNITY"
     )
-    closed: Optional[bool] = Field(None, alias="CLOSED")
-    is_new: Optional[bool] = Field(None, alias="IS_NEW")
-    is_recurring: Optional[bool] = Field(None, alias="IS_RECURRING")
+    closed: Optional[bool] = Field(default=None, alias="CLOSED")
+    is_new: Optional[bool] = Field(default=None, alias="IS_NEW")
+    is_recurring: Optional[bool] = Field(default=None, alias="IS_RECURRING")
     is_return_customer: Optional[bool] = Field(
-        None, alias="IS_RETURN_CUSTOMER"
+        default=None, alias="IS_RETURN_CUSTOMER"
     )
     is_repeated_approach: Optional[bool] = Field(
-        None, alias="IS_REPEATED_APPROACH"
+        default=None, alias="IS_REPEATED_APPROACH"
     )
 
     # Финансовые данные
-    opportunity: Optional[float] = Field(None, alias="OPPORTUNITY")
+    opportunity: Optional[float] = Field(default=None, alias="OPPORTUNITY")
 
     # Временные метки
-    begindate: Optional[datetime] = Field(None, alias="BEGINDATE")
-    closedate: Optional[datetime] = Field(None, alias="CLOSEDATE")
+    begindate: Optional[datetime] = Field(default=None, alias="BEGINDATE")
+    closedate: Optional[datetime] = Field(default=None, alias="CLOSEDATE")
 
     # Перечисляемые типы
     stage_semantic_id: StageSemanticEnum | None = Field(
-        None, alias="STAGE_SEMANTIC_ID"
+        default=None, alias="STAGE_SEMANTIC_ID"
     )
-    payment_type: TypePaymentEnum | None = Field(
-        None, alias="UF_CRM_1632738315"
+    payment_type: DualTypePaymentEnum | None = Field(
+        default=None, alias="UF_CRM_1632738315"
     )
-    shipping_type: TypeShipmentEnum | None = Field(
-        None, alias="UF_CRM_1655141630"
+    shipment_type: DualTypeShipmentEnum | None = Field(
+        default=None, alias="UF_CRM_1655141630"
     )
     processing_status: ProcessingStatusEnum | None = Field(
-        None, alias="UF_CRM_1750571370"
+        default=None, alias="UF_CRM_1750571370"
     )
 
     # Связи с другими сущностями
-    stage_id: Optional[str] = Field(None, alias="STAGE_ID")
-    category_id: Optional[int] = Field(None, alias="CATEGORY_ID")
-
-    # Валидаторы
-    _validate_bool_extra = field_validator(
-        "is_manual_opportunity",
-        "closed",
-        "is_new",
-        "is_recurring",
-        "is_return_customer",
-        "is_repeated_approach",
-        mode="before",
-    )(BitrixValidators.convert_to_bool)
-
-    _validate_int_extra = field_validator(
-        "category_id",
-        mode="before",
-    )(BitrixValidators.normalize_int)
-
-    _validate_datetime_extra = field_validator(
-        "begindate",
-        "closedate",
-        mode="before",
-    )(BitrixValidators.normalize_datetime_fields)
-
-    _validate_float = field_validator("opportunity", mode="before")(
-        BitrixValidators.normalize_float
-    )
+    stage_id: Optional[str] = Field(default=None, alias="STAGE_ID")
+    category_id: Optional[int] = Field(default=None, alias="CATEGORY_ID")
 
     @field_validator("stage_semantic_id", mode="before")  # type: ignore[misc]
     @classmethod
@@ -342,16 +262,16 @@ class DealUpdate(BaseUpdateSchema, BaseDeal):
 
     @field_validator("payment_type", mode="before")  # type: ignore[misc]
     @classmethod
-    def convert_payment_type(cls, v: Any) -> TypePaymentEnum:
+    def convert_payment_type(cls, v: Any) -> DualTypePaymentEnum:
         return BitrixValidators.convert_enum(
-            v, TypePaymentEnum, TypePaymentEnum.NOT_DEFINE
+            v, DualTypePaymentEnum, DualTypePaymentEnum.NOT_DEFINE
         )
 
-    @field_validator("shipping_type", mode="before")  # type: ignore[misc]
+    @field_validator("shipment_type", mode="before")  # type: ignore[misc]
     @classmethod
-    def convert_shipping_type(cls, v: Any) -> TypeShipmentEnum:
+    def convert_shipment_type(cls, v: Any) -> DualTypeShipmentEnum:
         return BitrixValidators.convert_enum(
-            v, TypeShipmentEnum, TypeShipmentEnum.NOT_DEFINE
+            v, DualTypeShipmentEnum, DualTypeShipmentEnum.NOT_DEFINE
         )
 
     @field_validator("processing_status", mode="before")  # type: ignore[misc]
@@ -360,3 +280,17 @@ class DealUpdate(BaseUpdateSchema, BaseDeal):
         return BitrixValidators.convert_enum(
             v, ProcessingStatusEnum, ProcessingStatusEnum.NOT_DEFINE
         )
+
+
+class AddInfoCreate(CommonFieldMixin):
+    """Модель для создания менеджеров"""
+
+    deal_id: int
+    comment: str
+
+
+class AddInfoUpdate(CommonFieldMixin):
+    """Модель для частичного обновления менеджеров"""
+
+    deal_id: int | None = Field(default=None)
+    comment: str | None = Field(default=None)

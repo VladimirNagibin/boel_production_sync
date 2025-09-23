@@ -6,6 +6,7 @@ from pydantic import Field, field_validator
 from models.enums import StageSemanticEnum
 
 from .base_schemas import (
+    SYSTEM_USER_ID,
     AddressMixin,
     BaseCreateSchema,
     BaseUpdateSchema,
@@ -34,7 +35,7 @@ class BaseLead:
 
     # Временные метки
     birthdate: datetime | None = Field(None, alias="BIRTHDATE")
-    date_closed: datetime | None = Field(..., alias="DATE_CLOSED")
+    date_closed: datetime | None = Field(None, alias="DATE_CLOSED")
     moved_time: datetime | None = Field(None, alias="MOVED_TIME")
 
     # География и источники
@@ -89,51 +90,13 @@ class BaseLead:
     im: list[CommunicationChannel] | None = Field(None, alias="IM")
     link: list[CommunicationChannel] | None = Field(None, alias="LINK")
 
-    # Валидаторы
-    _validate_bool = field_validator(
-        "has_phone",
-        "has_email",
-        "has_imol",
-        "opened",
-        "is_shipment_approved",
-        mode="before",
-    )(BitrixValidators.convert_to_bool)
-
-    _validate_int = field_validator(
-        "external_id",
-        "assigned_by_id",
-        "created_by_id",
-        "modify_by_id",
-        "last_activity_by",
-        "address_loc_addr_id",
-        "company_id",
-        "contact_id",
-        "main_activity_id",
-        "deal_failure_reason_id",
-        "moved_by_id",
-        mode="before",
-    )(BitrixValidators.normalize_int)
-
-    _validate_datetime = field_validator(
-        "date_create",
-        "date_modify",
-        "last_activity_time",
-        "birthdate",
-        "date_closed",
-        "moved_time",
-        "mgo_cc_create",
-        "mgo_cc_end",
-        mode="before",
-    )(BitrixValidators.normalize_datetime_fields)
-
-    _validate_list = field_validator(
-        "phone",
-        "email",
-        "web",
-        "im",
-        "link",
-        mode="before",
-    )(BitrixValidators.normalize_list)
+    @field_validator("external_id", mode="before")  # type: ignore[misc]
+    @classmethod
+    def convert_str_to_int(cls, value: str | int) -> int:
+        """Автоматическое преобразование строк в числа для ID"""
+        if isinstance(value, str) and value.isdigit():
+            return int(value)
+        return value  # type: ignore[return-value]
 
 
 class LeadCreate(
@@ -145,36 +108,52 @@ class LeadCreate(
     title: str = Field(..., alias="TITLE")
 
     # Статусы и флаги
-    is_manual_opportunity: bool = Field(False, alias="IS_MANUAL_OPPORTUNITY")
-    is_return_customer: bool = Field(False, alias="IS_RETURN_CUSTOMER")
+    is_manual_opportunity: bool = Field(
+        default=False, alias="IS_MANUAL_OPPORTUNITY"
+    )
+    is_return_customer: bool = Field(default=False, alias="IS_RETURN_CUSTOMER")
 
     # Финансовые данные
-    opportunity: float = Field(0.0, alias="OPPORTUNITY")
+    opportunity: float = Field(default=0.0, alias="OPPORTUNITY")
 
     # Перечисляемые типы
     status_semantic_id: StageSemanticEnum = Field(
-        StageSemanticEnum.PROSPECTIVE, alias="STATUS_SEMANTIC_ID"
+        default=StageSemanticEnum.PROSPECTIVE, alias="STATUS_SEMANTIC_ID"
     )
 
     # Связи с другими сущностями
     status_id: str = Field(..., alias="STATUS_ID")
-
-    # Валидаторы
-    _validate_bool_extra = field_validator(
-        "is_return_customer",
-        "is_manual_opportunity",
-        mode="before",
-    )(BitrixValidators.convert_to_bool)
-
-    _validate_float = field_validator("opportunity", mode="before")(
-        BitrixValidators.normalize_float
-    )
 
     @field_validator("status_semantic_id", mode="before")  # type: ignore[misc]
     @classmethod
     def convert_status_semantic_id(cls, v: Any) -> StageSemanticEnum:
         return BitrixValidators.convert_enum(
             v, StageSemanticEnum, StageSemanticEnum.PROSPECTIVE
+        )
+
+    @classmethod
+    def get_default_entity(cls, external_id: int) -> "LeadCreate":
+        now = datetime.now()
+        return LeadCreate(
+            # Обязательные поля из TimestampsCreateMixin
+            date_create=now,
+            date_modify=now,
+            # Обязательные поля из UserRelationsCreateMixin
+            assigned_by_id=SYSTEM_USER_ID,  # SYSTEM_USER_ID
+            created_by_id=SYSTEM_USER_ID,  # SYSTEM_USER_ID
+            modify_by_id=SYSTEM_USER_ID,  # SYSTEM_USER_ID
+            # Обязательные поля из HasCommunicationCreateMixin
+            has_phone=False,
+            has_email=False,
+            has_imol=False,
+            # Обязательные поля из LeadCreate
+            status_id="JUNK",
+            title=f"Deleted Lead {external_id}",  # Обязательное поле
+            # Задаем external_id и флаг удаления
+            external_id=external_id,  # Ваш внешний ID
+            is_deleted_in_bitrix=True,
+            # created_at=now,
+            # updated_at=now,
         )
 
 
@@ -202,17 +181,6 @@ class LeadUpdate(
 
     # Связи с другими сущностями
     status_id: str | None = Field(None, alias="STATUS_ID")
-
-    # Валидаторы
-    _validate_bool_extra = field_validator(
-        "is_return_customer",
-        "is_manual_opportunity",
-        mode="before",
-    )(BitrixValidators.convert_to_bool)
-
-    _validate_float = field_validator("opportunity", mode="before")(
-        BitrixValidators.normalize_float
-    )
 
     @field_validator("status_semantic_id", mode="before")  # type: ignore[misc]
     @classmethod

@@ -1,39 +1,45 @@
 from datetime import datetime
-from uuid import UUID
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, false
 from sqlalchemy.dialects.postgresql import ENUM as PgEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from .bases import EntityType, IntIdEntity
+from db.postgres import Base
+from schemas.deal_schemas import DealCreate
+
+from .bases import BusinessEntity, EntityType
 from .company_models import Company
 from .contact_models import Contact
-from .deal_documents import Billing
-from .enums import (
+
+# from .deal_documents import Billing
+from .enums import (  # TypePaymentEnum,; TypeShipmentEnum,
+    DualTypePayment,
+    DualTypePaymentEnum,
+    DualTypeShipment,
+    DualTypeShipmentEnum,
     ProcessingStatusEnum,
     StageSemanticEnum,
-    TypePaymentEnum,
-    TypeShipmentEnum,
 )
+from .invoice_models import Invoice
 from .lead_models import Lead
-from .references import (
+from .references import (  # DefectType,
     Category,
     CreationSource,
     Currency,
     DealFailureReason,
     DealStage,
     DealType,
-    DefectType,
     InvoiceStage,
     MainActivity,
     ShippingCompany,
     Source,
     Warehouse,
 )
+from .timeline_comment_models import TimelineComment
 from .user_models import User
 
 
-class Deal(IntIdEntity):
+class Deal(BusinessEntity):
     """Сделки"""
 
     __tablename__ = "deals"
@@ -45,15 +51,24 @@ class Deal(IntIdEntity):
         ),
         CheckConstraint("external_id > 0", name="external_id_positive"),
     )
+    _schema_class = DealCreate
 
     @property
     def entity_type(self) -> EntityType:
         return EntityType.DEAL
 
     @property
+    def entity_type1(self) -> str:
+        return "Deal"
+
+    @property
     def tablename(self) -> str:
         return self.__tablename__
 
+    def __str__(self) -> str:
+        return str(self.title)
+
+    # Идентификаторы и основные данные
     title: Mapped[str] = mapped_column(
         comment="Название сделки"
     )  # TITLE : Название
@@ -97,9 +112,9 @@ class Deal(IntIdEntity):
     payment_grace_period: Mapped[int | None] = mapped_column(
         comment="Отсрочка платежа (дни)"
     )  # UF_CRM_1656582798 Отсрочка платежа в днях
-    billings: Mapped["Billing"] = relationship(
-        "Billing", back_populates="deal"
-    )  # UF_CRM_1632738424* : Платёжки по счёту
+    # billings: Mapped["Billing"] = relationship(
+    #    "Billing", back_populates="deal"
+    # )  # UF_CRM_1632738424* : Платёжки по счёту
 
     # Временные метки
     begindate: Mapped[datetime] = mapped_column(
@@ -131,26 +146,34 @@ class Deal(IntIdEntity):
         ),
         comment="Семантика стадии",
     )  # STAGE_SEMANTIC_ID : Статусы стадии сделки
-    payment_type: Mapped[TypePaymentEnum] = mapped_column(
-        PgEnum(
-            TypePaymentEnum,
-            name="type_payment_enum",
-            create_type=False,
-            default=TypePaymentEnum.NOT_DEFINE,
-            server_default=0,
-        ),
+    # payment_type: Mapped[TypePaymentEnum] = mapped_column(
+    #    PgEnum(
+    #        TypePaymentEnum,
+    #        name="type_payment_enum",
+    #        create_type=False,
+    #        default=TypePaymentEnum.NOT_DEFINE,
+    #        server_default=0,
+    #    ),
+    #    comment="Тип оплаты",
+    # )  # UF_CRM_1632738315 : Тип оплаты счёта
+    payment_type: Mapped[DualTypePaymentEnum] = mapped_column(
+        DualTypePayment(value_type="deals"),
         comment="Тип оплаты",
     )  # UF_CRM_1632738315 : Тип оплаты счёта
-    shipping_type: Mapped[TypeShipmentEnum] = mapped_column(
-        PgEnum(
-            TypeShipmentEnum,
-            name="type_shipment_enum",
-            create_type=False,
-            default=TypeShipmentEnum.NOT_DEFINE,
-            server_default=0,
-        ),
-        comment="Тип отгрузки",
-    )  # UF_CRM_1655141630 : Тип отгрузки
+
+    # shipping_type: Mapped[TypeShipmentEnum] = mapped_column(
+    #    PgEnum(
+    #        TypeShipmentEnum,
+    #        name="type_shipment_enum",
+    #        create_type=False,
+    #        default=TypeShipmentEnum.NOT_DEFINE,
+    #        server_default=0,
+    #    ),
+    #    comment="Тип отгрузки",
+    # )  # UF_CRM_1655141630 : Тип отгрузки
+    shipment_type: Mapped[DualTypeShipmentEnum] = mapped_column(
+        DualTypeShipment(value_type="deals"), comment="Тип отгрузки для сделок"
+    )
     processing_status: Mapped[ProcessingStatusEnum] = mapped_column(
         PgEnum(
             ProcessingStatusEnum,
@@ -163,6 +186,22 @@ class Deal(IntIdEntity):
     )  # UF_CRM_1750571370 : Статус обработки
 
     # Связи с другими сущностями
+    invoices: Mapped[list["Invoice"]] = relationship(
+        "Invoice",
+        back_populates="deal",
+        foreign_keys="[Invoice.deal_id]",
+    )
+    timeline_comments: Mapped[list["TimelineComment"]] = relationship(
+        "TimelineComment",
+        primaryjoin=(
+            "and_(Deal.external_id == foreign(TimelineComment.entity_id), "
+            "TimelineComment.entity_type == 'Deal')"
+        ),
+        viewonly=True,
+        lazy="selectin",
+        back_populates="deal",
+    )
+
     currency_id: Mapped[str | None] = mapped_column(
         ForeignKey("currencies.external_id")
     )  # CURRENCY_ID : Ид валюты
@@ -172,28 +211,32 @@ class Deal(IntIdEntity):
     type_id: Mapped[str | None] = mapped_column(
         ForeignKey("deal_types.external_id")
     )  # TYPE_ID : Тип сделки
-    type: Mapped["DealType"] = relationship("DealType", back_populates="deals")
+    type: Mapped["DealType"] = relationship(
+        "DealType", foreign_keys=[type_id], back_populates="deals"
+    )
     stage_id: Mapped[str] = mapped_column(
         ForeignKey("deal_stages.external_id")
     )  # STAGE_ID : Идентификатор стадии сделки
     stage: Mapped["DealStage"] = relationship(
-        "DealStage", back_populates="deals"
+        "DealStage", back_populates="deals", foreign_keys=stage_id
     )
     lead_id: Mapped[int | None] = mapped_column(
         ForeignKey("leads.external_id")
     )  # LEAD_ID : Ид лида
-    lead: Mapped["Lead"] = relationship("Lead", back_populates="deals")
+    lead: Mapped["Lead"] = relationship(
+        "Lead", back_populates="deals", foreign_keys=[lead_id]
+    )
     company_id: Mapped[int | None] = mapped_column(
         ForeignKey("companies.external_id")
     )  # COMPANY_ID : Ид компании
     company: Mapped["Company"] = relationship(
-        "Company", back_populates="deals"
+        "Company", back_populates="deals", foreign_keys=[company_id]
     )
     contact_id: Mapped[int | None] = mapped_column(
         ForeignKey("contacts.external_id")
     )  # CONTACT_ID : Ид контакта
     contact: Mapped["Contact"] = relationship(
-        "Contact", back_populates="deals"
+        "Contact", back_populates="deals", foreign_keys=[contact_id]
     )
     category_id: Mapped[int] = mapped_column(
         ForeignKey("categories.external_id")
@@ -215,7 +258,7 @@ class Deal(IntIdEntity):
         ForeignKey("deal_types.external_id")
     )  # UF_CRM_612463720554B : Тип лида привязанного к сделке
     lead_type: Mapped["DealType"] = relationship(
-        "DealType", back_populates="lead_deals"
+        "DealType", back_populates="lead_deals", foreign_keys=[lead_type_id]
     )
     invoice_stage_id: Mapped[str | None] = mapped_column(
         ForeignKey("invoice_stages.external_id")
@@ -227,10 +270,12 @@ class Deal(IntIdEntity):
         ForeignKey("deal_stages.external_id")
     )  # UF_CRM_1632738604 : Ид стадии сделки (для фиксации предыдущей стадии)
     current_stage: Mapped["DealStage"] = relationship(
-        "DealStage", back_populates="current_deals"
+        "DealStage",
+        back_populates="current_deals",
+        foreign_keys=current_stage_id,
     )
     shipping_company_id: Mapped[int | None] = mapped_column(
-        ForeignKey("shipping_companies.external_id")
+        ForeignKey("shipping_companies.ext_alt_id")
     )  # UF_CRM_1650617036 : Ид фирмы отгрузки
     shipping_company: Mapped["ShippingCompany"] = relationship(
         "ShippingCompany", back_populates="deals"
@@ -269,26 +314,34 @@ class Deal(IntIdEntity):
     defect_expert: Mapped["User"] = relationship(
         "User", foreign_keys=[defect_expert_id], back_populates="defect_deals"
     )
+    add_info: Mapped["AdditionalInfo"] = relationship(
+        back_populates="deal", uselist=False
+    )
 
     # Поля сервисных сделок
-    defects: Mapped["DefectType"] = relationship(
-        "DefectType", back_populates="deal"
-    )  # UF_CRM_1655615996118* : Дефекты из списка по сделке
+    # defects: Mapped["DefectType"] = relationship(
+    #    "DefectType", back_populates="deal"
+    # )  # UF_CRM_1655615996118* : Дефекты из списка по сделке
     defect_conclusion: Mapped[str | None] = mapped_column(
         comment="Заключение по дефектам"
     )  # UF_CRM_1655618110493 : Итоговое заключение
 
     # Связанные сделки (доставка)
-    parent_deal_id: Mapped[UUID | None] = mapped_column(
-        ForeignKey("deals.id"), nullable=True
+    parent_deal_id: Mapped[int | None] = mapped_column(
+        ForeignKey("deals.external_id"), nullable=True
     )  # UF_CRM_1655891443 : Родительская сделка
     related_deals: Mapped[list["Deal"]] = relationship(
-        "Deal", back_populates="parent_deal", remote_side="[parent_deal_id]"
+        "Deal",
+        back_populates="parent_deal",
+        # remote_side="[parent_deal_id]",
+        foreign_keys="[Deal.parent_deal_id]",
     )  # UF_CRM_1658467259* : Связанные сделки
     parent_deal: Mapped["Deal | None"] = relationship(
         "Deal",
         back_populates="related_deals",
-        remote_side="[Deal.id]",
+        foreign_keys="[Deal.parent_deal_id]",
+        remote_side="[Deal.external_id]",
+        # remote_side="[Deal.id]",
         # foreign_keys="[Deal.parent_deal_id]",
     )  # Отношение к родительской сделке
 
@@ -296,6 +349,18 @@ class Deal(IntIdEntity):
     yaclientid: Mapped[str | None] = mapped_column(
         comment="yaclientid"
     )  # UF_CRM_1739185983784 : yaclientid
+
+    # Вспомогательные флаги
+    is_frozen: Mapped[bool] = mapped_column(
+        default=False,
+        server_default=false(),
+        comment="Просроченная сделка заморожена",
+    )
+    is_setting_source: Mapped[bool] = mapped_column(
+        default=False,
+        server_default=false(),
+        comment="Источники установлены вручную",
+    )
 
     """ remaining fields:
     "TAX_VALUE": double, Ставка налога
@@ -328,3 +393,21 @@ class Deal(IntIdEntity):
 
     "UF_CRM_1657360424": html ссылка
     """
+
+
+class AdditionalInfo(Base):
+    """
+    Дополнительная информация сделки
+    """
+
+    __tablename__ = "additional_info"
+
+    deal_id: Mapped[int] = mapped_column(
+        ForeignKey("deals.external_id"),
+        unique=True,
+        comment="ID сделки",
+    )
+    deal: Mapped["Deal"] = relationship("Deal", back_populates="add_info")
+    comment: Mapped[str] = mapped_column(
+        default="", comment="Дополнительная информация"
+    )

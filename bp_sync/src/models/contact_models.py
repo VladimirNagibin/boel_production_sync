@@ -2,12 +2,14 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, ForeignKey
-from sqlalchemy.ext.declarative import declared_attr
+
+# from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from schemas.contact_schemas import ContactCreate
+
 from .bases import CommunicationIntIdEntity, EntityType
-from .references import (
-    AdditionalResponsible,
+from .references import (  # AdditionalResponsible,
     ContactType,
     DealFailureReason,
     DealType,
@@ -18,6 +20,7 @@ from .references import (
 if TYPE_CHECKING:
     from .company_models import Company
     from .deal_models import Deal
+    from .invoice_models import Invoice
     from .lead_models import Lead
 
 
@@ -30,10 +33,15 @@ class Contact(CommunicationIntIdEntity):
     # __table_args__ = (
     #    CheckConstraint("opportunity >= 0", name="non_negative_opportunity"),
     # )
+    _schema_class = ContactCreate
 
     @property
     def entity_type(self) -> EntityType:
         return EntityType.CONTACT
+
+    @property
+    def entity_type1(self) -> str:
+        return "Contact"
 
     @property
     def tablename(self) -> str:
@@ -65,20 +73,28 @@ class Contact(CommunicationIntIdEntity):
     )  # UF_CRM_60D97EF75E465 : Разрешение на отгрузку (1/0)
 
     # Временные метки
-    birthdate: Mapped[datetime] = mapped_column(
+    birthdate: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), comment="Дата рождения"
     )  # BIRTHDATE : Дата рождения (2025-06-18T03:00:00+03:00)
 
     # Связи с другими сущностями
     deals: Mapped[list["Deal"]] = relationship(
-        "Deal", back_populates="contact"
+        "Deal", back_populates="contact", foreign_keys="[Deal.contact_id]"
     )
     leads: Mapped[list["Lead"]] = relationship(
-        "Lead", back_populates="contact"
+        "Lead", back_populates="contact", foreign_keys="[Lead.contact_id]"
     )
     companies: Mapped[list["Company"]] = relationship(
-        "Company", back_populates="contact"
+        "Company",
+        back_populates="contact",
+        foreign_keys="[Company.contact_id]",
     )
+    invoices: Mapped[list["Invoice"]] = relationship(
+        "Invoice",
+        back_populates="contact",
+        foreign_keys="[Invoice.contact_id]",
+    )
+
     type_id: Mapped[str | None] = mapped_column(
         ForeignKey("contact_types.external_id")
     )  # TYPE_ID : Тип контакта
@@ -89,12 +105,14 @@ class Contact(CommunicationIntIdEntity):
         ForeignKey("companies.external_id")
     )  # COMPANY_ID : Ид компании
     company: Mapped["Company"] = relationship(
-        "Company", back_populates="contacts"
+        "Company", back_populates="contacts", foreign_keys=[company_id]
     )
     lead_id: Mapped[int | None] = mapped_column(
         ForeignKey("leads.external_id")
     )  # LEAD_ID : Ид лида
-    lead: Mapped["Lead"] = relationship("Lead", back_populates="contacts")
+    lead: Mapped["Lead"] = relationship(
+        "Lead", back_populates="contacts", foreign_keys=[lead_id]
+    )
     source_id: Mapped[str | None] = mapped_column(
         ForeignKey("sources.external_id")
     )  # SOURCE_ID : Идентификатор источника
@@ -120,6 +138,7 @@ class Contact(CommunicationIntIdEntity):
         "DealType", back_populates="contacts"
     )
 
+    """
     @declared_attr  # type: ignore[misc]
     def additional_responsables(cls) -> Mapped[list["AdditionalResponsible"]]:
         return relationship(
@@ -134,7 +153,7 @@ class Contact(CommunicationIntIdEntity):
             lazy="selectin",
             overlaps="communications",
         )  # UF_CRM_1629106625* : Доп ответственные
-
+    """
     """ remaining fields:
     "HONORIFIC": str, Вид обращения. Статус из справочника.
     "PHOTO": file, Фотография

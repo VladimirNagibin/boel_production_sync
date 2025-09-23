@@ -1,14 +1,20 @@
 from datetime import datetime
 from typing import TYPE_CHECKING
-from uuid import UUID
 
-from sqlalchemy import DateTime, ForeignKey
-from sqlalchemy.ext.declarative import declared_attr
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import DateTime, ForeignKey  # , and_
+
+# from sqlalchemy.ext.declarative import declared_attr
+from sqlalchemy.orm import (  # declared_attr,; foreign,
+    Mapped,
+    mapped_column,
+    relationship,
+)
+
+from schemas.company_schemas import CompanyCreate
 
 from .bases import CommunicationIntIdEntity, EntityType
-from .references import (
-    AdditionalResponsible,
+from .deal_documents import Contract
+from .references import (  # AdditionalResponsible,
     ContactType,
     Currency,
     DealFailureReason,
@@ -23,7 +29,10 @@ from .references import (
 if TYPE_CHECKING:
     from .contact_models import Contact
     from .deal_models import Deal
+    from .delivery_note_models import DeliveryNote
+    from .invoice_models import Invoice
     from .lead_models import Lead
+    from .user_models import Manager
 
 
 class Company(CommunicationIntIdEntity):
@@ -35,14 +44,22 @@ class Company(CommunicationIntIdEntity):
     # __table_args__ = (
     #    CheckConstraint("opportunity >= 0", name="non_negative_opportunity"),
     # )
+    _schema_class = CompanyCreate
 
     @property
     def entity_type(self) -> EntityType:
         return EntityType.COMPANY
 
     @property
+    def entity_type1(self) -> str:
+        return "Company"
+
+    @property
     def tablename(self) -> str:
         return self.__tablename__
+
+    def __str__(self) -> str:
+        return str(self.title)
 
     # Идентификаторы и основные данные
     title: Mapped[str] = mapped_column(
@@ -80,26 +97,43 @@ class Company(CommunicationIntIdEntity):
     )  # UF_CRM_61974C16DBFBF : Разрешение на отгрузку (1/0)
 
     # Временные метки
-    date_last_shipment: Mapped[datetime] = mapped_column(
+    date_last_shipment: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), comment="Дата последней отгрузки"
     )  # UF_CRM_1623835088 : Дата последней отгрузки(2025-07-11T03:00:00+03:00)
 
     # Связи с другими сущностями
     deals: Mapped[list["Deal"]] = relationship(
-        "Deal", back_populates="company"
+        "Deal", back_populates="company", foreign_keys="[Deal.company_id]"
     )
     leads: Mapped[list["Lead"]] = relationship(
-        "Lead", back_populates="company"
+        "Lead",
+        back_populates="company",
+        foreign_keys="[Lead.company_id]",
     )
     contacts: Mapped[list["Contact"]] = relationship(
-        "Contact", back_populates="company"
+        "Contact",
+        back_populates="company",
+        foreign_keys="[Contact.company_id]",
+    )
+    contracts: Mapped[list["Contract"]] = relationship(
+        "Contract", back_populates="company"
     )  # UF_CRM_1623833623*
+    invoices: Mapped[list["Invoice"]] = relationship(
+        "Invoice",
+        back_populates="company",
+        foreign_keys="[Invoice.company_id]",
+    )
+    delivery_notes: Mapped[list["DeliveryNote"]] = relationship(
+        "DeliveryNote",
+        back_populates="company",
+        foreign_keys="[DeliveryNote.company_id]",
+    )
 
     currency_id: Mapped[str | None] = mapped_column(
         ForeignKey("currencies.external_id")
     )  # CURRENCY_ID : Ид валюты
     currency: Mapped["Currency"] = relationship(
-        "Currency", back_populates="deals"
+        "Currency", back_populates="companies"
     )
     company_type_id: Mapped[str | None] = mapped_column(
         ForeignKey("contact_types.external_id")
@@ -111,12 +145,14 @@ class Company(CommunicationIntIdEntity):
         ForeignKey("contacts.external_id")
     )  # CONTACT_ID : Ид контакта
     contact: Mapped["Contact"] = relationship(
-        "Contact", back_populates="companies"
+        "Contact", back_populates="companies", foreign_keys=[contact_id]
     )
     lead_id: Mapped[int | None] = mapped_column(
         ForeignKey("leads.external_id")
     )  # LEAD_ID : Ид лида
-    lead: Mapped["Lead"] = relationship("Lead", back_populates="companies")
+    lead: Mapped["Lead"] = relationship(
+        "Lead", back_populates="companies", foreign_keys=[lead_id]
+    )
     source_id: Mapped[str | None] = mapped_column(
         ForeignKey("sources.external_id")
     )  # UF_CRM_1637554945 : Идентификатор источника
@@ -142,7 +178,7 @@ class Company(CommunicationIntIdEntity):
         "DealType", back_populates="companies"
     )
     shipping_company_id: Mapped[int | None] = mapped_column(
-        ForeignKey("shipping_companies.ext_alt_id")
+        ForeignKey("shipping_companies.external_id")
     )  # UF_CRM_1631941968 : Ид текущей фирмы отгрузки
     shipping_company: Mapped["ShippingCompany"] = relationship(
         "ShippingCompany", back_populates="companies"
@@ -157,22 +193,26 @@ class Company(CommunicationIntIdEntity):
         ForeignKey("employees.external_id")
     )  # EMPLOYEES : Численность сотрудников
     employees: Mapped["Emploees"] = relationship(
-        "Employees", back_populates="companies"
+        "Emploees", back_populates="companies"
+    )
+    default_manager: Mapped[list["Manager"]] = relationship(
+        back_populates="default_company"
     )
 
-    parent_company_id: Mapped[UUID | None] = mapped_column(
-        ForeignKey("companies.id"), nullable=True
+    parent_company_id: Mapped[int | None] = mapped_column(
+        ForeignKey("companies.external_id"), nullable=True
     )  # UF_CRM_1623833602 : Головная компания
     related_companies: Mapped[list["Company"]] = relationship(
         "Company",
         back_populates="parent_company",
-        remote_side="[parent_company_id]",
+        # remote_side="[Company.external_id]",
+        foreign_keys="[Company.parent_company_id]",
     )  # Подчинённые компании
     parent_company: Mapped["Company | None"] = relationship(
         "Company",
         back_populates="related_companies",
-        remote_side="[Company.id]",
-        # foreign_keys="[Company.parent_company_id]",
+        foreign_keys="[Company.parent_company_id]",
+        remote_side="[Company.external_id]",
     )  # Отношение к головной компании
 
     # Для договора
@@ -203,6 +243,7 @@ class Company(CommunicationIntIdEntity):
     )  # UF_CRM_1654683828 : Текущий номер договора и код фирмы отгрузки
     # (для нового договора)
 
+    """
     @declared_attr  # type: ignore[misc]
     def additional_responsables(cls) -> Mapped[list["AdditionalResponsible"]]:
         return relationship(
@@ -215,9 +256,9 @@ class Company(CommunicationIntIdEntity):
             ),
             viewonly=True,
             lazy="selectin",
-            overlaps="communications",
+            overlaps="additional_responsables",
         )  # UF_CRM_1629106458* : Доп ответственные
-
+    """
     """ remaining fields:
     "LOGO": file, Логотип
 
@@ -230,7 +271,6 @@ class Company(CommunicationIntIdEntity):
     "REG_ADDRESS_COUNTRY"
     "REG_ADDRESS_COUNTRY_CODE"
     "REG_ADDRESS_LOC_ADDR_ID"
-
 
     "UF_CRM_1598883049": str, Промывочная жидкость клиента
     "UF_CRM_1598883027": list, Пеногасители клиента

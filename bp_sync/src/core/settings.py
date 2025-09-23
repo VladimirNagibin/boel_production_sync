@@ -16,7 +16,7 @@ class Settings(BaseSettings):  # type: ignore
     POSTGRES_PASSWORD: str = "postgres"
     POSTGRES_DB: str = "bp_sync"
     POSTGRES_DB_ECHO: bool = True
-    SERVICE_USER: int
+    SERVICE_USER: int = 1
     PROVIDER_B24: str = "B24"
 
     SECRET_KEY: str = "your-secret-key"
@@ -24,23 +24,33 @@ class Settings(BaseSettings):  # type: ignore
     USER_ADMIN: str = "admin"
     PASS_ADMIN: str = "pass"
 
-    BITRIX_LOGIN: str
-    BITRIX_PASS: str
-    BITRIX_CLIENT_ID: str
-    BITRIX_CLIENT_SECRET: str
-    BITRIX_PORTAL: str
-    BITRIX_REDIRECT_URI: str
+    BITRIX_LOGIN: str = ""
+    BITRIX_PASS: str = ""
+    BITRIX_CLIENT_ID: str = ""
+    BITRIX_CLIENT_SECRET: str = ""
+    BITRIX_PORTAL: str = ""
+    BITRIX_REDIRECT_URI: str = ""
 
-    REDIS_HOST: str
-    REDIS_PORT: int
-    REDIS_PASSWORD: str
+    REDIS_HOST: str = ""
+    REDIS_PORT: int = 6379
+    REDIS_PASSWORD: str = ""
 
     ENCRYPTION_KEY: str = (
         "your_fernet_key_here"  # сгенерировать Fernet.generate_key()
     )
 
+    RABBIT_HOST: str = "rabbitmq"
+    RABBIT_PORT: int = 5672
+    RABBIT_USER: str = "admin"
+    RABBIT_PASSWORD: str = "zxcvbn"
+
     BASE_DIR: str = str(Path(__file__).resolve().parent.parent)
     LOGGING_FILE_MAX_BYTES: int = 500_000
+    EXCHANGE_NAME: str = "sync"
+
+    WEB_HOOK_PORTAL: str = ""
+    WEB_HOOK_KEY: str = ""
+    ENDPOINT_SERND_FAIL_INVOICE: str = ""
 
     @property
     def dsn(self) -> str:

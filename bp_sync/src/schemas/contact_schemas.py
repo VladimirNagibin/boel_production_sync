@@ -3,10 +3,10 @@ from datetime import datetime
 from pydantic import Field, field_validator
 
 from .base_schemas import (
+    SYSTEM_USER_ID,
     AddressMixin,
     BaseCreateSchema,
     BaseUpdateSchema,
-    BitrixValidators,
     CommunicationChannel,
     HasCommunicationCreateMixin,
     HasCommunicationUpdateMixin,
@@ -48,7 +48,7 @@ class BaseContact:
     deal_failure_reason_id: int | None = Field(
         None, alias="UF_CRM_6539DA9518373"
     )
-    lead_type_id: str | None = Field(None, alias="UF_CRM_61236340EA7AC")
+    deal_type_id: str | None = Field(None, alias="UF_CRM_61236340EA7AC")
 
     # Маркетинговые метки
     mgo_cc_entry_id: str | None = Field(None, alias="UF_CRM_63E1D6D4B8A68")
@@ -85,54 +85,13 @@ class BaseContact:
         None, alias="UF_CRM_1629106625"
     )
 
-    # Валидаторы
-    _validate_bool = field_validator(
-        "opened",
-        "is_shipment_approved",
-        "has_phone",
-        "has_email",
-        "has_imol",
-        "export",
-        mode="before",
-    )(BitrixValidators.convert_to_bool)
-
-    _validate_int = field_validator(
-        "external_id",
-        "assigned_by_id",
-        "created_by_id",
-        "modify_by_id",
-        "last_activity_by",
-        "address_loc_addr_id",
-        "company_id",
-        "lead_id",
-        "main_activity_id",
-        "deal_failure_reason_id",
-        mode="before",
-    )(BitrixValidators.normalize_int)
-
-    # _validate_float = field_validator("revenue", mode="before")(
-    #    BitrixValidators.normalize_float
-    # )
-
-    _validate_datetime = field_validator(
-        "date_create",
-        "date_modify",
-        "last_activity_time",
-        "birthdate",
-        "mgo_cc_create",
-        "mgo_cc_end",
-        mode="before",
-    )(BitrixValidators.normalize_datetime_fields)
-
-    _validate_list = field_validator(
-        "phone",
-        "email",
-        "web",
-        "im",
-        "link",
-        "additional_responsible",
-        mode="before",
-    )(BitrixValidators.normalize_list)
+    @field_validator("external_id", mode="before")  # type: ignore[misc]
+    @classmethod
+    def convert_str_to_int(cls, value: str | int) -> int:
+        """Автоматическое преобразование строк в числа для ID"""
+        if isinstance(value, str) and value.isdigit():
+            return int(value)
+        return value  # type: ignore[return-value]
 
 
 class ContactCreate(
@@ -140,7 +99,28 @@ class ContactCreate(
 ):
     """Модель для создания контактов"""
 
-    ...
+    @classmethod
+    def get_default_entity(cls, external_id: int) -> "ContactCreate":
+        now = datetime.now()
+        return ContactCreate(
+            # Обязательные поля из TimestampsCreateMixin
+            date_create=now,
+            date_modify=now,
+            # Обязательные поля из UserRelationsCreateMixin
+            assigned_by_id=SYSTEM_USER_ID,  # SYSTEM_USER_ID
+            created_by_id=SYSTEM_USER_ID,  # SYSTEM_USER_ID
+            modify_by_id=SYSTEM_USER_ID,  # SYSTEM_USER_ID
+            # Обязательные поля из HasCommunicationCreateMixin
+            has_phone=False,
+            has_email=False,
+            has_imol=False,
+            name=f"Deleted Contact {external_id}",
+            # Задаем external_id и флаг удаления
+            external_id=external_id,  # Ваш внешний ID
+            is_deleted_in_bitrix=True,
+            # created_at=now,
+            # updated_at=now,
+        )
 
 
 class ContactUpdate(

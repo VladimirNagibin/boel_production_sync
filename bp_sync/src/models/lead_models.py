@@ -5,6 +5,8 @@ from sqlalchemy import CheckConstraint, DateTime, ForeignKey
 from sqlalchemy.dialects.postgresql import ENUM as PgEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from schemas.lead_schemas import LeadCreate
+
 from .bases import CommunicationIntIdEntity, EntityType
 from .enums import StageSemanticEnum
 from .references import (
@@ -32,10 +34,15 @@ class Lead(CommunicationIntIdEntity):
     __table_args__ = (
         CheckConstraint("opportunity >= 0", name="non_negative_opportunity"),
     )
+    _schema_class = LeadCreate
 
     @property
     def entity_type(self) -> EntityType:
         return EntityType.LEAD
+
+    @property
+    def entity_type1(self) -> str:
+        return "Lead"
 
     @property
     def tablename(self) -> str:
@@ -78,13 +85,13 @@ class Lead(CommunicationIntIdEntity):
     )  # OPPORTUNITY : Сумма
 
     # Временные метки
-    birthdate: Mapped[datetime] = mapped_column(
+    birthdate: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), comment="Дата рождения"
     )  # BIRTHDATE : Дата рождения (2025-06-18T03:00:00+03:00)
     moved_time: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), comment="Время перемещения"
     )  # MOVED_TIME : Дата перемещения элемента на текущую стадию
-    date_closed: Mapped[datetime] = mapped_column(
+    date_closed: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), comment="Дата закрытия"
     )  # DATE_CLOSED : Дата закрытия
 
@@ -116,9 +123,14 @@ class Lead(CommunicationIntIdEntity):
     # )  # UF_CRM_1750571370 : Статус обработки
 
     # Связи с другими сущностями
-    deals: Mapped[list["Deal"]] = relationship("Deal", back_populates="lead")
+    deals: Mapped[list["Deal"]] = relationship(
+        "Deal", back_populates="lead", foreign_keys="[Deal.lead_id]"
+    )
     contacts: Mapped[list["Contact"]] = relationship(
-        "Contact", back_populates="lead"
+        "Contact", back_populates="lead", foreign_keys="[Contact.lead_id]"
+    )
+    companies: Mapped[list["Company"]] = relationship(
+        "Company", back_populates="lead", foreign_keys="[Company.lead_id]"
     )
     currency_id: Mapped[str | None] = mapped_column(
         ForeignKey("currencies.external_id")
@@ -140,13 +152,15 @@ class Lead(CommunicationIntIdEntity):
         ForeignKey("companies.external_id")
     )  # COMPANY_ID : Ид компании
     company: Mapped["Company"] = relationship(
-        "Company", back_populates="leads"
+        "Company",
+        back_populates="leads",
+        foreign_keys=[company_id],
     )
     contact_id: Mapped[int | None] = mapped_column(
         ForeignKey("contacts.external_id")
     )  # CONTACT_ID : Ид контакта
     contact: Mapped["Contact"] = relationship(
-        "Contact", back_populates="leads"
+        "Contact", back_populates="leads", foreign_keys=[contact_id]
     )
     source_id: Mapped[str | None] = mapped_column(
         ForeignKey("sources.external_id")

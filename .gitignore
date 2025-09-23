@@ -194,5 +194,7 @@ cython_debug/
 .cursorindexingignore
 
 .vscode/
+logs/
 
 .info
+data/

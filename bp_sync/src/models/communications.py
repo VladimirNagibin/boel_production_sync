@@ -56,7 +56,7 @@ class CommunicationChannel(IntIdEntity):
         "CommunicationChannelType", back_populates="channels"
     )
     value: Mapped[str] = mapped_column(
-        String(255), comment="Тип коммуникации"
+        String(255), comment="Значение коннекта"
     )  # VALUE : Значение коннекта
 
     @hybrid_property  # type: ignore[misc]

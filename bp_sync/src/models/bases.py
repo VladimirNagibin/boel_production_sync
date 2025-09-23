@@ -1,12 +1,13 @@
 from datetime import datetime
 from enum import StrEnum, auto
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar, Type, TypeVar
 
 from sqlalchemy import DateTime, ForeignKey
 from sqlalchemy.ext.declarative import declared_attr
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, class_mapper, mapped_column, relationship
 
 from db.postgres import Base
+from schemas.base_schemas import CommonFieldMixin
 
 if TYPE_CHECKING:
     from .communications import CommunicationChannel
@@ -19,6 +20,7 @@ class EntityType(StrEnum):
     LEAD = "Lead"
     DEAL = "Deal"
     USER = "User"
+    INVOICE = "Invoice"
 
 
 class CommunicationType(StrEnum):
@@ -41,15 +43,95 @@ COMMUNICATION_TYPES = {
     "link": CommunicationType.LINK,
 }
 
+T = TypeVar("T", bound=CommonFieldMixin)
+
 
 class IntIdEntity(Base):
     """Базовый класс для сущностей с внешними ID"""
+
+    _schema_class: ClassVar[Type[CommonFieldMixin] | None] = None
 
     __abstract__ = True
     external_id: Mapped[int] = mapped_column(
         unique=True,
         comment="ID во внешней системе",
     )
+
+    @classmethod
+    def _get_schema_class(cls) -> Type[CommonFieldMixin] | None:
+        """Автоматически определяет класс схемы на основе имени модели"""
+        if cls._schema_class:
+            return cls._schema_class
+
+        # Попытка автоматического определения имени схемы
+        model_name = cls.__name__
+        schema_name = f"{model_name}Create"
+        try:
+            # Импортируем модуль схем (замените на ваш реальный импорт)
+            import schemas  # import schemas.deal_schemas
+
+            schema_class = getattr(schemas, schema_name, None)
+            if schema_class and issubclass(schema_class, CommonFieldMixin):
+                assert isinstance(schema_class, type)
+                cls._schema_class = schema_class
+                return schema_class
+        except (ImportError, AttributeError):
+            pass
+
+        return None
+
+    def to_pydantic(
+        self,
+        schema_class: Type[T] | None = None,
+        exclude_relationships: bool = True,
+    ) -> T:
+        """
+        Преобразует объект SQLAlchemy в Pydantic схему
+
+        Args:
+            schema_class: Класс Pydantic схемы
+            exclude_relationships: Исключать ли связи из преобразования
+
+        Returns:
+            Экземпляр Pydantic схемы
+        """
+        if schema_class is None:
+            schema_class = self._get_schema_class()
+            if schema_class is None:
+                raise ValueError(
+                    "Cannot automatically determine schema class for "
+                    f"{self.__class__.__name__}. Please provide schema_class "
+                    "parameter or set _schema_class."
+                )
+        data = {}
+
+        # Получаем все поля схемы
+        for field_name in schema_class.model_fields:
+            # Пропускаем поля, которые являются связями и должны быть исключены
+            if exclude_relationships and self._is_relationship_field(
+                field_name
+            ):
+                continue
+
+            if hasattr(self, field_name):
+                value = getattr(self, field_name)
+
+                # Особые обработки для определенных полей
+                if field_name == "external_id" and value:
+                    data["ID"] = value
+                else:
+                    data[field_name] = value
+        if hasattr(self, "id"):
+            data["internal_id"] = self.id
+        return schema_class(**data)
+
+    def _is_relationship_field(self, field_name: str) -> bool:
+        """Проверяет, является ли поле связью"""
+        try:
+            mapper = class_mapper(self.__class__)
+            return field_name in mapper.relationships
+        except Exception:
+            return False
 
 
 class NameIntIdEntity(IntIdEntity):
@@ -69,6 +151,9 @@ class NameStrIdEntity(Base):
     )
     name: Mapped[str]
 
+    def __str__(self) -> str:
+        return str(self.name)
+
 
 class TimestampsMixin:
     date_create: Mapped[datetime] = mapped_column(
@@ -87,6 +172,15 @@ class TimestampsMixin:
 
 class UserRelationsMixin:
     """Миксин для отношений с пользователями"""
+
+    # @property
+    # def tablename1(cls) -> str:
+    #    return "companies"
+
+    @property
+    def entity_type1(cls) -> str:
+        # return "Company"
+        raise NotImplementedError("Должно быть реализовано в дочернем классе")
 
     assigned_by_id: Mapped[int] = mapped_column(
         ForeignKey("users.external_id"),
@@ -117,36 +211,43 @@ class UserRelationsMixin:
     def assigned_user(cls) -> Mapped["User"]:
         return relationship(
             "User",
-            foreign_keys=f"{cls.entity_type}.assigned_by_id",
-            back_populates=f"assigned_{cls.tablename}",
+            foreign_keys=[cls.assigned_by_id],
+            back_populates=(
+                f"assigned_{cls.__tablename__}"  # type: ignore[attr-defined]
+            ),
         )
 
     @declared_attr  # type: ignore[misc]
     def created_user(cls) -> Mapped["User"]:
         return relationship(
             "User",
-            foreign_keys=f"{cls.entity_type}.created_by_id",
-            back_populates=f"created_{cls.tablename}",
+            foreign_keys=[cls.created_by_id],
+            back_populates=(
+                f"created_{cls.__tablename__}"  # type: ignore[attr-defined]
+            ),
         )
 
     @declared_attr  # type: ignore[misc]
     def modify_user(cls) -> Mapped["User"]:
         return relationship(
             "User",
-            foreign_keys=f"{cls.entity_type}.modify_by_id",
-            back_populates=f"modify_{cls.tablename}",
+            foreign_keys=[cls.modify_by_id],
+            back_populates=(
+                f"modify_{cls.__tablename__}"  # type: ignore[attr-defined]
+            ),
         )
 
     @declared_attr  # type: ignore[misc]
     def last_activity_user(cls) -> Mapped["User"]:
+        tablename = cls.__tablename__  # type: ignore[attr-defined]
         return relationship(
             "User",
-            foreign_keys=f"{cls.entity_type}.last_activity_by",
-            back_populates=f"last_activity_{cls.tablename}",
+            foreign_keys=[cls.last_activity_by],
+            back_populates=(f"last_activity_{tablename}"),
         )
 
 
-class MarketingMixin:
+class MarketingMixinUTM:
     utm_source: Mapped[str | None] = mapped_column(
         comment="Рекламная система"
     )  # UTM_SOURCE : Рекламная система (Yandex-Direct, Google-Adwords и др)
@@ -164,6 +265,9 @@ class MarketingMixin:
         comment="Тип трафика"
     )  # UTM_TERM : Условие поиска кампании. Например, ключевые слова
     # контекстной рекламы
+
+
+class MarketingMixin:
     mgo_cc_entry_id: Mapped[str | None] = mapped_column(
         comment="ID звонка"
     )  # UF_CRM_MGO_CC_ENTRY_ID : ID звонка
@@ -211,13 +315,17 @@ class CommunicationMixin:
 
     @declared_attr  # type: ignore[misc]
     def communications(cls) -> Mapped[list["CommunicationChannel"]]:
+        condition = (
+            "and_("
+            "foreign(CommunicationChannel.entity_type) == '{}',"
+            "foreign(CommunicationChannel.entity_id) == {}.external_id"
+            ")"
+        ).format(
+            cls.__name__, cls.__name__  # type: ignore[attr-defined]
+        )
         return relationship(
             "CommunicationChannel",
-            primaryjoin=(
-                "and_("
-                "foreign(CommunicationChannel.entity_type) == cls.entity_type,"
-                "foreign(CommunicationChannel.entity_id) == cls.external_id)"
-            ),
+            primaryjoin=condition,
             viewonly=True,
             lazy="selectin",
             overlaps="communications",
@@ -347,7 +455,7 @@ class AddressMixin:
     )  # ADDRESS_LOC_ADDR_ID : Идентификатор адреса из модуля местоположений
 
 
-class BusinessEntity(
+class BusinessEntityCore(
     IntIdEntity,
     TimestampsMixin,
     UserRelationsMixin,
@@ -365,18 +473,26 @@ class BusinessEntity(
     source_external: Mapped[str | None] = mapped_column(
         comment="Внешний источник"
     )  # UF_CRM_DCT_SOURCE : Источник внешний
-    originator_id: Mapped[str | None] = mapped_column(
-        comment="ID источника данных"
-    )  # ORIGINATOR_ID : Идентификатор источника данных
-    origin_id: Mapped[str | None] = mapped_column(
-        comment="ID элемента в источнике"
-    )  # ORIGIN_ID : Идентификатор элемента в источнике данных
     city: Mapped[str | None] = mapped_column(
         comment="Город"
     )  # UF_CRM_DCT_CITY : Город (населённый пункт)
     opened: Mapped[bool] = mapped_column(
         default=True, comment="Доступна для всех"
     )  # OPENED : Доступен для всех (Y/N)
+
+
+class BusinessEntity(
+    BusinessEntityCore,
+    MarketingMixinUTM,
+):
+    __abstract__ = True
+
+    originator_id: Mapped[str | None] = mapped_column(
+        comment="ID источника данных"
+    )  # ORIGINATOR_ID : Идентификатор источника данных
+    origin_id: Mapped[str | None] = mapped_column(
+        comment="ID элемента в источнике"
+    )  # ORIGIN_ID : Идентификатор элемента в источнике данных
 
 
 class CommunicationIntIdEntity(

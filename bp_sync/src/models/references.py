@@ -1,5 +1,4 @@
 from typing import TYPE_CHECKING
-from uuid import UUID
 
 from sqlalchemy import ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -11,7 +10,20 @@ if TYPE_CHECKING:
     from .contact_models import Contact
     from .deal_documents import Contract
     from .deal_models import Deal
+    from .delivery_note_models import DeliveryNote
+    from .invoice_models import Invoice
     from .lead_models import Lead
+    from .user_models import User
+
+
+CURRENCY_VALUES = [
+    ("Российский рубль", "RUB", 1.0, 1),
+    ("Доллар США", "USD", 78.4839, 1),
+    ("Евро", "EUR", 89.8380, 1),
+    ("Гривна", "UAH", 8.8277, 10),
+    ("Белорусский рубль", "BYN", 26.3696, 1),
+    ("Тенге", "KZT", 15.1277, 100),
+]
 
 
 class Currency(NameStrIdEntity):
@@ -35,21 +47,40 @@ class Currency(NameStrIdEntity):
     leads: Mapped[list["Lead"]] = relationship(
         "Lead", back_populates="currency"
     )
+    companies: Mapped[list["Company"]] = relationship(
+        "Company", back_populates="currency"
+    )
+    invoices: Mapped[list["Invoice"]] = relationship(
+        "Invoice", back_populates="currency"
+    )
+
+
+MAIN_ACTIVITY_VALUES = [
+    ("Дистрибьютор", 147, 45, 75, 93, 411),
+    ("Домашний пивовар", 149, 47, 77, 95, 413),
+    ("Завод", 151, 49, 79, 97, 415),
+    ("Крафт", 153, 51, 81, 99, 417),
+    ("Наш дилер", 155, 53, 83, 101, 419),
+    ("Розница", 157, 55, 85, 103, 421),
+    ("Сети", 159, 57, 87, 105, 423),
+    ("Торговая компания", 161, 59, 89, 107, 425),
+    ("Хорека", 163, 61, 91, 109, 427),
+]
 
 
 class MainActivity(NameIntIdEntity):
     """
     Основная деятельность клиента:
-    deal: lead: contact: company
-    147: 45: 75: 93: Дистрибьютор
-    149: 47: 77: 95: Домашний пивовар
-    151: 49: 79: 97: Завод
-    153: 51: 81: 99: Крафт
-    155: 53: 83: 101: Наш дилер
-    157: 55: 85: 103: Розница
-    159: 57: 87: 105: Сети
-    161: 59: 89: 107: Торговая компания
-    163: 61: 91: 109: Хорека
+    deal: lead: contact: company: invoice
+    147: 45: 75: 93: 411: Дистрибьютор
+    149: 47: 77: 95: 413: Домашний пивовар
+    151: 49: 79: 97: 415: Завод
+    153: 51: 81: 99: 417: Крафт
+    155: 53: 83: 101: 419: Наш дилер
+    157: 55: 85: 103: 421: Розница
+    159: 57: 87: 105: 423: Сети
+    161: 59: 89: 107: 425: Торговая компания
+    163: 61: 91: 109: 427: Хорека
     """
 
     __tablename__ = "main_activites"
@@ -62,6 +93,9 @@ class MainActivity(NameIntIdEntity):
     ext_alt3_id: Mapped[int] = mapped_column(
         unique=True, comment="id для связи с компанией"
     )
+    ext_alt4_id: Mapped[int] = mapped_column(
+        unique=True, comment="id для связи со счётом"
+    )
     deals: Mapped[list["Deal"]] = relationship(
         "Deal", back_populates="main_activity"
     )
@@ -71,15 +105,34 @@ class MainActivity(NameIntIdEntity):
     contacts: Mapped[list["Contact"]] = relationship(
         "Contact", back_populates="main_activity"
     )
+    companies: Mapped[list["Company"]] = relationship(
+        "Company", back_populates="main_activity"
+    )
+    invoices: Mapped[list["Invoice"]] = relationship(
+        "Invoice", back_populates="main_activity"
+    )
+
+
+DEAL_TYPE_VALUES = [
+    ("Прямые продажи", "1"),
+    ("Продажа Колонны", "3"),
+    ("Интернет продажа", "5"),
+    ("Маркетплейс", "4"),
+    ("Гарантийное обслуживание", "SALE"),
+    ("Сервис", "6"),
+    ("ВЭД", "7"),
+    ("Входящие", "UC_76MJ0I"),
+    ("Исходящие", "UC_FSOZEI"),
+]
 
 
 class DealType(NameStrIdEntity):
     """
     Типы сделок:
-    1: Продажа BOEL
+    1: Прямые продажи
     3: Продажа Колонны
     5: Интернет продажа
-    4: BOEL Engineering
+    4: Маркетплейс
     SALE: Гарантийное обслуживание
     6: Сервис
     7: ВЭД
@@ -88,11 +141,35 @@ class DealType(NameStrIdEntity):
     """
 
     __tablename__ = "deal_types"
-    deals: Mapped[list["Deal"]] = relationship("Deal", back_populates="type")
+    deals: Mapped[list["Deal"]] = relationship(
+        "Deal", back_populates="type", foreign_keys="[Deal.type_id]"
+    )
+    lead_deals: Mapped[list["Deal"]] = relationship(
+        "Deal", back_populates="lead_type", foreign_keys="[Deal.lead_type_id]"
+    )
     leads: Mapped[list["Lead"]] = relationship("Lead", back_populates="type")
     contacts: Mapped[list["Contact"]] = relationship(
         "Contact", back_populates="deal_type"
     )
+    companies: Mapped[list["Company"]] = relationship(
+        "Company", back_populates="deal_type"
+    )
+    invoices: Mapped[list["Invoice"]] = relationship(
+        "Invoice", back_populates="type"
+    )
+
+
+DEAL_STAGE_VALUES = [
+    ("Не разобрано", "NEW", 1),
+    ("Выявление потребности", "PREPAYMENT_INVOICE", 2),
+    ("Заинтересован", "PREPARATION", 3),
+    ("Согласование условий договор", "EXECUTING", 4),
+    ("Выставление счёта", "FINAL_INVOICE", 5),
+    ("На отгрузку", "1", 6),
+    ("Выиграна", "WON", 7),
+    ("Проиграна", "LOSE", 8),
+    ("Анализ проигрыша", "APOLOGY", 9),
+]
 
 
 class DealStage(NameStrIdEntity):
@@ -110,13 +187,24 @@ class DealStage(NameStrIdEntity):
     """
 
     __tablename__ = "deal_stages"
-    order: Mapped[int] = mapped_column(
+    sort_order: Mapped[int] = mapped_column(
         unique=True, comment="Порядковый номер стадии"
     )
-    deals: Mapped[list["Deal"]] = relationship("Deal", back_populates="stage")
-    current_deals: Mapped[list["Deal"]] = relationship(
-        "Deal", back_populates="current_stage"
+    deals: Mapped[list["Deal"]] = relationship(
+        "Deal", back_populates="stage", foreign_keys="[Deal.stage_id]"
     )
+    current_deals: Mapped[list["Deal"]] = relationship(
+        "Deal",
+        back_populates="current_stage",
+        foreign_keys="[Deal.current_stage_id]",
+    )
+
+
+CATEGORY_VALUES = [
+    ("общее направление", 0),
+    ("сервис", 1),
+    ("отгрузка со склада", 2),
+]
 
 
 class Category(NameIntIdEntity):
@@ -133,10 +221,40 @@ class Category(NameIntIdEntity):
     )
 
 
+SOURCE_VALUES = [
+    ("Существующий клиент", "PARTNER"),
+    ("Новый клиент", "19"),
+    ("Звонок", "CALL"),
+    ("Веб-сайт BOELSHOP", "WEB"),
+    ("Заказ BOELSHOP", "21"),
+    ("Звонок BOELSHOP", "22"),
+    ("CRM-форма", "WEBFORM"),
+    ("Выбирай", "20"),
+    ("EMAIL", "23"),
+    # deprecated
+    ("OZON", "16"),
+    ("WILDBERRIES", "17"),
+    ("ЮЛА", "7"),
+    ("АВИТО", "5"),
+    ("Avito - BOEL SHOP AVITO", "9|AVITO"),
+    ("Интернет-магазин", "STORE"),
+    ("Другое", "UC_7VUX6L"),
+    ("ВКонтакте - Открытая линия", "1|VK"),
+    ("Обратный звонок", "CALLBACK"),
+    ("Алиэкспресс", "12"),
+    ("Генератор продаж", "RC_GENERATOR"),
+    ("Шоп и периферия", "UC_2THEVX"),
+    ("Повторные продажи", "REPEAT_SALE"),
+    ("Существующий клиент", "Существующий клиент"),
+    ("OTHER", "OTHER"),
+    ("26", "26"),
+]
+
+
 class Source(NameStrIdEntity):
     """
     Источники сделок:
-    PARTNER:  Существующий клиент
+    PARTNER: Существующий клиент
     19: Новый клиент
     CALL: Звонок
     WEB: Веб-сайт BOELSHOP
@@ -154,46 +272,108 @@ class Source(NameStrIdEntity):
     RC_GENERATOR: Генератор продаж
     UC_2THEVX: Шоп и периферия
     REPEAT_SALE: Повторные продажи
-    # 20: Шоурум
+    # 20: Выбирай
     # 21: Интернет
+    # EMAIL: EMAIL
+    # Существующий клиент: Существующий клиент
+    # OTHER: OTHER
+    # 26: 26
     """
 
     __tablename__ = "sources"
     deals: Mapped[list["Deal"]] = relationship("Deal", back_populates="source")
-    leads: Mapped[list["Lead"]] = relationship("lead", back_populates="source")
+    leads: Mapped[list["Lead"]] = relationship("Lead", back_populates="source")
+    companies: Mapped[list["Company"]] = relationship(
+        "Company", back_populates="source"
+    )
+    contacts: Mapped[list["Contact"]] = relationship(
+        "Contact", back_populates="source"
+    )
+    invoices: Mapped[list["Invoice"]] = relationship(
+        "Invoice", back_populates="source"
+    )
+
+
+CREATION_SOURCE_VALUES = [
+    ("авто", 805, 541),
+    ("ручной", 807, 541),
+    # deprecated
+    ("Существующий клиент", 499, 535),
+    ("Новый клиент", 501, 537),
+    ("Шоурум", 503, 539),
+    ("Интернет", 505, 541),
+]
 
 
 class CreationSource(NameIntIdEntity):
     """
     Источники создания сделок:
-    499: Существующий клиент
-    501: Новый клиент
-    503: Шоурум
-    505: Интернет
-    # Ручная / Автоматическая
+    deal: invoice
+    499: 535: Существующий клиент
+    501: 537: Новый клиент
+    503: 539: Шоурум
+    505: 541: Интернет
+    805: 500: авто *500 - test
+    807: 502: ручной *502 - test
     """
 
     __tablename__ = "creation_sources"
+    ext_alt_id: Mapped[int] = mapped_column(
+        unique=True, comment="id для связи со счётом"
+    )
     deals: Mapped[list["Deal"]] = relationship(
         "Deal", back_populates="creation_source"
     )
+    invoices: Mapped[list["Invoice"]] = relationship(
+        "Invoice", back_populates="creation_source"
+    )
+
+
+INVOICE_STAGE_VALUES = [
+    ("новый", "DT31_1:N", 1),
+    ("отправлен", "DT31_1:S", 2),
+    ("успешный", "DT31_1:P", 3),
+    ("не оплачен", "DT31_1:D", 4),
+]
 
 
 class InvoiceStage(NameStrIdEntity):
     """
     Стадии счетов:
-    1. N: новый
-    2. S: отправлен
-    3. 1: выгружен в 1С
-    4. P: успешный
-    5. D: не оплачен
+    1. DT31_1:N: новый
+    2. DT31_1:S: отправлен
+    # 3. 1: выгружен в 1С
+    3. DT31_1:P: успешный
+    4. DT31_1:D: не оплачен
     """
 
     __tablename__ = "invoice_stages"
-    order: Mapped[int] = mapped_column(unique=True, comment="Порядковый номер")
+    sort_order: Mapped[int] = mapped_column(
+        unique=True, comment="Порядковый номер"
+    )
     deals: Mapped[list["Deal"]] = relationship(
         "Deal", back_populates="invoice_stage"
     )
+    invoices: Mapped[list["Invoice"]] = relationship(
+        "Invoice",
+        back_populates="invoice_stage",
+        foreign_keys="[Invoice.invoice_stage_id]",
+    )
+    previous_invoices: Mapped[list["Invoice"]] = relationship(
+        "Invoice",
+        back_populates="previous_stage",
+        foreign_keys="[Invoice.previous_stage_id]",
+    )
+    current_invoices: Mapped[list["Invoice"]] = relationship(
+        "Invoice",
+        back_populates="current_stage",
+        foreign_keys="[Invoice.current_stage_id]",
+    )
+
+
+SHIPPING_COMPANY_VALUES = [
+    ("Системы", 8923, 439),
+]
 
 
 class ShippingCompany(NameIntIdEntity):
@@ -214,21 +394,55 @@ class ShippingCompany(NameIntIdEntity):
     companies: Mapped[list["Company"]] = relationship(
         "Company", back_populates="shipping_company"
     )
+    invoices: Mapped[list["Invoice"]] = relationship(
+        "Invoice", back_populates="shipping_company"
+    )
+    delivery_notes: Mapped[list["DeliveryNote"]] = relationship(
+        "DeliveryNote", back_populates="shipping_company"
+    )
+
+
+WAREHOUSE_VALUES = [
+    ("Нск", 597, 481),
+    ("Спб", 599, 483),
+    ("Кдр", 601, 485),
+    ("Мск", 603, 487),
+]
 
 
 class Warehouse(NameIntIdEntity):
     """
     Склады
-    597: Нск
-    599: Спб
-    601: Кдр
-    603: Мск
+    deal: invoice
+    597: 481: Нск
+    599: 483: Спб
+    601: 485: Кдр
+    603: 487: Мск
     """
 
     __tablename__ = "warehouses"
+    ext_alt_id: Mapped[int] = mapped_column(
+        unique=True, comment="id для связи со счётом"
+    )
     deals: Mapped[list["Deal"]] = relationship(
         "Deal", back_populates="warehouse"
     )
+    invoices: Mapped[list["Invoice"]] = relationship(
+        "Invoice", back_populates="warehouse"
+    )
+    delivery_notes: Mapped[list["DeliveryNote"]] = relationship(
+        "DeliveryNote", back_populates="warehouse"
+    )
+
+
+DEFECT_TYPE_VALUES = [
+    ("Некомплектная поставка", 527),
+    ("Некачественная сборка/проверка", 529),
+    ("Дефект материала", 553),
+    ("Дефект изготовления комплектующих", 555),
+    ("Транспортное повреждение", 557),
+    ("Негарантийная поломка", 559),
+]
 
 
 class DefectType(NameIntIdEntity):
@@ -243,19 +457,28 @@ class DefectType(NameIntIdEntity):
     """
 
     __tablename__ = "defect_types"
-    deal_id: Mapped[UUID] = mapped_column(ForeignKey("deals.id"))
-    deal: Mapped["Deal"] = relationship("Deal", back_populates="defects")
+    # deal_id: Mapped[UUID] = mapped_column(ForeignKey("deals.id"))
+    # deal: Mapped["Deal"] = relationship("Deal", back_populates="defects")
+
+
+DEAL_FAILURE_REASON_VALUES = [
+    ("Нецелевой", 685, 665, 715, 735, 763),
+    ("Не проходим по ценам", 687, 667, 717, 737, 765),
+    ("Нет в наличии", 689, 669, 719, 739, 767),
+    ("Клиент не отвечает", 691, 671, 721, 741, 769),
+    ("Другое", 693, 673, 723, 743, 771),
+]
 
 
 class DealFailureReason(NameIntIdEntity):
     """
     Причины провала
-    deal:lead:contact:company
-    685:665:715:735: Нецелевой
-    687:667:717:737: Не проходим по ценам
-    689:669:719:739: Нет в наличии
-    691:671:721:741: Клиент не отвечает
-    693:673:723:743: Другое
+    deal:lead:contact:company: invoice
+    685:665:715:735: 763: Нецелевой
+    687:667:717:737: 765: Не проходим по ценам
+    689:669:719:739: 767: Нет в наличии
+    691:671:721:741: 769: Клиент не отвечает
+    693:673:723:743: 771: Другое
     """
 
     __tablename__ = "deal_failure_reasons"
@@ -268,6 +491,9 @@ class DealFailureReason(NameIntIdEntity):
     ext_alt3_id: Mapped[int] = mapped_column(
         unique=True, comment="id для связи с компанией"
     )
+    ext_alt4_id: Mapped[int] = mapped_column(
+        unique=True, comment="id для связи со счётом"
+    )
     deals: Mapped[list["Deal"]] = relationship(
         "Deal", back_populates="deal_failure_reason"
     )
@@ -277,6 +503,23 @@ class DealFailureReason(NameIntIdEntity):
     contacts: Mapped[list["Contact"]] = relationship(
         "Contact", back_populates="deal_failure_reason"
     )
+    companies: Mapped[list["Company"]] = relationship(
+        "Company", back_populates="deal_failure_reason"
+    )
+    invoices: Mapped[list["Invoice"]] = relationship(
+        "Invoice", back_populates="invoice_failure_reason"
+    )
+
+
+LEAD_STATUS_VALUES = [
+    ("Входящий лид", "NEW", 1),
+    ("Зависшие лиды", "UC_2N339H", 2),
+    ("Идентификация", "1", 3),
+    ("Квалификация", "IN_PROCESS", 4),
+    ("В разработке", "2", 5),
+    ("Качественный лид", "CONVERTED", 6),
+    ("Некачественный лид", "JUNK", 7),
+]
 
 
 class LeadStatus(NameStrIdEntity):
@@ -292,10 +535,21 @@ class LeadStatus(NameStrIdEntity):
     """
 
     __tablename__ = "lead_statuses"
-    order: Mapped[int] = mapped_column(unique=True, comment="Порядковый номер")
-    leads: Mapped[list["Deal"]] = relationship(
-        "Lead", back_populates="lead_status"
+    sort_order: Mapped[int] = mapped_column(
+        unique=True, comment="Порядковый номер"
     )
+    leads: Mapped[list["Lead"]] = relationship("Lead", back_populates="status")
+
+
+CONTACT_TYPE_VALUES = [
+    ("Клиенты", "CLIENT"),
+    ("Клиент", "CUSTOMER"),
+    ("Конкурент", "COMPETITOR"),
+    ("Поставщики", "SUPPLIER"),
+    ("Партнёры", "PARTNER"),
+    ("Другое", "OTHER"),
+    ("Не целевой", "1"),
+]
 
 
 class ContactType(NameStrIdEntity):
@@ -335,6 +589,22 @@ class AdditionalResponsible:
     )
 
 
+INDUSTRY_VALUES = [
+    ("Информационные технологии", "IT"),
+    ("Телекоммуникации и связь", "TELECOM"),
+    ("Производство", "MANUFACTURING"),
+    ("Банковские услуги", "BANKING"),
+    ("Консалтинг", "CONSULTING"),
+    ("Финансы", "FINANCE"),
+    ("Правительство", "GOVERNMENT"),
+    ("Доставка", "DELIVERY"),
+    ("Развлечения", "ENTERTAINMENT"),
+    ("Не для получения прибыли", "NOTPROFIT"),
+    ("Другое", "OTHER"),
+    ("Торговля", "1"),
+]
+
+
 class Industry(NameStrIdEntity):
     """
     Сфера деятельности:
@@ -358,6 +628,14 @@ class Industry(NameStrIdEntity):
     )
 
 
+EMPLORRS_VALUES = [
+    ("менее 50", "EMPLOYEES_1"),
+    ("50-250", "EMPLOYEES_2"),
+    ("250-500", "EMPLOYEES_3"),
+    ("более 500", "EMPLOYEES_4"),
+]
+
+
 class Emploees(NameStrIdEntity):
     """
     Количесиво сотрудников:
@@ -371,3 +649,52 @@ class Emploees(NameStrIdEntity):
     companies: Mapped[list["Company"]] = relationship(
         "Company", back_populates="employees"
     )
+
+
+class Department(NameIntIdEntity):
+    """
+    Отделы:
+    (предзаполнить)
+    """
+
+    __tablename__ = "departments"
+    parent_id: Mapped[int | None] = mapped_column(
+        ForeignKey("departments.external_id"), nullable=True
+    )
+    child_departments: Mapped[list["Department"]] = relationship(
+        "Department",
+        back_populates="parent_department",
+        foreign_keys="[Department.parent_id]",
+    )
+    parent_department: Mapped["Department | None"] = relationship(
+        "Department",
+        back_populates="child_departments",
+        foreign_keys="[Department.parent_id]",
+        remote_side="[Department.external_id]",
+    )
+    users: Mapped[list["User"]] = relationship(
+        "User", back_populates="department"
+    )
+
+
+MEASURE_VALUES = [
+    (1, "м", 6),
+    (3, "л.", 112),
+    (5, "г", 163),
+    (7, "кг", 166),
+    (9, "шт", 796),
+    (11, "упак", 778),
+]
+
+
+class Measure(NameIntIdEntity):
+    """
+    Единицы измерения:
+    (предзаполнить)
+    """
+
+    __tablename__ = "measures"
+
+    measure_code: Mapped[int] = mapped_column(
+        comment="Код единицы измерения"
+    )  # MEASURE_CODE
