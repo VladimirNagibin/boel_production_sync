@@ -48,6 +48,10 @@ class Settings(BaseSettings):  # type: ignore
     LOGGING_FILE_MAX_BYTES: int = 500_000
     EXCHANGE_NAME: str = "sync"
 
+    WEB_HOOK_PORTAL: str = ""
+    WEB_HOOK_KEY: str = ""
+    ENDPOINT_SERND_FAIL_INVOICE: str = ""
+
     @property
     def dsn(self) -> str:
         return (

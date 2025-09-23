@@ -373,9 +373,7 @@ async def check(
     ),
     # deal_bitrix_client: DealBitrixClient = Depends(get_deal_bitrix_client),
     deal_repo: DealRepository = Depends(get_deal_repository_dep),
-    # invoice_bitrix_client: InvoiceBitrixClient = Depends(
-    #    get_invoice_bitrix_client
-    # ),
+    invoice_client: InvoiceClient = Depends(get_invoice_client_dep),
     deal_client: DealClient = Depends(get_deal_client_dep),
     # lead_client: DealClient = Depends(get_lead_client),
     # lead_bitrix_client: LeadBitrixClient = Depends(get_lead_bitrix_client),
@@ -394,7 +392,7 @@ async def check(
     deal_id = 54195  # 49935
     # comm = await get_comm(deal_id, timeline_client, timeline_repo)
     await deal_client.handle_deal(deal_id)
-    result = ""
+    result = ""  # invoice_client.send_invoice_request_to_fail(123)
     # result = await company_bitrix_client.get(6533)
     # result = await contact_bitrix_client.get(18281)
     if result:
