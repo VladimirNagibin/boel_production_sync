@@ -140,10 +140,20 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
                     error=error_msg,
                 )
 
+            if deal_b24.category_id != 0:
+                error_msg = (
+                    f"Deal with id={external_id} not in the main funnel"
+                )
+                logger.warning(error_msg)
+                return None
+
             result = await self._handle_deal(deal_b24, deal_db, changes)
             if not result:
                 logger.warning(f"Deal {external_id} processing returned False")
                 return None
+
+            if deal_db and deal_db.is_frozen:
+                return True
 
             if self.update_tracker.has_changes() or changes:
                 sync_result = await self._synchronize_deal_data(
@@ -214,11 +224,14 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
         logger.info(f"Processing frozen deal: {deal_b24.external_id}")
         if not changes:
             return True
-        deal_update = DealUpdate(external_id=deal_b24.external_id)
-        for key, value in changes.items():
-            setattr(deal_update, key, value["external"])
-        await self.bitrix_client.update(deal_update)
-        return True
+        try:
+            deal_update = DealUpdate(external_id=deal_b24.external_id)
+            for key, value in changes.items():
+                setattr(deal_update, key, value["external"])
+            await self.bitrix_client.update(deal_update)
+            return True
+        except Exception:
+            return False
 
     async def _handle_fail_stage_deal(
         self,
@@ -237,36 +250,47 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
                 "current_stage_id", deal_b24.stage_id, deal_b24
             )
         if invoice:
-            if (
-                invoice.invoice_stage_id != STAGE_INVOICE_FAIL
-                or invoice.current_stage_id != STAGE_INVOICE_FAIL
-            ):
-                invoice_update_data: dict[str, Any] = {
-                    "external_id": invoice.external_id,
-                    "stage_id": STAGE_INVOICE_FAIL,
-                    "current_stage_id": STAGE_INVOICE_FAIL,
-                }
-                invoice_update = InvoiceUpdate(**invoice_update_data)
-                try:
-                    invoice_service = await self.repo.get_invoice_client()
-                    await invoice_service.bitrix_client.update(invoice_update)
-                    if invoice.external_id and isinstance(
-                        invoice.external_id, int
-                    ):
-                        await invoice_service.import_from_bitrix(
-                            int(invoice.external_id)
-                        )
-                    if invoice.is_loaded:
-                        ...  # TODO: send in 1C to delete invoice
-                except Exception as e:
-                    logger.error(
-                        f"Failed to update invoice ID {invoice.external_id}: "
-                        f"{str(e)}"
-                    )
-                    ...
-                    # return False
+            await self.move_invoice_in_fail_stage_1s(invoice)
 
         return True
+
+    async def move_invoice_in_fail_stage_1s(
+        self, invoice: InvoiceCreate
+    ) -> None:
+        if (
+            invoice.invoice_stage_id != STAGE_INVOICE_FAIL
+            or invoice.current_stage_id != STAGE_INVOICE_FAIL
+        ):
+            invoice_update_data: dict[str, Any] = {
+                "external_id": invoice.external_id,
+                "stage_id": STAGE_INVOICE_FAIL,
+                "current_stage_id": STAGE_INVOICE_FAIL,
+            }
+            invoice_update = InvoiceUpdate(**invoice_update_data)
+            try:
+                invoice_service = await self.repo.get_invoice_client()
+                await invoice_service.bitrix_client.update(invoice_update)
+                if invoice.external_id and isinstance(
+                    invoice.external_id, int
+                ):
+                    await invoice_service.import_from_bitrix(
+                        int(invoice.external_id)
+                    )
+                if (
+                    invoice.is_loaded
+                    and invoice.external_id
+                    and isinstance(invoice.external_id, int)
+                ):
+                    invoice_service.send_invoice_request_to_fail(
+                        invoice.external_id
+                    )
+            except Exception as e:
+                logger.error(
+                    f"Failed to update invoice ID {invoice.external_id}: "
+                    f"{str(e)}"
+                )
+                ...
+                # return False
 
     async def _handle_deal_without_invoice(
         self,

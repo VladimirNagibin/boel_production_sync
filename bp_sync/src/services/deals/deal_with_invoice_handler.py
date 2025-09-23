@@ -12,6 +12,9 @@ if TYPE_CHECKING:
 
 DEAL_STAGE_INVOICE = "FINAL_INVOICE"
 DEAL_STAGE_LOSE = "LOSE"
+DEAL_STAGE_APOLOGY = "APOLOGY"
+DEAL_STAGE_FOR_SHIPMENT = "1"
+DEAL_STAGE_WON = "WON"
 
 
 class DealWithInvioceHandler:
@@ -84,6 +87,14 @@ class DealWithInvioceHandler:
                     "stage_id", DEAL_STAGE_INVOICE, deal_b24
                 )
 
+            if (
+                deal_b24.current_stage_id
+                and deal_b24.current_stage_id != DEAL_STAGE_INVOICE
+            ):
+                self.deal_client.update_tracker.update_field(
+                    "current_stage_id", DEAL_STAGE_INVOICE, deal_b24
+                )
+
         if invoice.invoice_stage_id == InvoiceStage.FAIL:
             if deal_b24.stage_semantic_id and (
                 deal_b24.stage_semantic_id != StageSemanticEnum.FAIL
@@ -91,6 +102,10 @@ class DealWithInvioceHandler:
                 self.deal_client.update_tracker.update_field(
                     "stage_id", DEAL_STAGE_LOSE, deal_b24
                 )
+                self.deal_client.update_tracker.update_field(
+                    "current_stage_id", DEAL_STAGE_LOSE, deal_b24
+                )
+
         product_client = self.deal_client.product_bitrix_client
         if deal_b24.external_id and invoice.external_id:
             if not await product_client.update_deal_product_from_invoice(
@@ -100,6 +115,39 @@ class DealWithInvioceHandler:
                 ...
         if invoice.invoice_stage_id == InvoiceStage.SECCESS:
             # TODO: handel seccess stage
-            ...
+            # Checking the conditions that the deal is successful
+            # and transform in stage WON
+            # Else in stage for SHIPMENT or FAIL
+            if (
+                deal_b24.stage_id == DEAL_STAGE_FOR_SHIPMENT
+                and deal_db
+                and deal_db.stage_id == DEAL_STAGE_WON
+            ):
+                self.deal_client.update_tracker.update_field(
+                    "stage_id", DEAL_STAGE_WON, deal_b24
+                )
+                self.deal_client.update_tracker.update_field(
+                    "current_stage_id", DEAL_STAGE_WON, deal_b24
+                )
+            # The edit at the shipping stage has not yet been implemented
+            if (
+                deal_b24.stage_id == DEAL_STAGE_WON
+                and deal_db
+                and deal_db.stage_id in (DEAL_STAGE_LOSE, DEAL_STAGE_APOLOGY)
+            ):
+                self.deal_client.update_tracker.update_field(
+                    "stage_id", deal_db.stage_id, deal_b24
+                )
+                self.deal_client.update_tracker.update_field(
+                    "current_stage_id", deal_db.stage_id, deal_b24
+                )
+                await self.deal_client.move_invoice_in_fail_stage_1s(invoice)
+            if deal_b24.stage_id not in (
+                DEAL_STAGE_FOR_SHIPMENT,
+                DEAL_STAGE_WON,
+            ):
+                # The invoice cannot be successful and
+                # the deal is not on shipment or is not successful.
+                ...
 
         return True

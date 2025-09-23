@@ -1,17 +1,17 @@
 services:
-  mark:
+  bp_sync:
     image: vlnag/bp_sync
     env_file:
       - .env
-    volumes:
-      - ./bp_sync/src/logs:/opt/app/logs
+    #volumes:
+    #  - ./bp_sync/src/logs:/opt/app/logs
     ports:
      - 8000:8000
     depends_on:
       db:
         condition: service_healthy
 
-  mark-migrations:
+  bp_sync-migrations:
     image: vlnag/bp_sync
     env_file:
       - .env
@@ -35,5 +35,31 @@ services:
       start_period: 0s
       timeout: 10s
 
+  redis:
+    image: redis:7-alpine
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    command: redis-server --requirepass ${REDIS_PASSWORD} --save 60 1 --appendonly yes
+    volumes:
+      - redis-data:/data
+
+  rabbitmq:
+    container_name: rabbitmq
+    hostname: rabbitmq
+    image: rabbitmq:3.12-management
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBIT_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBIT_PASSWORD}
+    ports:
+      - 5672:5672
+      - 15672:15672
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
 volumes:
   db_data:
+  redis-data:
