@@ -292,6 +292,9 @@ DEFAULT_COMPANY: list[tuple[Any, ...]] = [
         121,
         121,
         121,
+        False,
+        False,
+        False,
     ),
     (
         7925,
@@ -304,6 +307,9 @@ DEFAULT_COMPANY: list[tuple[Any, ...]] = [
         29,
         29,
         29,
+        False,
+        False,
+        False,
     ),
     (
         22095,
@@ -316,6 +322,9 @@ DEFAULT_COMPANY: list[tuple[Any, ...]] = [
         905,
         905,
         905,
+        False,
+        False,
+        False,
     ),
     (
         17709,
@@ -328,6 +337,9 @@ DEFAULT_COMPANY: list[tuple[Any, ...]] = [
         923,
         923,
         923,
+        False,
+        False,
+        False,
     ),
     (
         18453,
@@ -340,6 +352,9 @@ DEFAULT_COMPANY: list[tuple[Any, ...]] = [
         1039,
         1039,
         1039,
+        False,
+        False,
+        False,
     ),
     (
         18845,
@@ -352,6 +367,9 @@ DEFAULT_COMPANY: list[tuple[Any, ...]] = [
         319,
         319,
         319,
+        False,
+        False,
+        False,
     ),
     (
         20631,
@@ -364,6 +382,9 @@ DEFAULT_COMPANY: list[tuple[Any, ...]] = [
         1865,
         1865,
         1865,
+        False,
+        False,
+        False,
     ),
     (
         21063,
@@ -376,6 +397,9 @@ DEFAULT_COMPANY: list[tuple[Any, ...]] = [
         3231,
         3231,
         3231,
+        False,
+        False,
+        False,
     ),
 ]
 

@@ -64,6 +64,9 @@ def upgrade() -> None:
             "assigned_by_id",
             "created_by_id",
             "modify_by_id",
+            "has_phone",
+            "has_email",
+            "has_imol",
         ],
         DEFAULT_COMPANY,
     )
