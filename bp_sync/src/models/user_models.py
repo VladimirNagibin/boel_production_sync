@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import DateTime, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -280,15 +280,15 @@ class User(IntIdEntity):
     )
 
 
-DEFAULT_COMPANY: list[tuple[int, str, float, bool, bool]] = [
-    (16079, "Company_16079", 0, False, True),
-    (7925, "Company_7925", 0, False, True),
-    (22095, "Company_22095", 0, False, True),
-    (17709, "Company_17709", 0, False, True),
-    (18453, "Company_18453", 0, False, True),
-    (18845, "Company_18845", 0, False, True),
-    (20631, "Company_20631", 0, False, True),
-    (21063, "Company_21063", 0, False, True),
+DEFAULT_COMPANY: list[tuple[Any, ...]] = [
+    (16079, "Company_16079", 0, False, True, datetime.now(), datetime.now()),
+    (7925, "Company_7925", 0, False, True, datetime.now(), datetime.now()),
+    (22095, "Company_22095", 0, False, True, datetime.now(), datetime.now()),
+    (17709, "Company_17709", 0, False, True, datetime.now(), datetime.now()),
+    (18453, "Company_18453", 0, False, True, datetime.now(), datetime.now()),
+    (18845, "Company_18845", 0, False, True, datetime.now(), datetime.now()),
+    (20631, "Company_20631", 0, False, True, datetime.now(), datetime.now()),
+    (21063, "Company_21063", 0, False, True, datetime.now(), datetime.now()),
 ]
 
 MANAGER_VALUES: list[tuple[int, bool, int | None, int | None]] = [
