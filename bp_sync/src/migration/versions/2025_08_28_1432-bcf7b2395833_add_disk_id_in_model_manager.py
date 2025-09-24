@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from alembic import op
 
 from migration.helpers import get_query_for_bulk_insert
-from models.user_models import MANAGER_VALUES, USERS_VALUES
+from models.user_models import DEFAULT_COMPANY, MANAGER_VALUES, USERS_VALUES
 
 # revision identifiers, used by Alembic.
 revision: str = "bcf7b2395833"
@@ -49,6 +49,12 @@ def upgrade() -> None:
         "users",
         ["external_id", "active", "is_online"],
         USERS_VALUES,
+    )
+    op.execute(sa.text(query))
+    query = get_query_for_bulk_insert(
+        "companies",
+        ["external_id", "title", "revenue", "is_my_company"],
+        DEFAULT_COMPANY,
     )
     op.execute(sa.text(query))
     query = get_query_for_bulk_insert(
