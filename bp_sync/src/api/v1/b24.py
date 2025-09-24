@@ -393,11 +393,19 @@ async def check(
     # comm = await get_comm(deal_id, timeline_client, timeline_repo)
     # await deal_client.handle_deal(deal_id)
     result = ""  # invoice_client.send_invoice_request_to_fail(123)
-    result = await company_bitrix_client.get(6533)
+    try:
+        result = await company_bitrix_client.get(6533)
+    except BitrixAuthError as e:
+        return JSONResponse(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            content={
+                "detail": e.detail,
+            },
+        )
     # result = await contact_bitrix_client.get(18281)
     if result:
         ...
-        print(f"{result}-------DEAL--UPDATE")
+        # print(f"{result}-------DEAL--UPDATE")
     # print(f"{products_deal}-------DEAL")
     # products_invoice = await product_bitrix_client.get_entity_products(
     #    26309, EntityTypeAbbr.INVOICE)
