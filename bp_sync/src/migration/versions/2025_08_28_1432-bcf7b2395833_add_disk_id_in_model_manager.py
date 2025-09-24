@@ -53,7 +53,15 @@ def upgrade() -> None:
     op.execute(sa.text(query))
     query = get_query_for_bulk_insert(
         "companies",
-        ["external_id", "title", "revenue", "is_my_company", "opened"],
+        [
+            "external_id",
+            "title",
+            "revenue",
+            "is_my_company",
+            "opened",
+            "date_create",
+            "date_modify",
+        ],
         DEFAULT_COMPANY,
     )
     op.execute(sa.text(query))
