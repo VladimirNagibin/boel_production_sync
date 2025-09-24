@@ -198,3 +198,5 @@ logs/
 
 .info
 data/
+
+.env_
