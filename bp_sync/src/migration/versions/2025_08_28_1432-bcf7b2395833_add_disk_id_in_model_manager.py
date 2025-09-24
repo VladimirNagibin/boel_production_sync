@@ -61,6 +61,9 @@ def upgrade() -> None:
             "opened",
             "date_create",
             "date_modify",
+            "assigned_by_id",
+            "created_by_id",
+            "modify_by_id",
         ],
         DEFAULT_COMPANY,
     )
