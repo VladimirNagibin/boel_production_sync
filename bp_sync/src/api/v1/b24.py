@@ -389,11 +389,11 @@ async def check(
     ),
 ) -> JSONResponse:
 
-    deal_id = 54195  # 49935
+    # deal_id = 54195  # 49935
     # comm = await get_comm(deal_id, timeline_client, timeline_repo)
-    await deal_client.handle_deal(deal_id)
+    # await deal_client.handle_deal(deal_id)
     result = ""  # invoice_client.send_invoice_request_to_fail(123)
-    # result = await company_bitrix_client.get(6533)
+    result = await company_bitrix_client.get(6533)
     # result = await contact_bitrix_client.get(18281)
     if result:
         ...
