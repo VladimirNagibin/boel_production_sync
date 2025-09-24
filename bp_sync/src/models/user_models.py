@@ -280,15 +280,15 @@ class User(IntIdEntity):
     )
 
 
-DEFAULT_COMPANY: list[tuple[int, str, float, bool]] = [
-    (16079, "Company_16079", 0, False),
-    (7925, "Company_7925", 0, False),
-    (22095, "Company_22095", 0, False),
-    (17709, "Company_17709", 0, False),
-    (18453, "Company_18453", 0, False),
-    (18845, "Company_18845", 0, False),
-    (20631, "Company_20631", 0, False),
-    (21063, "Company_21063", 0, False),
+DEFAULT_COMPANY: list[tuple[int, str, float, bool, bool]] = [
+    (16079, "Company_16079", 0, False, True),
+    (7925, "Company_7925", 0, False, True),
+    (22095, "Company_22095", 0, False, True),
+    (17709, "Company_17709", 0, False, True),
+    (18453, "Company_18453", 0, False, True),
+    (18845, "Company_18845", 0, False, True),
+    (20631, "Company_20631", 0, False, True),
+    (21063, "Company_21063", 0, False, True),
 ]
 
 MANAGER_VALUES: list[tuple[int, bool, int | None, int | None]] = [
