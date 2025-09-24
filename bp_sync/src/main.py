@@ -10,11 +10,10 @@ from sqladmin import Admin
 
 from admin.admin_models import register_models
 from admin.authenticate import BasicAuthBackend
-
-# from api.v1.health import health_router
-# from api.v1.products import product_router
-from api.v1.b24 import b24_router
+from api.v1.accounting_documents import account_router
+from api.v1.b24.b24_router import b24_router
 from api.v1.reports import reports_router
+from api.v1.test import test_router
 from api.v1.upload_product_codes import upload_codes_router
 from core.logger import LOGGING, logger
 from core.settings import settings
@@ -69,11 +68,14 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-app.include_router(b24_router, prefix="/api/v1/b24", tags=["b24"])
+
+app.include_router(b24_router, prefix="/api/v1", tags=["b24"])
 app.include_router(reports_router, prefix="/api/v1/reports", tags=["reports"])
-app.include_router(upload_codes_router, prefix="/api/v1/codes", tags=["codes"])
-# app.include_router(health_router, prefix="/api/v1/health", tags=["health"])
-# app.include_router(producths_router, prefix="/api/v1/hs", tags=["hs"])
+app.include_router(
+    upload_codes_router, prefix="/api/v1/codes", tags=["product_codes_1C"]
+)
+app.include_router(account_router, prefix="/api/v1/account", tags=["account"])
+app.include_router(test_router, prefix="/api/v1/test", tags=["test"])
 auth_backend = BasicAuthBackend()
 admin = Admin(app, engine, authentication_backend=auth_backend)
 register_models(admin)
