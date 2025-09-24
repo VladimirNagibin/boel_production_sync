@@ -20,22 +20,22 @@ if TYPE_CHECKING:
     from .timeline_comment_models import TimelineComment
 
 
-USERS_VALUES: list[tuple[int]] = [
-    (171,),
-    (121,),
-    (29,),
-    (905,),
-    (923,),
-    (1039,),
-    (319,),
-    (1865,),
-    (3231,),
-    (5747,),
-    (9637,),
-    (5095,),
-    (11077,),
-    (227,),
-    (9023,),
+USERS_VALUES: list[tuple[int, bool, bool]] = [
+    (171, True, False),
+    (121, True, False),
+    (29, True, False),
+    (905, True, False),
+    (923, True, False),
+    (1039, True, False),
+    (319, True, False),
+    (1865, True, False),
+    (3231, True, False),
+    (5747, True, False),
+    (9637, True, False),
+    (5095, True, False),
+    (11077, True, False),
+    (227, True, False),
+    (9023, True, False),
 ]
 
 
