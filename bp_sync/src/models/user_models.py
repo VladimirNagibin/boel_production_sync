@@ -20,6 +20,25 @@ if TYPE_CHECKING:
     from .timeline_comment_models import TimelineComment
 
 
+USERS_VALUES: list[tuple[int]] = [
+    (171,),
+    (121,),
+    (29,),
+    (905,),
+    (923,),
+    (1039,),
+    (319,),
+    (1865,),
+    (3231,),
+    (5747,),
+    (9637,),
+    (5095,),
+    (11077,),
+    (227,),
+    (9023,),
+]
+
+
 class User(IntIdEntity):
     """
     Пользователи
