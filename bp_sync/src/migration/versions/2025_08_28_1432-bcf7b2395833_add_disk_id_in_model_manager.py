@@ -47,7 +47,7 @@ def upgrade() -> None:
     # ### end Alembic commands ###
     query = get_query_for_bulk_insert(
         "users",
-        ["external_id"],
+        ["external_id", "active", "is_online"],
         USERS_VALUES,
     )
     op.execute(sa.text(query))
