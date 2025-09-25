@@ -104,7 +104,7 @@ async def load_deals(
     )
 
 
-@deals_router.get(
+@deals_router.post(
     "/set-source",
     summary="Set source deal",
     description="Updating and fixing source deal.",
