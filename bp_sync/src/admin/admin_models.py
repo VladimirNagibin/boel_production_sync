@@ -288,16 +288,23 @@ class DealTypeAdmin(BaseAdmin, model=DealType):  # type: ignore[call-arg]
 class ShippingCompanyAdmin(
     BaseAdmin, model=ShippingCompany
 ):  # type: ignore[call-arg]
-    name = "Фирмы отгрузки"
+    name = "Фирма отгрузки"
+    name_plural = "Фирмы отгрузки"
+    category = "Справочники"
+
     column_list = [  # Поля в списке
         "external_id",
         "name",
+        "ext_alt_id",
     ]
-    column_labels = {  # Надписи полей в списке
+    column_labels = {  # Надписи полей в списке # type: ignore
         "external_id": "Внешний код",
         "name": "Название",
+        "ext_alt_id": "Дополнительный код",
     }
-    column_default_sort = [("external_id", True)]  # Сортировка по умолчанию
+    column_default_sort = [  # Сортировка по умолчанию # type: ignore
+        ("external_id", True)
+    ]
     column_sortable_list = [  # Список полей по которым возможна сортировка
         "external_id",
         "name",
@@ -309,9 +316,17 @@ class ShippingCompanyAdmin(
     form_columns = [  # Поля на форме
         "external_id",
         "name",
+        "ext_alt_id",
     ]
-    column_details_list = ["name", "id", "created_at"]  #
-    icon = "fa-solid fa-location-arrow"
+    column_details_list = [
+        "id",
+        "name",
+        "external_id",
+        "ext_alt_id",
+        "created_at",
+    ]
+    icon = "fa-solid fa-box"
+    _is_base_class = False
 
 
 class BillingAdmin(BaseAdmin, model=Billing):  # type: ignore[call-arg]

@@ -2,10 +2,10 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 
-from services.dependencies import get_code_service
+from services.dependencies import get_code_service, request_context
 from services.products.code_services import CodeService
 
-upload_codes_router = APIRouter()  # tags=["Product Codes"]
+upload_codes_router = APIRouter(dependencies=[Depends(request_context)])
 
 
 @upload_codes_router.post(  # type: ignore[misc]

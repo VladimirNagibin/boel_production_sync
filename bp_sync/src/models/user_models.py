@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import DateTime, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -18,6 +18,25 @@ if TYPE_CHECKING:
     from .invoice_models import Invoice
     from .lead_models import Lead
     from .timeline_comment_models import TimelineComment
+
+
+USERS_VALUES: list[tuple[int, bool, bool]] = [
+    (171, True, False),
+    (121, True, False),
+    (29, True, False),
+    (905, True, False),
+    (923, True, False),
+    (1039, True, False),
+    (319, True, False),
+    (1865, True, False),
+    (3231, True, False),
+    (5747, True, False),
+    (9637, True, False),
+    (5095, True, False),
+    (11077, True, False),
+    (227, True, False),
+    (9023, True, False),
+]
 
 
 class User(IntIdEntity):
@@ -260,6 +279,129 @@ class User(IntIdEntity):
         back_populates="user", uselist=False
     )
 
+
+DEFAULT_COMPANY: list[tuple[Any, ...]] = [
+    (
+        16079,
+        "Company_16079",
+        0,
+        False,
+        True,
+        datetime.now(),
+        datetime.now(),
+        121,
+        121,
+        121,
+        False,
+        False,
+        False,
+    ),
+    (
+        7925,
+        "Company_7925",
+        0,
+        False,
+        True,
+        datetime.now(),
+        datetime.now(),
+        29,
+        29,
+        29,
+        False,
+        False,
+        False,
+    ),
+    (
+        22095,
+        "Company_22095",
+        0,
+        False,
+        True,
+        datetime.now(),
+        datetime.now(),
+        905,
+        905,
+        905,
+        False,
+        False,
+        False,
+    ),
+    (
+        17709,
+        "Company_17709",
+        0,
+        False,
+        True,
+        datetime.now(),
+        datetime.now(),
+        923,
+        923,
+        923,
+        False,
+        False,
+        False,
+    ),
+    (
+        18453,
+        "Company_18453",
+        0,
+        False,
+        True,
+        datetime.now(),
+        datetime.now(),
+        1039,
+        1039,
+        1039,
+        False,
+        False,
+        False,
+    ),
+    (
+        18845,
+        "Company_18845",
+        0,
+        False,
+        True,
+        datetime.now(),
+        datetime.now(),
+        319,
+        319,
+        319,
+        False,
+        False,
+        False,
+    ),
+    (
+        20631,
+        "Company_20631",
+        0,
+        False,
+        True,
+        datetime.now(),
+        datetime.now(),
+        1865,
+        1865,
+        1865,
+        False,
+        False,
+        False,
+    ),
+    (
+        21063,
+        "Company_21063",
+        0,
+        False,
+        True,
+        datetime.now(),
+        datetime.now(),
+        3231,
+        3231,
+        3231,
+        False,
+        False,
+        False,
+    ),
+]
 
 MANAGER_VALUES: list[tuple[int, bool, int | None, int | None]] = [
     (171, True, None, 19447),  # Admin
