@@ -10,10 +10,11 @@ from services.delivery_notes.delivery_note_repository import (
 from services.dependencies import (
     get_billing_repository_dep,
     get_delivery_note_repository_dep,
+    request_context,
 )
 from services.exceptions import ConflictException
 
-account_router = APIRouter()
+account_router = APIRouter(dependencies=[Depends(request_context)])
 
 
 @account_router.post("/billing")  # type: ignore
