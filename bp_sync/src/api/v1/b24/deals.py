@@ -1,9 +1,10 @@
 from datetime import date
 from typing import Any
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import JSONResponse
 
+from core.settings import settings
 from services.deals.deal_bitrix_services import DealBitrixClient
 from services.deals.deal_import_services import DealProcessor
 from services.deals.deal_services import DealClient
@@ -101,3 +102,37 @@ async def load_deals(
             "failed": len(deal_fail),
         },
     )
+
+
+@deals_router.get(
+    "/set-source",
+    summary="Set source deal",
+    description="Updating and fixing source deal.",
+)  # type: ignore
+async def set_source_deal(
+    user_id: str = Query(..., description="ID пользователя из шаблона"),
+    key: str = Query(..., description="Секретный ключ из глобальных констант"),
+    deal_id: str = Query(..., description="ID сделки"),
+    creation_source: str | None = Query(None, description="Источник создания"),
+    source: str | None = Query(None, description="Источник"),
+    type_: str | None = Query(None, alias="type", description="Тип источника"),
+    deal_client: DealClient = Depends(get_deal_client_dep),
+) -> None:
+    """
+    Обработчик вебхука из Битрикс24 для установки источника сделки.
+
+    URL: http://portal:8000/api/v1/b24/set-source
+    Параметры:
+      - user_id={=Template:TargetUser}
+      - key={{Константы глобальные: ключ}}
+      - deal_id={{ID}}
+      - creation_source={=Template:CreationSource}
+      - source={=Template:Source}
+      - type={=Template:Type}
+    """
+    if key != settings.WEB_HOOK_KEY:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Invalid secret key"
+        )
+    # check user right
+    await deal_client.bitrix_client.send_message_b24(171, f"{user_id}")
