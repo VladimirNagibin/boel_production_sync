@@ -28,6 +28,7 @@ from .deal_report_helpers import (
 )
 from .deal_repository import DealRepository
 from .deal_source_classifier import WEBSITE_CREATOR, identify_source
+from .deal_source_handler import DealSourceHandler
 from .deal_stage_handler import DealStageHandler
 from .deal_update_tracker import DealUpdateTracker
 from .deal_with_invoice_handler import DealWithInvioceHandler
@@ -63,6 +64,7 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
         self.update_tracker = DealUpdateTracker()
         self.site_order_handler = SiteOrderHandler(self)
         self.deal_with_invoice_handler = DealWithInvioceHandler(self)
+        self.deal_source_handler = DealSourceHandler(self)
 
     @property
     def entity_name(self) -> str:
@@ -652,5 +654,27 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
             logger.error(
                 "Failed to update comments for deal "
                 f"{deal_b24.external_id}: {str(e)}"
+            )
+            return False
+
+    async def set_deal_source(
+        self,
+        user_id: str,
+        key: str,
+        deal_id: str,
+        creation_source: str | None,
+        source: str | None,
+        type_deal: str | None,
+    ) -> bool:
+        try:
+            return await self.deal_source_handler.set_deal_source(
+                user_id, key, deal_id, creation_source, source, type_deal
+            )
+        except HTTPException:
+            # Re-raise HTTP exceptions to be handled by FastAPI
+            raise
+        except Exception as e:
+            logger.error(
+                f"Error in process_deal_source: {str(e)}", exc_info=True
             )
             return False
