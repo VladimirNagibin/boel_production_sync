@@ -104,7 +104,7 @@ async def load_deals(
     )
 
 
-@deals_router.get(
+@deals_router.post(
     "/set-source",
     summary="Set source deal",
     description="Updating and fixing source deal.",
@@ -115,7 +115,9 @@ async def set_source_deal(
     deal_id: str = Query(..., description="ID сделки"),
     creation_source: str | None = Query(None, description="Источник создания"),
     source: str | None = Query(None, description="Источник"),
-    type_: str | None = Query(None, alias="type", description="Тип источника"),
+    type_deal: str | None = Query(
+        None, alias="type", description="Тип источника"
+    ),
     deal_client: DealClient = Depends(get_deal_client_dep),
 ) -> None:
     """
@@ -135,4 +137,7 @@ async def set_source_deal(
             status_code=status.HTTP_403_FORBIDDEN, detail="Invalid secret key"
         )
     # check user right
-    await deal_client.bitrix_client.send_message_b24(171, f"{user_id}")
+    await deal_client.bitrix_client.send_message_b24(
+        171,
+        f"{user_id}::{deal_id}::{creation_source}::{source}::{type_deal}",
+    )
