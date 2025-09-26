@@ -8,6 +8,7 @@ from core.settings import settings
 from services.deals.deal_bitrix_services import DealBitrixClient
 from services.deals.deal_import_services import DealProcessor
 from services.deals.deal_services import DealClient
+from services.deals.enums import CreationSourceEnum
 from services.dependencies import (
     get_deal_bitrix_client_dep,
     get_deal_client_dep,
@@ -137,7 +138,10 @@ async def set_source_deal(
             status_code=status.HTTP_403_FORBIDDEN, detail="Invalid secret key"
         )
     # check user right
-    await deal_client.bitrix_client.send_message_b24(
-        171,
-        f"{user_id}::{deal_id}::{creation_source}::{source}::{type_deal}",
-    )
+    if creation_source:
+        await deal_client.bitrix_client.send_message_b24(
+            171,
+            f"{user_id}::{deal_id}::"
+            f"{CreationSourceEnum.get_value_by_display_name(creation_source)}"
+            f"::{source}::{type_deal}",
+        )
