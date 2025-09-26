@@ -430,6 +430,9 @@ class Manager(Base):
     __tablename__ = "managers"
     _schema_class = ManagerCreate
 
+    def __str__(self) -> str:
+        return str(self.user.full_name)
+
     user_id: Mapped[int] = mapped_column(
         ForeignKey("users.external_id"),
         unique=True,

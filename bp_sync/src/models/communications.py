@@ -41,6 +41,15 @@ class CommunicationChannel(IntIdEntity):
     #        "channel_type_id", "value", name="uq_channel_type_value"
     #    ),
     # )
+
+    def __str__(self) -> str:
+        name = ""
+        if self.type_id:
+            name += self.type_id
+        if self.value_type:
+            name += f" {self.value_type}"
+        return f"{name}: {self.value}" if name else str(self.value)
+
     entity_type: Mapped[EntityType] = mapped_column(
         String(20),
         comment="Тип сущности",

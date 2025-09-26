@@ -1,4 +1,4 @@
-# from typing import Any
+from typing import Any
 
 from sqladmin import Admin, ModelView
 
@@ -56,19 +56,38 @@ class BaseAdmin(ModelView):  # type: ignore[misc]
 # Основные сущности
 class DealAdmin(BaseAdmin, model=Deal):  # type: ignore[call-arg]
     name = "Сделка"
+    name_plural = "Сделки"
+    category = "Сущности"
+
     column_list = [  # Поля в списке
         "external_id",
         "title",
         "opportunity",
-        "begindate",
+        "processing_status",
+        "is_deleted_in_bitrix",
     ]
-    column_labels = {  # Надписи полей в списке
+
+    # Форматирование значений
+    column_formatters: dict[str, Any] = {
+        "title": lambda m, a: (
+            str(getattr(m, a, ""))[:35] + "..."
+            if len(str(getattr(m, a, ""))) > 35
+            else str(getattr(m, a, ""))
+        ),
+        "opportunity": lambda m, a: (
+            f"{getattr(m, a, 0):,.2f}" if getattr(m, a, 0) else "0"
+        ),
+    }
+
+    column_labels = {  # Надписи полей в списке # type: ignore
         "external_id": "Внешний код",
         "title": "Название",
         "opportunity": "Сумма",
         "begindate": "Дата начала",
     }
-    column_default_sort = [("external_id", True)]  # Сортировка по умолчанию
+    column_default_sort = [  # Сортировка по умолчанию # type: ignore
+        ("external_id", True)
+    ]
     column_sortable_list = [  # Список полей по которым возможна сортировка
         "external_id",
         "title",
@@ -79,7 +98,7 @@ class DealAdmin(BaseAdmin, model=Deal):  # type: ignore[call-arg]
         "title",
         "external_id",
     ]
-    form_columns = [  # Поля на форме
+    form_columns = [  # Поля на форме создания
         "external_id",
         "title",
         "opportunity",
@@ -88,7 +107,20 @@ class DealAdmin(BaseAdmin, model=Deal):  # type: ignore[call-arg]
         "stage_id",
         "category_id",
     ]
-    column_details_list = ["title", "stage_semantic_id", "payment_type"]  #
+    column_details_list = [  # Поля на форме просмотра
+        "title",
+        "assigned_user",
+        "created_user",
+        "modify_user",
+        "last_activity_user",
+        "date_create",
+        "date_modify",
+        "last_activity_time",
+        "last_communication_time",
+        "additional_info",
+        "stage_semantic_id",
+        "payment_type",
+    ]
     # form_ajax_refs = {  # Поиск поля по значению из списка
     # "currency": {
     #    "fields": ["name", "external_id"],
@@ -100,6 +132,7 @@ class DealAdmin(BaseAdmin, model=Deal):  # type: ignore[call-arg]
     # "contact": {"fields": ["name", "last_name"]},
     # }
     icon = "fa-solid fa-handshake"
+    _is_base_class = False
 
 
 class CompanyAdmin(BaseAdmin, model=Company):  # type: ignore[call-arg]
