@@ -39,6 +39,10 @@ class Currency(NameStrIdEntity):
     """
 
     __tablename__ = "currencies"
+
+    def __str__(self) -> str:
+        return str(self.name)
+
     rate: Mapped[float] = mapped_column(comment="Курс валюты")
     nominal: Mapped[int] = mapped_column(comment="Номинал")
     deals: Mapped[list["Deal"]] = relationship(
@@ -84,6 +88,10 @@ class MainActivity(NameIntIdEntity):
     """
 
     __tablename__ = "main_activites"
+
+    def __str__(self) -> str:
+        return str(self.name)
+
     ext_alt_id: Mapped[int] = mapped_column(
         unique=True, comment="id для связи с лидом"
     )
@@ -141,6 +149,10 @@ class DealType(NameStrIdEntity):
     """
 
     __tablename__ = "deal_types"
+
+    def __str__(self) -> str:
+        return str(self.name)
+
     deals: Mapped[list["Deal"]] = relationship(
         "Deal", back_populates="type", foreign_keys="[Deal.type_id]"
     )
@@ -187,6 +199,10 @@ class DealStage(NameStrIdEntity):
     """
 
     __tablename__ = "deal_stages"
+
+    def __str__(self) -> str:
+        return str(self.name)
+
     sort_order: Mapped[int] = mapped_column(
         unique=True, comment="Порядковый номер стадии"
     )
@@ -216,6 +232,10 @@ class Category(NameIntIdEntity):
     """
 
     __tablename__ = "categories"
+
+    def __str__(self) -> str:
+        return str(self.name)
+
     deals: Mapped[list["Deal"]] = relationship(
         "Deal", back_populates="category"
     )
@@ -281,6 +301,10 @@ class Source(NameStrIdEntity):
     """
 
     __tablename__ = "sources"
+
+    def __str__(self) -> str:
+        return str(self.name)
+
     deals: Mapped[list["Deal"]] = relationship("Deal", back_populates="source")
     leads: Mapped[list["Lead"]] = relationship("Lead", back_populates="source")
     companies: Mapped[list["Company"]] = relationship(
@@ -318,6 +342,10 @@ class CreationSource(NameIntIdEntity):
     """
 
     __tablename__ = "creation_sources"
+
+    def __str__(self) -> str:
+        return str(self.name)
+
     ext_alt_id: Mapped[int] = mapped_column(
         unique=True, comment="id для связи со счётом"
     )
@@ -348,6 +376,10 @@ class InvoiceStage(NameStrIdEntity):
     """
 
     __tablename__ = "invoice_stages"
+
+    def __str__(self) -> str:
+        return str(self.name)
+
     sort_order: Mapped[int] = mapped_column(
         unique=True, comment="Порядковый номер"
     )
@@ -382,6 +414,10 @@ class ShippingCompany(NameIntIdEntity):
     """
 
     __tablename__ = "shipping_companies"
+
+    def __str__(self) -> str:
+        return str(self.name)
+
     ext_alt_id: Mapped[int] = mapped_column(
         unique=True, comment="id для связи с компанией"
     )
@@ -421,6 +457,10 @@ class Warehouse(NameIntIdEntity):
     """
 
     __tablename__ = "warehouses"
+
+    def __str__(self) -> str:
+        return str(self.name)
+
     ext_alt_id: Mapped[int] = mapped_column(
         unique=True, comment="id для связи со счётом"
     )
@@ -457,6 +497,10 @@ class DefectType(NameIntIdEntity):
     """
 
     __tablename__ = "defect_types"
+
+    def __str__(self) -> str:
+        return str(self.name)
+
     # deal_id: Mapped[UUID] = mapped_column(ForeignKey("deals.id"))
     # deal: Mapped["Deal"] = relationship("Deal", back_populates="defects")
 
@@ -482,6 +526,10 @@ class DealFailureReason(NameIntIdEntity):
     """
 
     __tablename__ = "deal_failure_reasons"
+
+    def __str__(self) -> str:
+        return str(self.name)
+
     ext_alt_id: Mapped[int] = mapped_column(
         unique=True, comment="id для связи с лидом"
     )
@@ -535,6 +583,10 @@ class LeadStatus(NameStrIdEntity):
     """
 
     __tablename__ = "lead_statuses"
+
+    def __str__(self) -> str:
+        return str(self.name)
+
     sort_order: Mapped[int] = mapped_column(
         unique=True, comment="Порядковый номер"
     )
@@ -565,6 +617,10 @@ class ContactType(NameStrIdEntity):
     """
 
     __tablename__ = "contact_types"
+
+    def __str__(self) -> str:
+        return str(self.name)
+
     contacts: Mapped[list["Contact"]] = relationship(
         "Contact", back_populates="type"
     )
@@ -623,6 +679,10 @@ class Industry(NameStrIdEntity):
     """
 
     __tablename__ = "industries"
+
+    def __str__(self) -> str:
+        return str(self.name)
+
     companies: Mapped[list["Company"]] = relationship(
         "Company", back_populates="industry"
     )
@@ -646,6 +706,10 @@ class Emploees(NameStrIdEntity):
     """
 
     __tablename__ = "employees"
+
+    def __str__(self) -> str:
+        return str(self.name)
+
     companies: Mapped[list["Company"]] = relationship(
         "Company", back_populates="employees"
     )
@@ -658,6 +722,10 @@ class Department(NameIntIdEntity):
     """
 
     __tablename__ = "departments"
+
+    def __str__(self) -> str:
+        return str(self.name)
+
     parent_id: Mapped[int | None] = mapped_column(
         ForeignKey("departments.external_id"), nullable=True
     )
@@ -694,6 +762,9 @@ class Measure(NameIntIdEntity):
     """
 
     __tablename__ = "measures"
+
+    def __str__(self) -> str:
+        return str(self.name)
 
     measure_code: Mapped[int] = mapped_column(
         comment="Код единицы измерения"

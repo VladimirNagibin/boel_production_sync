@@ -17,6 +17,9 @@ class DeliveryNote(NameStrIdEntity):
 
     __tablename__ = "delivery_notes"
 
+    def __str__(self) -> str:
+        return str(self.name)
+
     opportunity: Mapped[float] = mapped_column(
         default=0.0, comment="Сумма сделки"
     )

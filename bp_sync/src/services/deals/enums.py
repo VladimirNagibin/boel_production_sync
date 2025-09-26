@@ -16,13 +16,20 @@ class CreationSourceEnum(IntEnum):
     MANUAL = 807  # ручной
 
     @classmethod
-    def get_display_name(cls, value: int) -> str:
-        """Get display name by value"""
-        display_names = {
+    def _display_name_map(cls) -> dict[int, str]:
+        return {
             805: "авто",
             807: "ручной",
         }
-        return display_names.get(value, "Неизвестно")
+
+    @classmethod
+    def _reverse_display_name_map(cls) -> dict[str, int]:
+        return {v: k for k, v in cls._display_name_map().items()}
+
+    @classmethod
+    def get_display_name(cls, value: int) -> str:
+        """Get display name by value"""
+        return cls._display_name_map().get(value, "Неизвестно")
 
     @classmethod
     def from_value(cls, value: int | None) -> "CreationSourceEnum":
@@ -32,6 +39,26 @@ class CreationSourceEnum(IntEnum):
                 return member
         raise ValueError(f"No matching enum member for value {value}")
 
+    @classmethod
+    def from_display_name(cls, display_name: str) -> "CreationSourceEnum":
+        """Get enum member by display name"""
+        value = cls._reverse_display_name_map().get(display_name)
+        if value is None:
+            raise ValueError(
+                f"No matching enum member for display name '{display_name}'"
+            )
+        return cls.from_value(value)
+
+    @classmethod
+    def get_value_by_display_name(cls, display_name: str) -> int:
+        """Get value by display name"""
+        value = cls._reverse_display_name_map().get(display_name)
+        if value is None:
+            raise ValueError(
+                f"No matching value for display name '{display_name}'"
+            )
+        return value
+
 
 class DealTypeEnum(StrEnum):
     DIRECT_SALES = "1"  # Прямые продажи
@@ -40,15 +67,22 @@ class DealTypeEnum(StrEnum):
     FOREIGN_TRADE = "7"  # ВЭД
 
     @classmethod
-    def get_display_name(cls, value: str) -> str:
-        """Get display name by value"""
-        display_names = {
+    def _display_name_map(cls) -> dict[str, str]:
+        return {
             "1": "Прямые продажи",
             "4": "Маркетплейс",
             "5": "Интернет продажа",
             "7": "ВЭД",
         }
-        return display_names.get(value, "Неизвестно")
+
+    @classmethod
+    def _reverse_display_name_map(cls) -> dict[str, str]:
+        return {v: k for k, v in cls._display_name_map().items()}
+
+    @classmethod
+    def get_display_name(cls, value: str) -> str:
+        """Get display name by value"""
+        return cls._display_name_map().get(value, "Неизвестно")
 
     @classmethod
     def from_value(cls, value: str | None) -> "DealTypeEnum":
@@ -57,6 +91,26 @@ class DealTypeEnum(StrEnum):
             if member.value == value:
                 return member
         raise ValueError(f"No matching enum member for value {value}")
+
+    @classmethod
+    def from_display_name(cls, display_name: str) -> "DealTypeEnum":
+        """Get enum member by display name"""
+        value = cls._reverse_display_name_map().get(display_name)
+        if value is None:
+            raise ValueError(
+                f"No matching enum member for display name '{display_name}'"
+            )
+        return cls.from_value(value)
+
+    @classmethod
+    def get_value_by_display_name(cls, display_name: str) -> str:
+        """Get value by display name"""
+        value = cls._reverse_display_name_map().get(display_name)
+        if value is None:
+            raise ValueError(
+                f"No matching value for display name '{display_name}'"
+            )
+        return value
 
 
 class DealSourceEnum(StrEnum):
@@ -71,9 +125,8 @@ class DealSourceEnum(StrEnum):
     EMAIL = "23"  # EMAIL
 
     @classmethod
-    def get_display_name(cls, value: str) -> str:
-        """Get display name by value"""
-        display_names = {
+    def _display_name_map(cls) -> dict[str, str]:
+        return {
             "PARTNER": "Существующий клиент",
             "19": "Новый клиент",
             "CALL": "Звонок",
@@ -84,7 +137,15 @@ class DealSourceEnum(StrEnum):
             "20": "Выбирай",
             "23": "EMAIL",
         }
-        return display_names.get(value, "Неизвестно")
+
+    @classmethod
+    def _reverse_display_name_map(cls) -> dict[str, str]:
+        return {v: k for k, v in cls._display_name_map().items()}
+
+    @classmethod
+    def get_display_name(cls, value: str) -> str:
+        """Get display name by value"""
+        return cls._display_name_map().get(value, "Неизвестно")
 
     @classmethod
     def from_value(cls, value: str | None) -> "DealSourceEnum":
@@ -93,6 +154,26 @@ class DealSourceEnum(StrEnum):
             if member.value == value:
                 return member
         raise ValueError(f"No matching enum member for value {value}")
+
+    @classmethod
+    def from_display_name(cls, display_name: str) -> "DealSourceEnum":
+        """Get enum member by display name"""
+        value = cls._reverse_display_name_map().get(display_name)
+        if value is None:
+            raise ValueError(
+                f"No matching enum member for display name '{display_name}'"
+            )
+        return cls.from_value(value)
+
+    @classmethod
+    def get_value_by_display_name(cls, display_name: str) -> str:
+        """Get value by display name"""
+        value = cls._reverse_display_name_map().get(display_name)
+        if value is None:
+            raise ValueError(
+                f"No matching value for display name '{display_name}'"
+            )
+        return value
 
 
 class InvoiceStage(StrEnum):

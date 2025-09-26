@@ -24,6 +24,10 @@ class Billing(NameStrIdEntity):
     """
 
     __tablename__ = "billings"
+
+    def __str__(self) -> str:
+        return str(self.name)
+
     payment_method: Mapped[MethodPaymentEnum] = mapped_column(
         PgEnum(
             MethodPaymentEnum,
@@ -53,6 +57,10 @@ class Contract(Base):
     """
 
     __tablename__ = "contracts"
+
+    def __str__(self) -> str:
+        return str(self.display_info)
+
     shipping_company_id: Mapped[UUID] = mapped_column(
         ForeignKey("shipping_companies.id"),
         comment="Фирма отгрузки",

@@ -4,7 +4,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import JSONResponse
 
-from core.settings import settings
+from core.logger import logger
 from services.deals.deal_bitrix_services import DealBitrixClient
 from services.deals.deal_import_services import DealProcessor
 from services.deals.deal_services import DealClient
@@ -109,7 +109,7 @@ async def load_deals(
     summary="Set source deal",
     description="Updating and fixing source deal.",
 )  # type: ignore
-async def set_source_deal(
+async def set_deal_source(
     user_id: str = Query(..., description="ID пользователя из шаблона"),
     key: str = Query(..., description="Секретный ключ из глобальных констант"),
     deal_id: str = Query(..., description="ID сделки"),
@@ -119,7 +119,7 @@ async def set_source_deal(
         None, alias="type", description="Тип источника"
     ),
     deal_client: DealClient = Depends(get_deal_client_dep),
-) -> None:
+) -> JSONResponse:
     """
     Обработчик вебхука из Битрикс24 для установки источника сделки.
 
@@ -132,12 +132,34 @@ async def set_source_deal(
       - source={=Template:Source}
       - type={=Template:Type}
     """
-    if key != settings.WEB_HOOK_KEY:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Invalid secret key"
+
+    try:
+        success = await deal_client.set_deal_source(
+            user_id, key, deal_id, creation_source, source, type_deal
         )
-    # check user right
-    await deal_client.bitrix_client.send_message_b24(
-        171,
-        f"{user_id}::{deal_id}::{creation_source}::{source}::{type_deal}",
-    )
+
+        if success:
+            return JSONResponse(
+                status_code=status.HTTP_200_OK,
+                content={
+                    "status": "success",
+                    "message": "Deal source updated successfully",
+                },
+            )
+        else:
+            return JSONResponse(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                content={
+                    "status": "error",
+                    "message": "Failed to update deal source",
+                },
+            )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error in set_source_deal: {str(e)}")
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"status": "error", "message": "Internal server error"},
+        )

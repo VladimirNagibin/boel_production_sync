@@ -18,6 +18,13 @@ class TimelineComment(IntIdEntity):
 
     __tablename__ = "timeline_comments"
 
+    def __str__(self) -> str:
+        return str(
+            self.comment_entity[:30]
+            if self.comment_entity
+            else self.deal.title
+        )
+
     # @property
     # def entity_type(self) -> EntityType:
     #    return EntityType.USER

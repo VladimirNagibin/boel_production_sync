@@ -41,6 +41,9 @@ class Invoice(BusinessEntityCore):
 
     __tablename__ = "invoices"
 
+    def __str__(self) -> str:
+        return str(self.title)
+
     # __table_args__ = (
     #    CheckConstraint("opportunity >= 0", name="non_negative_opportunity"),
     #    CheckConstraint(
