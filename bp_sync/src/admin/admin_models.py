@@ -11,6 +11,11 @@ from models.contact_models import Contact  # noqa: F401
 from models.deal_documents import Billing, Contract  # noqa: F401
 from models.deal_models import AdditionalInfo, Deal  # noqa: F401
 from models.delivery_note_models import DeliveryNote  # noqa: F401
+from models.enums import (
+    DualTypePaymentEnum,
+    DualTypeShipmentEnum,
+    StageSemanticEnum,
+)
 from models.invoice_models import Invoice  # noqa: F401
 from models.lead_models import Lead  # noqa: F401
 from models.references import (  # noqa: F401
@@ -63,8 +68,17 @@ class DealAdmin(BaseAdmin, model=Deal):  # type: ignore[call-arg]
         "external_id",
         "title",
         "opportunity",
+        "stage",
+        "type",
+        "creation_source",
+        "source",
         "processing_status",
         "is_deleted_in_bitrix",
+        "is_frozen",
+        "is_setting_source",
+        "category",
+        "stage_semantic_id",
+        "payment_type",
     ]
 
     # Форматирование значений
@@ -77,13 +91,76 @@ class DealAdmin(BaseAdmin, model=Deal):  # type: ignore[call-arg]
         "opportunity": lambda m, a: (
             f"{getattr(m, a, 0):,.2f}" if getattr(m, a, 0) else "0"
         ),
+        "stage_semantic_id": lambda m, a: (
+            StageSemanticEnum.get_display_name(getattr(m, a, ""))
+            if getattr(m, a, "")
+            else "Не указано"
+        ),
+    }
+
+    # Форматтеры для детальной страницы (показываем display_name)
+    column_formatters_detail: dict[str, Any] = {
+        "stage_semantic_id": lambda m, a: (
+            StageSemanticEnum.get_display_name(getattr(m, a, ""))
+            if getattr(m, a, "")
+            else "Не указано"
+        ),
+        "payment_type": lambda m, a: (
+            DualTypePaymentEnum.get_display_name(
+                getattr(m, a, "")  # type: ignore[arg-type]
+            )
+            if getattr(m, a, "")
+            else "Не указано"
+        ),
+        "shipment_type": lambda m, a: (
+            DualTypeShipmentEnum.get_display_name(
+                getattr(m, a, "")  # type: ignore[arg-type]
+            )
+            if getattr(m, a, "")
+            else "Не указано"
+        ),
     }
 
     column_labels = {  # Надписи полей в списке # type: ignore
         "external_id": "Внешний код",
         "title": "Название",
         "opportunity": "Сумма",
-        "begindate": "Дата начала",
+        "category": "Воронка",
+        "stage": "Стадия",
+        "type": "Тип",
+        "creation_source": "Источник сводно",
+        "source": "Источник",
+        "processing_status": "Статус обработки",
+        "is_deleted_in_bitrix": "Удалён в Б24",
+        "is_frozen": "Заморожен",
+        "is_setting_source": "Источники вручную",
+        "assigned_user": "Ответственный",
+        "created_user": "Создатель",
+        "modify_user": "Изменил",
+        "last_activity_user": "Последняя активность",
+        "date_create": "Дата создания",
+        "date_modify": "Дата изменения",
+        "last_activity_time": "Дата последней активности",
+        "last_communication_time": "Дата последней коммуникации",
+        "additional_info": "Дополнительная информация",
+        "stage_semantic_id": "Семантика стадии",
+        "payment_type": "Тип оплаты",
+        "begindate": "Дата начала сделки",
+        "closedate": "Дата завершения сделки",
+        "moved_time": "Время перемещения сделки",
+        "payment_deadline": "Срок оплаты сделки",
+        "shipment_type": "Тип отгрузки",
+        "invoices": "Счета",
+        "timeline_comments": "Комментарии из ленты",
+        "company": "Компания",
+        "contact": "Контакт",
+        "lead": "Лид",
+        "main_activity": "Основная деятельность",
+        "invoice_stage": "Стадия счёта",
+        "current_stage": "Предыдущая стадия",
+        "shipping_company": "Фирма отгрузки",
+        "warehouse": "Склад",
+        "add_info": "Дополнительная информация",
     }
     column_default_sort = [  # Сортировка по умолчанию # type: ignore
         ("external_id", True)
@@ -92,27 +169,44 @@ class DealAdmin(BaseAdmin, model=Deal):  # type: ignore[call-arg]
         "external_id",
         "title",
         "opportunity",
-        "begindate",
+        "processing_status",
+        "is_deleted_in_bitrix",
+        "is_frozen",
+        "is_setting_source",
     ]
     column_searchable_list = [  # Список полей по которым возможен поиск
-        "title",
         "external_id",
+        "title",
     ]
-    form_columns = [  # Поля на форме создания
+    form_columns = [  # Поля на форме редактирования
         "external_id",
         "title",
         "opportunity",
-        "begindate",
-        "closedate",
         "stage_id",
         "category_id",
+        "stage_semantic_id",
     ]
     column_details_list = [  # Поля на форме просмотра
+        "external_id",
         "title",
+        "opportunity",
+        "category",
+        "stage",
+        "type",
+        "creation_source",
+        "source",
+        "processing_status",
+        "is_deleted_in_bitrix",
+        "is_frozen",
+        "is_setting_source",
         "assigned_user",
         "created_user",
         "modify_user",
         "last_activity_user",
+        "begindate",
+        "closedate",
+        "moved_time",
+        "payment_deadline",
         "date_create",
         "date_modify",
         "last_activity_time",
@@ -120,7 +214,37 @@ class DealAdmin(BaseAdmin, model=Deal):  # type: ignore[call-arg]
         "additional_info",
         "stage_semantic_id",
         "payment_type",
+        "shipment_type",
+        "invoices",
+        "timeline_comments",
+        "company",
+        "contact",
+        "lead",
+        "main_activity",
+        "invoice_stage",
+        "current_stage",
+        "shipping_company",
+        "warehouse",
+        "add_info",
     ]
+
+    form_args = {
+        "stage_semantic_id": {
+            "choices": [
+                (member.value, member.get_display_name(member.value))
+                for member in StageSemanticEnum
+            ]
+        }
+    }
+
+    # Или через form_choices (альтернативный способ)
+    form_choices = {
+        "stage_semantic_id": [
+            (member.value, member.get_display_name(member.value))
+            for member in StageSemanticEnum
+        ]
+    }
+
     # form_ajax_refs = {  # Поиск поля по значению из списка
     # "currency": {
     #    "fields": ["name", "external_id"],
@@ -132,11 +256,13 @@ class DealAdmin(BaseAdmin, model=Deal):  # type: ignore[call-arg]
     # "contact": {"fields": ["name", "last_name"]},
     # }
     icon = "fa-solid fa-handshake"
-    _is_base_class = False
 
 
 class CompanyAdmin(BaseAdmin, model=Company):  # type: ignore[call-arg]
     name = "Компания"
+    name_plural = "Компании"
+    category = "Сущности"
+
     column_list = [  # Поля в списке
         "title",
         "external_id",
@@ -207,6 +333,8 @@ class CompanyAdmin(BaseAdmin, model=Company):  # type: ignore[call-arg]
 # Справочники
 class DepartmentAdmin(BaseAdmin, model=Department):  # type: ignore[call-arg]
     name = "Отдел"
+    name_plural = "Отделы"
+    category = "Справочники"
     column_list = [  # Поля в списке
         "external_id",
         "name",
@@ -234,6 +362,8 @@ class DepartmentAdmin(BaseAdmin, model=Department):  # type: ignore[call-arg]
 
 class SourceAdmin(BaseAdmin, model=Source):  # type: ignore[call-arg]
     name = "Источник"
+    name_plural = "Источники"
+    category = "Источники"
     column_list = [  # Поля в списке
         "external_id",
         "name",
@@ -256,13 +386,15 @@ class SourceAdmin(BaseAdmin, model=Source):  # type: ignore[call-arg]
         "name",
     ]
     column_details_list = ["name", "id", "created_at"]  #
-    icon = "fa-solid fa-location-arrow"
+    icon = "fa-solid fa-chart-line"
 
 
 class CreationSourceAdmin(
     BaseAdmin, model=CreationSource
 ):  # type: ignore[call-arg]
     name = "Сводные источники"
+    name_plural = "Сводные источники"
+    category = "Источники"
     column_list = [  # Поля в списке
         "external_id",
         "name",
@@ -288,11 +420,13 @@ class CreationSourceAdmin(
         "ext_alt_id",
     ]
     column_details_list = ["name", "id", "created_at"]  #
-    icon = "fa-solid fa-location-arrow"
+    icon = "fa-solid fa-arrow-right-arrow-left"
 
 
 class DealTypeAdmin(BaseAdmin, model=DealType):  # type: ignore[call-arg]
     name = "Тип сделки"
+    name_plural = "Типы сделок"
+    category = "Источники"
     column_list = [  # Поля в списке
         "external_id",
         "name",
@@ -315,7 +449,7 @@ class DealTypeAdmin(BaseAdmin, model=DealType):  # type: ignore[call-arg]
         "name",
     ]
     column_details_list = ["name", "id", "created_at"]  #
-    icon = "fa-solid fa-location-arrow"
+    icon = "fa-solid fa-tags"
 
 
 class ShippingCompanyAdmin(
@@ -363,7 +497,9 @@ class ShippingCompanyAdmin(
 
 
 class BillingAdmin(BaseAdmin, model=Billing):  # type: ignore[call-arg]
-    name = "Платежи"
+    name = "Платежка"
+    name_plural = "Платёжки"
+    category = "Бух документы"
     column_list = [  # Поля в списке
         "external_id",
         "name",
@@ -396,13 +532,15 @@ class BillingAdmin(BaseAdmin, model=Billing):  # type: ignore[call-arg]
         "document_type",
         "invoice",
     ]  #
-    icon = "fa-solid fa-location-arrow"
+    icon = "fa-solid fa-money-check"
 
 
 class DeliveryNoteAdmin(
     BaseAdmin, model=DeliveryNote
 ):  # type: ignore[call-arg]
-    name = "Накладные"
+    name = "Накладная"
+    name_plural = "Накладные"
+    category = "Бух документы"
     column_list = [  # Поля в списке
         "external_id",
         "name",
@@ -425,51 +563,13 @@ class DeliveryNoteAdmin(
         "name",
     ]
     column_details_list = ["name", "id", "created_at"]  #
-    icon = "fa-solid fa-location-arrow"
-
-
-class TimelineCommentAdmin(
-    BaseAdmin, model=TimelineComment
-):  # type: ignore[call-arg]
-    name = "Комментарии"
-    column_list = [  # Поля в списке
-        "external_id",
-        "entity_id",
-    ]
-    column_labels = {  # Надписи полей в списке
-        "external_id": "Внешний код",
-        "entity_id": "Название",
-    }
-    column_default_sort = [("external_id", True)]  # Сортировка по умолчанию
-    column_sortable_list = [  # Список полей по которым возможна сортировка
-        "external_id",
-        "entity_id",
-    ]
-    column_searchable_list = [  # Список полей по которым возможен поиск
-        "entity_id",
-        "external_id",
-    ]
-    form_columns = [  # Поля на форме
-        "created",
-        "entity_id",
-        "entity_type",
-        "author",
-        "deal",
-        "comment_entity",
-    ]
-    column_details_list = [
-        "created",
-        "entity_id",
-        "entity_type",
-        "author",
-        "deal",
-        "comment_entity",
-    ]  #
-    icon = "fa-solid fa-location-arrow"
+    icon = "fa-solid fa-file-invoice"
 
 
 class ManagerAdmin(BaseAdmin, model=Manager):  # type: ignore[call-arg]
     name = "Менеджер"
+    name_plural = "Менеджеры"
+    category = "Сотрудники"
     column_list = [  # Поля в списке
         "user_id",
         "is_active",
@@ -510,7 +610,7 @@ class ManagerAdmin(BaseAdmin, model=Manager):  # type: ignore[call-arg]
         "is_active",
         "default_company_id",
     ]  #
-    icon = "fa-solid fa-tags"
+    icon = "fa-solid fa-id-card"
 
     """
     async def insert_model(
@@ -528,36 +628,10 @@ class ManagerAdmin(BaseAdmin, model=Manager):  # type: ignore[call-arg]
     """
 
 
-class AddInfoAdmin(BaseAdmin, model=AdditionalInfo):  # type: ignore[call-arg]
-    name = "Доп информация сделки"
-    column_list = [  # Поля в списке
-        "deal_id",
-        "comment",
-    ]
-    column_labels = {  # Надписи полей в списке
-        "deal_id": "ID сделки",
-        "comment": "Дополнительная информация",
-    }
-    column_default_sort = [("deal_id", True)]  # Сортировка по умолчанию
-    column_sortable_list = [  # Список полей по которым возможна сортировка
-        "deal_id",
-        "comment",
-    ]
-    column_searchable_list = [  # Список полей по которым возможен поиск
-        "deal_id",
-        "comment",
-    ]
-    form_columns = [  # Поля на форме
-        # "external_id",
-        "comment",
-        "deal",
-    ]
-    column_details_list = ["deal_id", "comment", "created_at"]  #
-    icon = "fa-solid fa-location-arrow"
-
-
 class UserAdmin(BaseAdmin, model=User):  # type: ignore[call-arg]
     name = "Пользователь"
+    name_plural = "Пользователи"
+    category = "Сотрудники"
     column_list = [  # Поля в списке
         "external_id",
         "full_name",
@@ -593,7 +667,79 @@ class UserAdmin(BaseAdmin, model=User):  # type: ignore[call-arg]
         "external_id",
         "full_name",
     ]  #
-    icon = "fa-solid fa-tags"
+    icon = "fa-solid fa-user"
+
+
+class TimelineCommentAdmin(
+    BaseAdmin, model=TimelineComment
+):  # type: ignore[call-arg]
+    name = "Комментарий в ленте"
+    name_plural = "Комментарии в ленте"
+    category = "Доп справочники"
+    column_list = [  # Поля в списке
+        "external_id",
+        "entity_id",
+    ]
+    column_labels = {  # Надписи полей в списке
+        "external_id": "Внешний код",
+        "entity_id": "Название",
+    }
+    column_default_sort = [("external_id", True)]  # Сортировка по умолчанию
+    column_sortable_list = [  # Список полей по которым возможна сортировка
+        "external_id",
+        "entity_id",
+    ]
+    column_searchable_list = [  # Список полей по которым возможен поиск
+        "entity_id",
+        "external_id",
+    ]
+    form_columns = [  # Поля на форме
+        "created",
+        "entity_id",
+        "entity_type",
+        "author",
+        "deal",
+        "comment_entity",
+    ]
+    column_details_list = [
+        "created",
+        "entity_id",
+        "entity_type",
+        "author",
+        "deal",
+        "comment_entity",
+    ]  #
+    icon = "fa-solid fa-comment"
+
+
+class AddInfoAdmin(BaseAdmin, model=AdditionalInfo):  # type: ignore[call-arg]
+    name = "Доп информация сделки"
+    name_plural = "Доп информации сделок"
+    category = "Доп справочники"
+    column_list = [  # Поля в списке
+        "deal_id",
+        "comment",
+    ]
+    column_labels = {  # Надписи полей в списке
+        "deal_id": "ID сделки",
+        "comment": "Дополнительная информация",
+    }
+    column_default_sort = [("deal_id", True)]  # Сортировка по умолчанию
+    column_sortable_list = [  # Список полей по которым возможна сортировка
+        "deal_id",
+        "comment",
+    ]
+    column_searchable_list = [  # Список полей по которым возможен поиск
+        "deal_id",
+        "comment",
+    ]
+    form_columns = [  # Поля на форме
+        # "external_id",
+        "comment",
+        "deal",
+    ]
+    column_details_list = ["deal_id", "comment", "created_at"]  #
+    icon = "fa-solid fa-note-sticky"
 
 
 """
