@@ -18,6 +18,16 @@ class StageSemanticEnum(StrEnum):
     SUCCESS = "S"
     FAIL = "F"
 
+    @classmethod
+    def get_display_name(cls, value: str) -> str:
+        """Get display name by value"""
+        display_name_map: dict[str, str] = {
+            "P": "В работе",
+            "S": "Успех",
+            "F": "Провал",
+        }
+        return display_name_map.get(value, "Неизвестно")
+
 
 # class TypePaymentEnum(IntEnum):
 #    """
@@ -64,6 +74,17 @@ class DualTypePaymentEnum(Enum):
                 if value == item.deal_value or value == item.invoice_value:
                     return item
         return cls.NOT_DEFINE
+
+    @classmethod
+    def get_display_name(cls, value: "DualTypePaymentEnum") -> str:
+        """Get display name by value"""
+        display_name_map: dict[DualTypePaymentEnum, str] = {
+            DualTypePaymentEnum.PREPAYMENT: "Предоплата",
+            DualTypePaymentEnum.POSTPONEMENT: "Отсрочка",
+            DualTypePaymentEnum.PARTPAYMENT: "Частичная",
+            DualTypePaymentEnum.NOT_DEFINE: "Не определено",
+        }
+        return display_name_map.get(value, "Неизвестно")
 
 
 class DualTypePayment(
@@ -153,6 +174,17 @@ class DualTypeShipmentEnum(Enum):
                 if value == item.deal_value or value == item.invoice_value:
                     return item
         return cls.NOT_DEFINE
+
+    @classmethod
+    def get_display_name(cls, value: "DualTypeShipmentEnum") -> str:
+        """Get display name by value"""
+        display_name_map: dict[DualTypeShipmentEnum, str] = {
+            DualTypeShipmentEnum.PICKUP: "Самовывоз",
+            DualTypeShipmentEnum.DELIVERY_COURIER: "Доставка курьером",
+            DualTypeShipmentEnum.TRANSPORT_COMPANY: "Отправка ТК",
+            DualTypeShipmentEnum.NOT_DEFINE: "Не определено",
+        }
+        return display_name_map.get(value, "Неизвестно")
 
 
 class DualTypeShipment(
