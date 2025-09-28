@@ -290,6 +290,14 @@ async def handle_bitrix24_webhook_raw(
     await deal_client.bitrix_client.send_message_b24(
         171, json.dumps(request_data)
     )
+
+    form_data = await request.form()
+    parsed_body = dict(form_data)
+
+    await deal_client.bitrix_client.send_message_b24(
+        171, json.dumps(parsed_body)
+    )
+
     try:
         # Получаем raw JSON
         body = await request.body()
