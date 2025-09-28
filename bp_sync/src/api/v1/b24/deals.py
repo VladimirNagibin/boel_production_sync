@@ -1,3 +1,4 @@
+import json
 from datetime import date
 from typing import Any
 
@@ -262,7 +263,10 @@ async def handle_bitrix24_webhook_raw(
     await deal_client.bitrix_client.send_message_b24(171, "NEW PROCESS")
     try:
         # Получаем raw JSON
-        payload = await request.json()
+        body = await request.body()
+        payload = json.loads(body)
+        # payload = WebhookPayload(**json.loads(body))
+        # payload = await request.json()
         await deal_client.bitrix_client.send_message_b24(171, payload)
         # Базовые проверки
         if not all(key in payload for key in ["event", "data", "auth", "ts"]):
