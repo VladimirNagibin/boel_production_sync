@@ -14,6 +14,7 @@ from models.delivery_note_models import DeliveryNote  # noqa: F401
 from models.enums import (
     DualTypePaymentEnum,
     DualTypeShipmentEnum,
+    ProcessingStatusEnum,
     StageSemanticEnum,
 )
 from models.invoice_models import Invoice  # noqa: F401
@@ -78,7 +79,6 @@ class DealAdmin(BaseAdmin, model=Deal):  # type: ignore[call-arg]
         "is_setting_source",
         "category",
         "stage_semantic_id",
-        "payment_type",
     ]
 
     # Форматирование значений
@@ -114,6 +114,13 @@ class DealAdmin(BaseAdmin, model=Deal):  # type: ignore[call-arg]
         ),
         "shipment_type": lambda m, a: (
             DualTypeShipmentEnum.get_display_name(
+                getattr(m, a, "")  # type: ignore[arg-type]
+            )
+            if getattr(m, a, "")
+            else "Не указано"
+        ),
+        "processing_status": lambda m, a: (
+            ProcessingStatusEnum.get_display_name(
                 getattr(m, a, "")  # type: ignore[arg-type]
             )
             if getattr(m, a, "")
@@ -181,10 +188,10 @@ class DealAdmin(BaseAdmin, model=Deal):  # type: ignore[call-arg]
     form_columns = [  # Поля на форме редактирования
         "external_id",
         "title",
-        "opportunity",
-        "stage_id",
-        "category_id",
-        "stage_semantic_id",
+        "processing_status",
+        "is_deleted_in_bitrix",
+        "is_frozen",
+        "is_setting_source",
     ]
     column_details_list = [  # Поля на форме просмотра
         "external_id",
@@ -264,44 +271,207 @@ class CompanyAdmin(BaseAdmin, model=Company):  # type: ignore[call-arg]
     category = "Сущности"
 
     column_list = [  # Поля в списке
-        "title",
         "external_id",
+        "title",
+        "is_my_company",
         "revenue",
-        "city",
-        "created_at",
+        "industry",
+        "employees",
+        "source",
     ]
-    column_labels = {  # Надписи полей в списке
-        "title": "Название",
-        "external_id": "Код Б24",
-        "revenue": "Оборот за год",
+
+    # Форматирование значений
+    column_formatters: dict[str, Any] = {
+        "title": lambda m, a: (
+            str(getattr(m, a, ""))[:35] + "..."
+            if len(str(getattr(m, a, ""))) > 35
+            else str(getattr(m, a, ""))
+        ),
+        "revenue": lambda m, a: (
+            f"{getattr(m, a, 0):,.2f} ₽" if getattr(m, a, 0) else "0 ₽"
+        ),
+        "is_my_company": lambda m, a: (
+            "✅ Моя" if getattr(m, a, False) else "❌ Чужая"
+        ),
     }
-    column_default_sort = [("title", True)]  # Сортировка по умолчанию
-    column_sortable_list = [  # Список полей по которым возможна сортировка
-        "title",
+
+    # Форматтеры для детальной страницы
+    column_formatters_detail: dict[str, Any] = {
+        "title": lambda m, a: getattr(m, a, ""),
+        "revenue": lambda m, a: (
+            f"{getattr(m, a, 0):,.2f} ₽" if getattr(m, a, 0) else "0 ₽"
+        ),
+        "is_my_company": lambda m, a: (
+            "✅ Моя компания" if getattr(m, a, False) else "❌ Не моя компания"
+        ),
+        "date_last_shipment": lambda m, a: (
+            getattr(m, a, "").strftime(  # type: ignore[union-attr]
+                "%d.%m.%Y %H:%M"
+            )
+            if getattr(m, a, "")
+            else "Не указана"
+        ),
+    }
+
+    column_labels = {  # Надписи полей в списке
+        "external_id": "Внешний код",
+        "title": "Название компании",
+        "is_my_company": "Моя компания",
+        "revenue": "Годовой оборот",
+        "industry": "Сфера деятельности",
+        "employees": "Численность сотрудников",
+        "source": "Источник",
+        "currency": "Валюта",
+        "company_type": "Тип компании",
+        "contact": "Контакт",
+        "lead": "Лид",
+        "main_activity": "Основная деятельность",
+        "deal_failure_reason": "Причина провала",
+        "deal_type": "Тип сделки",
+        "shipping_company": "Фирма отгрузки",
+        "banking_details": "Банковские реквизиты",
+        "address_legal": "Юридический адрес",
+        "address_company": "Адрес компании",
+        "province_company": "Область/Край",
+        "is_shipment_approved": "Разрешение на отгрузку",
+        "date_last_shipment": "Дата последней отгрузки",
+        "origin_version": "Версия данных",
+        "parent_company": "Головная компания",
+        "related_companies": "Дочерние компании",
+        "deals": "Сделки",
+        "leads": "Лиды",
+        "contacts": "Контакты",
+        "contracts": "Договоры",
+        "invoices": "Счета",
+        "delivery_notes": "Накладные",
+        "position_head": "Должность руководителя",
+        "basis_operates": "Основание деятельности",
+        "position_head_genitive": "Должность руков. (род. падеж)",
+        "basis_operates_genitive": "Основание деятельности (род. падеж)",
+        "payment_delay_genitive": "Отсрочка (род. падеж)",
+        "full_name_genitive": "ФИО (род. падеж)",
+        "current_contract": "Текущий договор",
+        "current_number_contract": "Номер договора",
+    }
+
+    column_default_sort = [("external_id", True)]
+
+    column_sortable_list = [
         "external_id",
-    ]
-    column_searchable_list = [  # Список полей по которым возможен поиск
         "title",
+        "revenue",
+        "is_my_company",
+        "date_last_shipment",
+    ]
+
+    column_searchable_list = [
         "external_id",
-    ]
-    form_columns = [  # Поля на форме
         "title",
+        "address_legal",
+        "address_company",
+        "banking_details",
+    ]
+
+    form_columns = [  # Поля на форме редактирования
+        "external_id",
+        "title",
+        "is_my_company",
         "revenue",
         "currency",
         "company_type",
-        "contact",
+        "industry",
+        "employees",
+        "source",
+        "main_activity",
+        "shipping_company",
+        "banking_details",
+        "address_legal",
+        "address_company",
+        "province_company",
+        "is_shipment_approved",
+        "parent_company",
     ]
-    column_details_list = ["title", "address_legal", "banking_details"]  #
-    form_ajax_refs = {  # Поиск поля по значению из списка
-        # "currency": {
-        #    "fields": ["name", "external_id"],
-        #    "page_size": 10,
-        #    "placeholder": "Search currency...",
-        #    "minimum_input_length": 2
-        # },
-        "company_type": {"fields": ["name"]},
-        "contact": {"fields": ["name", "last_name"]},
+
+    column_details_list = [  # Поля на форме просмотра
+        "external_id",
+        "title",
+        "is_my_company",
+        "revenue",
+        "currency",
+        "company_type",
+        "industry",
+        "employees",
+        "source",
+        "main_activity",
+        "shipping_company",
+        "banking_details",
+        "address_legal",
+        "address_company",
+        "province_company",
+        "is_shipment_approved",
+        "date_last_shipment",
+        "origin_version",
+        "parent_company",
+        "contact",
+        "lead",
+        "deal_failure_reason",
+        "deal_type",
+        "position_head",
+        "basis_operates",
+        "position_head_genitive",
+        "basis_operates_genitive",
+        "payment_delay_genitive",
+        "full_name_genitive",
+        "current_contract",
+        "current_number_contract",
+    ]
+    """
+    # Настройки AJAX для связанных полей
+    form_ajax_refs = {
+        "currency": {
+            "fields": ("name", "symbol"),
+            "order_by": "name",
+        },
+        "company_type": {
+            "fields": ("name",),
+            "order_by": "name",
+        },
+        "industry": {
+            "fields": ("name",),
+            "order_by": "name",
+        },
+        "employees": {
+            "fields": ("name",),
+            "order_by": "name",
+        },
+        "source": {
+            "fields": ("name",),
+            "order_by": "name",
+        },
+        "main_activity": {
+            "fields": ("name",),
+            "order_by": "name",
+        },
+        "shipping_company": {
+            "fields": ("name",),
+            "order_by": "name",
+        },
+        "parent_company": {
+            "fields": ("title",),
+            "order_by": "title",
+        },
+        "contact": {
+            "fields": ["name", "last_name"]
+        },
     }
+    """
+    # "currency": {
+    #    "fields": ["name", "external_id"],
+    #    "page_size": 10,
+    #    "placeholder": "Search currency...",
+    #    "minimum_input_length": 2
+    # },
+
     """
     async def scaffold_form(
         self, rules: list[str] | None = None
