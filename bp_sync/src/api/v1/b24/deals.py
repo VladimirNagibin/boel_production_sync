@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import JSONResponse
 
 from core.logger import logger
+from core.settings import settings
 from schemas.deal_schemas import BitrixWebhookPayload
 
 # from services.bitrix_services.webhook_service import verify_webhook
@@ -169,7 +170,7 @@ async def set_deal_source(
 
 
 @deals_router.post(
-    "/process",
+    "/process_",
     summary="Handling deal",
     description="Processing deal.",
 )  # type: ignore
@@ -249,36 +250,39 @@ async def handle_bitrix24_webhook(  # type: ignore
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-"""
 # Альтернативная версия с raw JSON обработкой
-@deals_router.post("/update/raw")
-async def handle_bitrix24_webhook_raw(request: Request):
-    ""
+@deals_router.post("/process")  # type: ignore
+async def handle_bitrix24_webhook_raw(
+    request: Request,
+    deal_client: DealClient = Depends(get_deal_client_dep),
+) -> JSONResponse:
+    """
     Обработчик вебхуков с прямой обработкой JSON
-    ""
+    """
+    await deal_client.bitrix_client.send_message_b24(171, "NEW PROCESS")
     try:
         # Получаем raw JSON
         payload = await request.json()
 
         # Базовые проверки
-        if not all(key in payload for key in ['event', 'data', 'auth', 'ts']):
+        if not all(key in payload for key in ["event", "data", "auth", "ts"]):
             raise HTTPException(
                 status_code=400, detail="Invalid webhook format"
             )
 
         # Проверка токена
-        auth = payload.get('auth', {})
-        expected_domain = WEBHOOK_CONFIG[
-            "expected_tokens"
-        ].get(auth.get('application_token', ''))
-        if expected_domain != auth.get('domain'):
+        auth = payload.get("auth", {})
+        expected_domain = settings.web_hook_config["expected_tokens"].get(
+            auth.get("application_token", "")
+        )
+        if expected_domain != auth.get("domain"):
             raise HTTPException(
                 status_code=401, detail="Invalid webhook token"
             )
 
         # Обработка события
-        event = payload['event']
-        deal_id = payload.get('data', {}).get('FIELDS', {}).get('ID')
+        event = payload["event"]
+        deal_id = payload.get("data", {}).get("FIELDS", {}).get("ID")
 
         if event == "ONCRMDEALUPDATE" and deal_id:
             # Ваша логика обработки
@@ -286,15 +290,14 @@ async def handle_bitrix24_webhook_raw(request: Request):
 
             return JSONResponse(
                 status_code=200,
-                content={"status": "success", "deal_id": deal_id}
+                content={"status": "success", "deal_id": deal_id},
             )
 
         return JSONResponse(
             status_code=200,
-            content={"status": "success", "message": "Webhook received"}
+            content={"status": "success", "message": "Webhook received"},
         )
 
     except Exception as e:
         print(f"Error in raw webhook handler: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
-"""
