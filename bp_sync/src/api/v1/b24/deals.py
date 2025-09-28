@@ -4,10 +4,11 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import JSONResponse
+from pydantic import ValidationError
 
 from core.logger import logger
 from core.settings import settings
-from schemas.deal_schemas import BitrixWebhookPayload
+from schemas.deal_schemas import BitrixWebhookAuth, BitrixWebhookPayload
 
 # from services.bitrix_services.webhook_service import verify_webhook
 from services.deals.deal_bitrix_services import DealBitrixClient
@@ -291,12 +292,13 @@ async def handle_bitrix24_webhook_raw(
         171, json.dumps(request_data)
     )
 
-    form_data = await request.form()
-    parsed_body = dict(form_data)
-
-    await deal_client.bitrix_client.send_message_b24(
-        171, json.dumps(parsed_body)
-    )
+    # form_data = await request.form()
+    # parsed_body = dict(form_data)
+    bitrix_webhook_payload = await process_webhook(request)
+    if bitrix_webhook_payload:
+        await deal_client.bitrix_client.send_message_b24(
+            171, str(bitrix_webhook_payload.model_dump_json())
+        )
 
     try:
         # Получаем raw JSON
@@ -364,3 +366,59 @@ async def handle_bitrix24_webhook_raw(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error",
         )
+
+
+async def process_webhook(request: Request) -> BitrixWebhookPayload | None:
+    form_data = await request.form()
+    parsed_body = dict(form_data)
+
+    # Преобразуем плоскую структуру во вложенную
+    structured_data: dict[str, Any] = {}
+
+    for key, value in parsed_body.items():
+        # Обрабатываем вложенные ключи вида data[FIELDS][ID]
+        if "[" in key and "]" in key:
+            parts = key.replace("]", "").split("[")
+            current_level = structured_data
+
+            for i, part in enumerate(parts):
+                if i == len(parts) - 1:
+                    current_level[part] = value
+                else:
+                    if part not in current_level:
+                        current_level[part] = {}
+                    current_level = current_level[part]
+        else:
+            structured_data[key] = value
+
+    # Создаем объект BitrixWebhookPayload
+    try:
+        webhook_payload = BitrixWebhookPayload(
+            event=structured_data.get("event", ""),
+            event_handler_id=structured_data.get("event_handler_id", ""),
+            data=structured_data.get("data", {}),
+            ts=structured_data.get("ts", ""),
+            auth=BitrixWebhookAuth(
+                domain=structured_data.get("auth", {}).get("domain", ""),
+                client_endpoint=structured_data.get("auth", {}).get(
+                    "client_endpoint", ""
+                ),
+                server_endpoint=structured_data.get("auth", {}).get(
+                    "server_endpoint", ""
+                ),
+                member_id=structured_data.get("auth", {}).get("member_id", ""),
+                application_token=structured_data.get("auth", {}).get(
+                    "application_token", ""
+                ),
+            ),
+        )
+
+        print(
+            f"Обработан вебхук: {webhook_payload.event} для сделки "
+            f"{webhook_payload.data.get('FIELDS', {}).get('ID')}"
+        )
+        return webhook_payload
+
+    except ValidationError as e:
+        print(f"Ошибка валидации: {e}")
+        return None
