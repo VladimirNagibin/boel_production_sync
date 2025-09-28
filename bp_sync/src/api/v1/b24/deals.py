@@ -6,7 +6,8 @@ from fastapi.responses import JSONResponse
 
 from core.logger import logger
 from schemas.deal_schemas import BitrixWebhookPayload
-from services.bitrix_services.webhook_service import verify_webhook
+
+# from services.bitrix_services.webhook_service import verify_webhook
 from services.deals.deal_bitrix_services import DealBitrixClient
 from services.deals.deal_import_services import DealProcessor
 from services.deals.deal_services import DealClient
@@ -174,7 +175,7 @@ async def set_deal_source(
 )  # type: ignore
 async def handle_bitrix24_webhook(  # type: ignore
     request: Request,
-    payload: BitrixWebhookPayload = Depends(verify_webhook),
+    payload: BitrixWebhookPayload,  # = Depends(verify_webhook),
     deal_client: DealClient = Depends(get_deal_client_dep),
 ):
     """
@@ -198,7 +199,7 @@ async def handle_bitrix24_webhook(  # type: ignore
 
                 if success:
                     return JSONResponse(
-                        status_code=200,
+                        status_code=status.HTTP_200_OK,
                         content={
                             "status": "success",
                             "message": f"Deal {deal_id} processed success",
@@ -207,7 +208,7 @@ async def handle_bitrix24_webhook(  # type: ignore
                     )
                 else:
                     return JSONResponse(
-                        status_code=500,
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                         content={
                             "status": "error",
                             "message": f"Failed to process deal {deal_id}",
