@@ -260,8 +260,6 @@ async def handle_bitrix24_webhook_raw(
     """
     Обработчик вебхуков с прямой обработкой JSON
     """
-    await deal_client.bitrix_client.send_message_b24(171, "NEW PROCESS DEAL")
-
     try:
         webhook_payload: BitrixWebhookPayload | None = await process_webhook(
             request
@@ -275,9 +273,6 @@ async def handle_bitrix24_webhook_raw(
                     "event": "Not define",
                 },
             )
-        await deal_client.bitrix_client.send_message_b24(
-            171, str(webhook_payload.model_dump_json())
-        )
 
         # Проверка токена
         auth = webhook_payload.auth
@@ -291,10 +286,7 @@ async def handle_bitrix24_webhook_raw(
 
         # Обработка события
         event = webhook_payload.event
-        deal_id = webhook_payload.data["FIELDS"]["ID"]
-        await deal_client.bitrix_client.send_message_b24(
-            171, f"{deal_id}:: DEAL_ID"
-        )
+        deal_id = int(webhook_payload.data["FIELDS"]["ID"])
         if event == "ONCRMDEALUPDATE" and deal_id and deal_id == 54195:  # TEST
             await deal_client.bitrix_client.send_message_b24(
                 171, "NEW PROCESS"
