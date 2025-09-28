@@ -1,10 +1,12 @@
 from datetime import date
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import JSONResponse
 
 from core.logger import logger
+from schemas.deal_schemas import BitrixWebhookPayload
+from services.bitrix_services.webhook_service import verify_webhook
 from services.deals.deal_bitrix_services import DealBitrixClient
 from services.deals.deal_import_services import DealProcessor
 from services.deals.deal_services import DealClient
@@ -26,7 +28,7 @@ from services.timeline_comments.timeline_comment_repository import (
     TimelineCommentRepository,
 )
 
-deals_router = APIRouter()
+deals_router = APIRouter(prefix="/deals")
 
 
 @deals_router.get(
@@ -163,3 +165,135 @@ async def set_deal_source(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={"status": "error", "message": "Internal server error"},
         )
+
+
+@deals_router.post(
+    "/process",
+    summary="Handling deal",
+    description="Processing deal.",
+)  # type: ignore
+async def handle_bitrix24_webhook(  # type: ignore
+    request: Request,
+    payload: BitrixWebhookPayload = Depends(verify_webhook),
+    deal_client: DealClient = Depends(get_deal_client_dep),
+):
+    """
+    Обработчик вебхуков от Bitrix24
+    """
+    try:
+        # Логируем получение вебхука
+        print(
+            f"Получен вебхук: {payload.event} для обработчика "
+            f"{payload.event_handler_id}"
+        )
+
+        # Обработка в зависимости от типа события
+        if payload.event == "ONCRMDEALUPDATE":
+            deal_id = payload.data.get("FIELDS", {}).get("ID")
+            if deal_id and deal_id == 54195:  # TEST ++++++++++++++++++++++
+                await deal_client.bitrix_client.send_message_b24(
+                    171, "NEW PROCESS"
+                )
+                success = await deal_client.handle_deal(deal_id)
+
+                if success:
+                    return JSONResponse(
+                        status_code=200,
+                        content={
+                            "status": "success",
+                            "message": f"Deal {deal_id} processed success",
+                            "event": payload.event,
+                        },
+                    )
+                else:
+                    return JSONResponse(
+                        status_code=500,
+                        content={
+                            "status": "error",
+                            "message": f"Failed to process deal {deal_id}",
+                            "event": payload.event,
+                        },
+                    )
+            else:
+                return JSONResponse(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    content={
+                        "status": "error",
+                        "message": "Deal ID not found in webhook data",
+                        "event": payload.event,
+                    },
+                )
+
+        # Добавьте обработку других событий по необходимости
+        elif payload.event == "ONCRMDEALADD":
+            # Обработка создания сделки
+            pass
+        elif payload.event == "ONCRMDEALDELETE":
+            # Обработка удаления сделки
+            pass
+
+        # Для неподдерживаемых событий возвращаем успех, но логируем
+        print(f"Unhandled event type: {payload.event}")
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={
+                "status": "success",
+                "message": "Webhook received but no specific handler",
+                "event": payload.event,
+            },
+        )
+
+    except Exception as e:
+        print(f"Error processing webhook: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+"""
+# Альтернативная версия с raw JSON обработкой
+@deals_router.post("/update/raw")
+async def handle_bitrix24_webhook_raw(request: Request):
+    ""
+    Обработчик вебхуков с прямой обработкой JSON
+    ""
+    try:
+        # Получаем raw JSON
+        payload = await request.json()
+
+        # Базовые проверки
+        if not all(key in payload for key in ['event', 'data', 'auth', 'ts']):
+            raise HTTPException(
+                status_code=400, detail="Invalid webhook format"
+            )
+
+        # Проверка токена
+        auth = payload.get('auth', {})
+        expected_domain = WEBHOOK_CONFIG[
+            "expected_tokens"
+        ].get(auth.get('application_token', ''))
+        if expected_domain != auth.get('domain'):
+            raise HTTPException(
+                status_code=401, detail="Invalid webhook token"
+            )
+
+        # Обработка события
+        event = payload['event']
+        deal_id = payload.get('data', {}).get('FIELDS', {}).get('ID')
+
+        if event == "ONCRMDEALUPDATE" and deal_id:
+            # Ваша логика обработки
+            print(f"Processing deal update: {deal_id}")
+
+            return JSONResponse(
+                status_code=200,
+                content={"status": "success", "deal_id": deal_id}
+            )
+
+        return JSONResponse(
+            status_code=200,
+            content={"status": "success", "message": "Webhook received"}
+        )
+
+    except Exception as e:
+        print(f"Error in raw webhook handler: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+"""

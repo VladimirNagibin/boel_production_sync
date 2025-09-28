@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Any
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -51,6 +52,7 @@ class Settings(BaseSettings):  # type: ignore
     WEB_HOOK_PORTAL: str = ""
     WEB_HOOK_KEY: str = ""
     ENDPOINT_SERND_FAIL_INVOICE: str = ""
+    WEB_HOOK_DEAL_UPDATE_TOKEN: str = "token"
 
     @property
     def dsn(self) -> str:
@@ -63,6 +65,22 @@ class Settings(BaseSettings):  # type: ignore
     model_config = SettingsConfigDict(
         env_file=".env", env_file_encoding="utf-8"
     )
+
+    @property
+    def web_hook_config(self) -> dict[str, Any]:
+        return {
+            "expected_tokens": {
+                self.WEB_HOOK_DEAL_UPDATE_TOKEN: self.BITRIX_PORTAL.replace(
+                    "https://", ""
+                )
+            },
+            "allowed_events": [
+                "ONCRMDEALUPDATE",
+                "ONCRMDEALADD",
+                "ONCRMDEALDELETE",
+            ],
+            "webhook_key": self.WEB_HOOK_KEY,
+        }
 
 
 settings = Settings()

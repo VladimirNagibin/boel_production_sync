@@ -243,6 +243,17 @@ class ProcessingStatusEnum(IntEnum):
     OVERDUE = 785
     NOT_DEFINE = 0
 
+    @classmethod
+    def get_display_name(cls, value: int) -> str:
+        """Get display name by value"""
+        display_name_map: dict[int, str] = {
+            781: "ОК",
+            783: "Риск просрочки",
+            785: "Просрочен",
+            0: "Не определено",
+        }
+        return display_name_map.get(value, "Неизвестно")
+
 
 class MethodPaymentEnum(IntEnum):
     """
