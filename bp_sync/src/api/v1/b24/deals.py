@@ -263,7 +263,7 @@ async def handle_bitrix24_webhook_raw(
     try:
         # Получаем raw JSON
         payload = await request.json()
-
+        await deal_client.bitrix_client.send_message_b24(171, payload)
         # Базовые проверки
         if not all(key in payload for key in ["event", "data", "auth", "ts"]):
             raise HTTPException(
@@ -284,20 +284,42 @@ async def handle_bitrix24_webhook_raw(
         event = payload["event"]
         deal_id = payload.get("data", {}).get("FIELDS", {}).get("ID")
 
-        if event == "ONCRMDEALUPDATE" and deal_id:
-            # Ваша логика обработки
-            print(f"Processing deal update: {deal_id}")
-
-            return JSONResponse(
-                status_code=200,
-                content={"status": "success", "deal_id": deal_id},
+        if event == "ONCRMDEALUPDATE" and deal_id and deal_id == 54195:  # TEST
+            await deal_client.bitrix_client.send_message_b24(
+                171, "NEW PROCESS"
             )
+            success = await deal_client.handle_deal(deal_id)
 
+            if success:
+                return JSONResponse(
+                    status_code=status.HTTP_200_OK,
+                    content={
+                        "status": "success",
+                        "message": f"Deal {deal_id} processed success",
+                        "event": payload.event,
+                    },
+                )
+            else:
+                return JSONResponse(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    content={
+                        "status": "error",
+                        "message": f"Failed to process deal {deal_id}",
+                        "event": payload.event,
+                    },
+                )
         return JSONResponse(
-            status_code=200,
-            content={"status": "success", "message": "Webhook received"},
+            status_code=status.HTTP_200_OK,
+            content={
+                "status": "success",
+                "message": "Webhook received but no specific handler",
+                "event": payload.event,
+            },
         )
 
     except Exception as e:
         print(f"Error in raw webhook handler: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error",
+        )
