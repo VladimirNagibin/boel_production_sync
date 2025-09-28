@@ -189,8 +189,8 @@ async def handle_bitrix24_webhook(  # type: ignore
 
         # Обработка в зависимости от типа события
         if payload.event == "ONCRMDEALUPDATE":
-            deal_id = payload.data.get("FIELDS", {}).get("ID")
-            if deal_id and deal_id == 54195:  # TEST ++++++++++++++++++++++
+            deal_id = int(payload.data.get("FIELDS", {}).get("ID"))
+            if deal_id and deal_id == 54195:  # TEST ++++++++++++++++++++
                 await deal_client.bitrix_client.send_message_b24(
                     171, "NEW PROCESS"
                 )
