@@ -1,5 +1,4 @@
-import json
-from datetime import date, datetime
+from datetime import date
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
@@ -263,70 +262,39 @@ async def handle_bitrix24_webhook_raw(
     """
     await deal_client.bitrix_client.send_message_b24(171, "NEW PROCESS DEAL")
 
-    request_data: dict[str, Any] = {
-        "timestamp": datetime.now().isoformat(),
-        "method": request.method,
-        "url": str(request.url),
-        "headers": dict(request.headers),
-        "client": {
-            "host": request.client.host if request.client else None,
-            "port": request.client.port if request.client else None,
-        },
-        "query_params": dict(request.query_params),
-        "path_params": request.path_params,
-        "cookies": dict(request.cookies),
-    }
-
-    # Добавляем тело
     try:
-        body = await request.body()
-        if body:
-            try:
-                request_data["body"] = await request.json()
-            except Exception:
-                request_data["body"] = body.decode("utf-8")
-    except Exception as e:
-        request_data["body_error"] = str(e)
-
-    await deal_client.bitrix_client.send_message_b24(
-        171, json.dumps(request_data)
-    )
-
-    # form_data = await request.form()
-    # parsed_body = dict(form_data)
-    bitrix_webhook_payload = await process_webhook(request)
-    if bitrix_webhook_payload:
-        await deal_client.bitrix_client.send_message_b24(
-            171, str(bitrix_webhook_payload.model_dump_json())
+        webhook_payload: BitrixWebhookPayload | None = await process_webhook(
+            request
         )
-
-    try:
-        # Получаем raw JSON
-        body = await request.body()
-        payload = json.loads(body)
-        # payload = WebhookPayload(**json.loads(body))
-        # payload = await request.json()
-        await deal_client.bitrix_client.send_message_b24(171, payload)
-        # Базовые проверки
-        if not all(key in payload for key in ["event", "data", "auth", "ts"]):
-            raise HTTPException(
-                status_code=400, detail="Invalid webhook format"
+        if not webhook_payload:
+            return JSONResponse(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                content={
+                    "status": "error",
+                    "message": "Failed to process deal",
+                    "event": "Not define",
+                },
             )
+        await deal_client.bitrix_client.send_message_b24(
+            171, str(webhook_payload.model_dump_json())
+        )
 
         # Проверка токена
-        auth = payload.get("auth", {})
+        auth = webhook_payload.auth
         expected_domain = settings.web_hook_config["expected_tokens"].get(
-            auth.get("application_token", "")
+            auth.application_token
         )
-        if expected_domain != auth.get("domain"):
+        if expected_domain != auth.domain:
             raise HTTPException(
                 status_code=401, detail="Invalid webhook token"
             )
 
         # Обработка события
-        event = payload["event"]
-        deal_id = payload.get("data", {}).get("FIELDS", {}).get("ID")
-
+        event = webhook_payload.event
+        deal_id = webhook_payload.data["FIELDS"]["ID"]
+        await deal_client.bitrix_client.send_message_b24(
+            171, f"{deal_id}:: DEAL_ID"
+        )
         if event == "ONCRMDEALUPDATE" and deal_id and deal_id == 54195:  # TEST
             await deal_client.bitrix_client.send_message_b24(
                 171, "NEW PROCESS"
@@ -339,7 +307,7 @@ async def handle_bitrix24_webhook_raw(
                     content={
                         "status": "success",
                         "message": f"Deal {deal_id} processed success",
-                        "event": payload.event,
+                        "event": webhook_payload.event,
                     },
                 )
             else:
@@ -348,7 +316,7 @@ async def handle_bitrix24_webhook_raw(
                     content={
                         "status": "error",
                         "message": f"Failed to process deal {deal_id}",
-                        "event": payload.event,
+                        "event": webhook_payload.event,
                     },
                 )
         return JSONResponse(
@@ -356,7 +324,7 @@ async def handle_bitrix24_webhook_raw(
             content={
                 "status": "success",
                 "message": "Webhook received but no specific handler",
-                "event": payload.event,
+                "event": webhook_payload.event,
             },
         )
 
