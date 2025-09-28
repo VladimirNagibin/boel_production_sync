@@ -1,5 +1,5 @@
 import json
-from datetime import date
+from datetime import date, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
@@ -260,7 +260,36 @@ async def handle_bitrix24_webhook_raw(
     """
     Обработчик вебхуков с прямой обработкой JSON
     """
-    await deal_client.bitrix_client.send_message_b24(171, "NEW PROCESS")
+    await deal_client.bitrix_client.send_message_b24(171, "NEW PROCESS DEAL")
+
+    request_data: dict[str, Any] = {
+        "timestamp": datetime.now().isoformat(),
+        "method": request.method,
+        "url": str(request.url),
+        "headers": dict(request.headers),
+        "client": {
+            "host": request.client.host if request.client else None,
+            "port": request.client.port if request.client else None,
+        },
+        "query_params": dict(request.query_params),
+        "path_params": request.path_params,
+        "cookies": dict(request.cookies),
+    }
+
+    # Добавляем тело
+    try:
+        body = await request.body()
+        if body:
+            try:
+                request_data["body"] = await request.json()
+            except Exception:
+                request_data["body"] = body.decode("utf-8")
+    except Exception as e:
+        request_data["body_error"] = str(e)
+
+    await deal_client.bitrix_client.send_message_b24(
+        171, json.dumps(request_data)
+    )
     try:
         # Получаем raw JSON
         body = await request.body()
