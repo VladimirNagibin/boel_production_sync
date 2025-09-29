@@ -51,10 +51,25 @@ from .site_order_handler import SiteOrderHandler
 SOURCE_SITE_ORDER = "21"
 STAGE_INVOICE_FAIL = "DT31_1:D"
 CONDITION_MOVING_STAGE = {
-    1: "Критерий 2",
-    2: "Критерий 3",
-    3: "Критерий 4",
-    4: "Критерий 5",
+    1: (
+        "Для перехода на стадию ВЫЯВЛЕНИЕ ПОТРЕБНОСТИ должны быть заполнены "
+        "контактные данные (компания или контакт)"
+    ),
+    2: (
+        "Для перехода на стадию ЗАИНТЕРЕСОВАН должны быть заполнены "
+        "товары, основная деятельность и город"
+    ),
+    3: (
+        "Для перехода на стадию СОГЛАСОВАНИЕ УСЛОВИЙ должны быть заполнены "
+        "компания покупателя и фирма отгрузки"
+    ),
+    4: (
+        "Для перехода на стадию ВЫСТАВЛЕНИЕ СЧЁТА должно быть наличие "
+        "договора с компанией по фирме отгрузки. "
+        "Исключения: Отгрузка по Системам - договор не требуется. "
+        "Предоплата по ИП Воробьёву - используется счет-оферта без заключения "
+        "договора."
+    ),
 }
 
 
@@ -361,6 +376,13 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
             and available_stage
             and current_stage != available_stage
         ):
+            await self.bitrix_client.send_message_b24(
+                deal_b24.assigned_by_id,
+                (
+                    f"Cur:{current_stage}, Ava:{available_stage}, "
+                    f"Usr:{deal_b24.assigned_by_id}"
+                ),
+            )
             if current_stage > available_stage:
                 messages: list[str] = []
                 for i in range(current_stage, available_stage):
