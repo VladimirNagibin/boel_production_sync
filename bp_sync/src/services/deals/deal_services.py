@@ -376,20 +376,12 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
             and available_stage
             and current_stage != available_stage
         ):
-            await self.bitrix_client.send_message_b24(
-                171,
-                (
-                    f"Cur:{current_stage}, Ava:{available_stage}, "
-                    f"Usr:{deal_b24.assigned_by_id}"
-                ),
-            )
+
             if current_stage > available_stage:
-                messages: list[str] = []
-                for i in range(current_stage, available_stage):
-                    messages.append(CONDITION_MOVING_STAGE[i])
-                await self.bitrix_client.send_message_b24(
-                    deal_b24.assigned_by_id, "; ".join(messages)
+                await self._send_message_unavailable_stage(
+                    current_stage, available_stage, deal_b24
                 )
+
             stage_id = await self.repo.get_external_id_by_sort_order_stage(
                 available_stage
             )
@@ -412,6 +404,29 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
             )
 
         return current_stage
+
+    async def _send_message_unavailable_stage(
+        self, current_stage: int, available_stage: int, deal_b24: DealCreate
+    ) -> None:
+        await self.bitrix_client.send_message_b24(
+            171,
+            (
+                f"Cur:{current_stage}, Ava:{available_stage}, "
+                f"Usr:{deal_b24.assigned_by_id}"
+            ),
+        )
+        messages: list[str] = []
+        for i in range(available_stage, current_stage):
+            messages.append(CONDITION_MOVING_STAGE[i])
+        link = (
+            f"[url={self.bitrix_client.get_link(deal_b24.external_id)}]"
+            f"{deal_b24.title}[/url]"
+        )
+        await self.bitrix_client.send_message_b24(
+            171,
+            f"{link}: {'; '.join(messages)}",
+            # deal_b24.assigned_by_id, "; ".join(messages)
+        )
 
     async def _handle_deal_with_invoice(
         self,

@@ -3,6 +3,7 @@ from typing import Any, Generic, Type, TypeVar
 from fastapi import HTTPException, status
 
 from core.logger import logger
+from core.settings import settings
 from schemas.base_schemas import (  # CoreCreateSchema,; CoreUpdateSchema,
     CommonFieldMixin,
     ListResponseSchema,
@@ -390,3 +391,9 @@ class BaseBitrixEntityClient(Generic[SchemaTypeCreate, SchemaTypeUpdate]):
             return bool(response.get("result", False))
         except Exception:
             return False
+
+    def get_link(self, external_id: int | str | None) -> str:
+        return (
+            f"{settings.BITRIX_PORTAL}/crm/{self.entity_name}/details/"
+            f"{external_id if external_id else ''}/"
+        )
