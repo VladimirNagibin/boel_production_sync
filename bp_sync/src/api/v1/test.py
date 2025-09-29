@@ -24,7 +24,8 @@ from services.dependencies import (
     request_context,
 )
 from services.entities.measure_repository import MeasureRepository
-from services.exceptions import BitrixAuthError
+
+# from services.exceptions import BitrixAuthError
 from services.invoices.invoice_services import InvoiceClient
 from services.products.product_bitrix_services import ProductBitrixClient
 from services.timeline_comments.timeline_comment_bitrix_services import (
@@ -82,19 +83,19 @@ async def check(
     ),
 ) -> JSONResponse:
 
-    # deal_id = 54195  # 49935
+    deal_id = 54195  # 49935
     # comm = await get_comm(deal_id, timeline_client, timeline_repo)
-    # await deal_client.handle_deal(deal_id)
+    await deal_client.handle_deal(deal_id)
     result = ""  # invoice_client.send_invoice_request_to_fail(123)
-    try:
-        result = await company_bitrix_client.get(6533)
-    except BitrixAuthError as e:
-        return JSONResponse(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            content={
-                "detail": e.detail,
-            },
-        )
+    # try:
+    #    result = await company_bitrix_client.get(6533)
+    # except BitrixAuthError as e:
+    #    return JSONResponse(
+    #        status_code=status.HTTP_401_UNAUTHORIZED,
+    #        content={
+    #            "detail": e.detail,
+    #        },
+    #    )
     # result = await contact_bitrix_client.get(18281)
     if result:
         ...
@@ -145,8 +146,8 @@ async def check(
     #        },
     #    )
     return JSONResponse(
-        status_code=status.HTTP_404_NOT_FOUND,
+        status_code=status.HTTP_200_OK,
         content={
-            "status": "fault",
+            "status": "test",
         },
     )
