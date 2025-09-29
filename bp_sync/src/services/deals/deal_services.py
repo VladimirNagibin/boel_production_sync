@@ -6,6 +6,7 @@ from fastapi import HTTPException, Request, status
 from fastapi.responses import JSONResponse
 
 from core.logger import logger
+from core.settings import settings
 from models.deal_models import Deal as DealDB
 from models.enums import StageSemanticEnum
 from schemas.company_schemas import CompanyCreate
@@ -742,7 +743,6 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
         """
         Основной метод обработки вебхука сделки
         """
-        TEST_DEAL_ID = 54195
         ADMIN_ID = 171
         try:
             webhook_payload = await self.webhook_service.process_webhook(
@@ -756,7 +756,7 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
                     webhook_payload.event,
                 )
 
-            if deal_id != TEST_DEAL_ID:  # TEST ++++++++++++++++++++++++++++
+            if settings.WEB_HOOK_TEST and deal_id != settings.DEAL_ID_TEST:
                 return self._success_response(
                     "Test mode: Webhook received but deal not test",
                     webhook_payload.event,
