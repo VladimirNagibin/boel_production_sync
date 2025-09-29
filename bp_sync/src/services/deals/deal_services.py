@@ -50,6 +50,12 @@ from .site_order_handler import SiteOrderHandler
 
 SOURCE_SITE_ORDER = "21"
 STAGE_INVOICE_FAIL = "DT31_1:D"
+CONDITION_MOVING_STAGE = {
+    1: "Критерий 2",
+    2: "Критерий 3",
+    3: "Критерий 4",
+    4: "Критерий 5",
+}
 
 
 class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
@@ -355,6 +361,13 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
             and available_stage
             and current_stage != available_stage
         ):
+            if current_stage > available_stage:
+                messages: list[str] = []
+                for i in range(current_stage, available_stage):
+                    messages.append(CONDITION_MOVING_STAGE[i])
+                await self.bitrix_client.send_message_b24(
+                    deal_b24.assigned_by_id, "; ".join(messages)
+                )
             stage_id = await self.repo.get_external_id_by_sort_order_stage(
                 available_stage
             )
