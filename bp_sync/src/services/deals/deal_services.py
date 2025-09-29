@@ -2,7 +2,6 @@ import time
 from datetime import datetime
 from typing import Any
 
-from bitrix_services.webhook_service import WebhookService
 from fastapi import HTTPException, Request, status
 from fastapi.responses import JSONResponse
 
@@ -15,6 +14,7 @@ from schemas.deal_schemas import DealCreate, DealUpdate
 from schemas.invoice_schemas import InvoiceCreate, InvoiceUpdate
 from schemas.lead_schemas import LeadCreate
 from schemas.product_schemas import EntityTypeAbbr
+from services.bitrix_services.webhook_service import WebhookService
 
 from ..base_services.base_service import BaseEntityClient
 from ..exceptions import (
