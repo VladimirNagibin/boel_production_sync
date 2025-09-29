@@ -392,7 +392,7 @@ class CoreUpdateSchema(
                 FIELDS_BY_TYPE["int_none"] + FIELDS_BY_TYPE["enums"]
             ):
                 result[alias] = "" if value == 0 else value
-            elif alias == "ID":
+            elif alias in ("ID", "external_id"):
                 continue
             else:
                 # Остальные значения без изменений (проверка ссылочных полей)
