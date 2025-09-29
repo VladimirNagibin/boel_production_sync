@@ -305,13 +305,17 @@ class BitrixWebhookAuth(BaseModel):  # type: ignore[misc]
     application_token: str
 
 
-class BitrixWebhookData(BaseModel):  # type: ignore[misc]
-    ID: str
-
-
 class BitrixWebhookPayload(BaseModel):  # type: ignore[misc]
     event: str
     event_handler_id: str
-    data: dict[str, Any]  # Более гибкая структура для data
+    data: dict[str, Any]
     ts: str
     auth: BitrixWebhookAuth
+
+    @property
+    def deal_id(self) -> int | None:
+        """Извлекает ID сделки из данных"""
+        try:
+            return int(self.data.get("FIELDS", {}).get("ID", 0))
+        except (ValueError, TypeError):
+            return None

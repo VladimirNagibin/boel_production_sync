@@ -52,3 +52,21 @@ class ConflictException(HTTPException):  # type: ignore[misc]
 
 class CyclicCallException(Exception):
     pass
+
+
+class DealProcessingError(Exception):
+    """Исключение для ошибок обработки сделки"""
+
+    pass
+
+
+class WebhookValidationError(Exception):
+    """Кастомное исключение для ошибок валидации вебхуков"""
+
+    pass
+
+
+class WebhookSecurityError(Exception):
+    """Кастомное исключение для ошибок безопасности вебхуков"""
+
+    pass

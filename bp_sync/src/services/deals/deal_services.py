@@ -1,7 +1,10 @@
+import time
 from datetime import datetime
 from typing import Any
 
-from fastapi import HTTPException, status
+from bitrix_services.webhook_service import WebhookService
+from fastapi import HTTPException, Request, status
+from fastapi.responses import JSONResponse
 
 from core.logger import logger
 from models.deal_models import Deal as DealDB
@@ -14,7 +17,12 @@ from schemas.lead_schemas import LeadCreate
 from schemas.product_schemas import EntityTypeAbbr
 
 from ..base_services.base_service import BaseEntityClient
-from ..exceptions import BitrixApiError
+from ..exceptions import (
+    BitrixApiError,
+    DealProcessingError,
+    WebhookSecurityError,
+    WebhookValidationError,
+)
 from ..products.product_bitrix_services import ProductBitrixClient
 from ..timeline_comments.timeline_comment_bitrix_services import (
     TimeLineCommentBitrixClient,
@@ -65,6 +73,7 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
         self.site_order_handler = SiteOrderHandler(self)
         self.deal_with_invoice_handler = DealWithInvioceHandler(self)
         self.deal_source_handler = DealSourceHandler(self)
+        self.webhook_service = WebhookService()
 
     @property
     def entity_name(self) -> str:
@@ -678,3 +687,96 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
                 f"Error in process_deal_source: {str(e)}", exc_info=True
             )
             return False
+
+    async def deal_processing(self, request: Request) -> JSONResponse:
+        """
+        Основной метод обработки вебхука сделки
+        """
+        TEST_DEAL_ID = 54195
+        ADMIN_ID = 171
+        try:
+            webhook_payload = await self.webhook_service.process_webhook(
+                request
+            )
+
+            deal_id = webhook_payload.deal_id
+            if not deal_id:
+                return self._success_response(
+                    "Webhook received but no deal ID found",
+                    webhook_payload.event,
+                )
+
+            if deal_id != TEST_DEAL_ID:  # TEST ++++++++++++++++++++++++++++
+                return self._success_response(
+                    "Test mode: Webhook received but deal not test",
+                    webhook_payload.event,
+                )
+
+            await self.bitrix_client.send_message_b24(
+                ADMIN_ID, f"START NEW PROCESS DEAL ID: {deal_id}"
+            )
+
+            success = await self.handle_deal(deal_id)
+
+            if success:
+                return self._success_response(
+                    f"Deal {deal_id} processed successfully",
+                    webhook_payload.event,
+                )
+            else:
+                raise DealProcessingError(f"Failed to process deal {deal_id}")
+
+        except WebhookSecurityError as e:
+            logger.warning(f"Webhook security error: {e}")
+            return self._error_response(
+                status.HTTP_401_UNAUTHORIZED,
+                "Security validation failed",
+                "Security error",
+            )
+        except WebhookValidationError as e:
+            logger.warning(f"Webhook validation error: {e}")
+            return self._error_response(
+                status.HTTP_400_BAD_REQUEST,
+                "Webhook validation failed",
+                "Validation error",
+            )
+        except DealProcessingError as e:
+            logger.error(f"Deal processing error: {e}")
+            return self._error_response(
+                status.HTTP_500_INTERNAL_SERVER_ERROR,
+                "Deal processing failed",
+                "Processing error",
+            )
+        except Exception as e:
+            logger.error(f"Unexpected error in deal processing: {e}")
+            return self._error_response(
+                status.HTTP_500_INTERNAL_SERVER_ERROR,
+                "Internal server error",
+                "Unexpected error",
+            )
+
+    def _success_response(self, message: str, event: str) -> JSONResponse:
+        """Успешный ответ"""
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={
+                "status": "success",
+                "message": message,
+                "event": event,
+                "timestamp": time.time(),
+            },
+        )
+
+    def _error_response(
+        self, status_code: int, message: str, error_type: str
+    ) -> JSONResponse:
+        """Ответ с ошибкой"""
+        return JSONResponse(
+            status_code=status_code,
+            content={
+                "status": "error",
+                "message": message,
+                "error_type": error_type,
+                "timestamp": time.time(),
+            },
+        )
