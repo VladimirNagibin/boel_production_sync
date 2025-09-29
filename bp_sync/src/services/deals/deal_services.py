@@ -377,7 +377,7 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
             and current_stage != available_stage
         ):
             await self.bitrix_client.send_message_b24(
-                deal_b24.assigned_by_id,
+                171,
                 (
                     f"Cur:{current_stage}, Ava:{available_stage}, "
                     f"Usr:{deal_b24.assigned_by_id}"
