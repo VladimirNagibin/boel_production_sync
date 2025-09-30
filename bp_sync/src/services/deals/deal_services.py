@@ -261,6 +261,7 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
             deal_update = DealUpdate(external_id=deal_b24.external_id)
             for key, value in changes.items():
                 setattr(deal_update, key, value["external"])
+            print(deal_update)
             await self.bitrix_client.update(deal_update)
             return True
         except Exception:

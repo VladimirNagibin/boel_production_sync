@@ -350,53 +350,145 @@ class CoreUpdateSchema(
         extra="ignore",
     )
 
-    def to_bitrix_dict(self) -> dict[str, Any]:
+    # Константы для преобразований
+    _BOOLEAN_FIELDS_TO_STRING: ClassVar[set[str]] = {
+        "UF_CRM_60D2AFAEB32CC",
+        "UF_CRM_1632738559",
+        "UF_CRM_1623830089",
+        "UF_CRM_60D97EF75E465",
+        "UF_CRM_61974C16DBFBF",
+    }
+
+    _COMMUNICATION_TIME_FIELDS: ClassVar[set[str]] = {
+        "LAST_COMMUNICATION_TIME",
+        "lastCommunicationTime",
+    }
+
+    _SPECIAL_BOOLEAN_FIELDS: ClassVar[dict[str, Any]] = {
+        "webformId": (1, 0)  # (true_value, false_value)
+    }
+
+    _EXCLUDED_FIELDS: ClassVar[set[str]] = {"ID", "id", "external_id"}
+
+    _DUAL_ENUM: ClassVar[set[str]] = {
+        "payment_type",
+        "UF_CRM_1632738315",
+        "shipment_type",
+        "UF_CRM_1655141630",
+        "ufCrm_SMART_INVOICE_1651114959541",
+        "ufCrm_62B53CC5A2EDF",
+    }
+
+    def _build_alias_mapping(self, alias_choice: int) -> dict[str, str]:
+        """Строит маппинг имен полей на выбранные алиасы"""
+        alias_mapping: dict[str, Any] = {}
+
+        for field_name, field_info in self.__class__.model_fields.items():
+            validation_alias = field_info.validation_alias
+
+            if isinstance(validation_alias, AliasChoices):
+                # Безопасный выбор алиаса с проверкой границ
+                choice_index = max(
+                    0, min(alias_choice - 1, len(validation_alias.choices) - 1)
+                )
+                alias_mapping[field_name] = validation_alias.choices[
+                    choice_index
+                ]
+
+        return alias_mapping
+
+    def _transform_boolean_value(self, field_alias: str, value: bool) -> Any:
+        """Преобразует булево значение в нужный формат"""
+        if field_alias in self._SPECIAL_BOOLEAN_FIELDS:
+            true_val, false_val = self._SPECIAL_BOOLEAN_FIELDS[field_alias]
+            return true_val if value else false_val
+        elif field_alias in self._BOOLEAN_FIELDS_TO_STRING:
+            return "1" if value else "0"
+        else:
+            return "Y" if value else "N"
+
+    def _transform_datetime_value(
+        self, field_alias: str, value: datetime
+    ) -> str:
+        """Преобразует datetime в строковый формат"""
+        if field_alias in self._COMMUNICATION_TIME_FIELDS:
+            return value.strftime("%d.%m.%Y %H:%M:%S")
+        else:
+            # Стандартный ISO формат с часовым поясом
+            # iso_format = value.isoformat()
+            # Убедимся, что часовой пояс в правильном формате
+            # if (
+            #     iso_format and iso_format[-5] in ("+", "-") and
+            #     ":" not in iso_format[-5:]
+            # ):
+            #    iso_format = f"{iso_format[:-2]}:{iso_format[-2:]}"
+            iso_format = value.strftime("%Y-%m-%dT%H:%M:%S%z")
+            if iso_format and iso_format[-5] in ("+", "-"):
+                iso_format = f"{iso_format[:-2]}:{iso_format[-2:]}"
+            return iso_format
+
+    def _transform_numeric_value(self, field_alias: str, value: Any) -> Any:
+        """Преобразует числовые значения для специальных полей"""
+        if field_alias in (
+            FIELDS_BY_TYPE["int_none"] + FIELDS_BY_TYPE["enums"]
+        ):
+            return "" if value == 0 else value
+        return value
+
+    def _transform_tuple_value(
+        self, field_alias: str, value: Any, alias_choice: int
+    ) -> Any:
+        """Преобразует перечисления с двойственными полями"""
+        try:
+            return value[alias_choice - 1]
+        except Exception:
+            return value[0]
+
+    def _apply_field_transformations(
+        self, field_alias: str, value: Any, alias_choice: int
+    ) -> Any:
+        """Применяет все необходимые преобразования к значению поля"""
+        if isinstance(value, bool):
+            return self._transform_boolean_value(field_alias, value)
+        elif isinstance(value, datetime):
+            return self._transform_datetime_value(field_alias, value)
+        elif isinstance(value, tuple):
+            return self._transform_tuple_value(
+                field_alias, value, alias_choice
+            )
+        else:
+            return self._transform_numeric_value(field_alias, value)
+
+    def to_bitrix_dict(self, alias_choice: int = 1) -> dict[str, Any]:
         """Преобразует модель в словарь для Bitrix API"""
+
+        # Строим маппинг алиасов
+        alias_mapping = self._build_alias_mapping(alias_choice)
+
+        # Получаем данные модели
         data = self.model_dump(
             by_alias=True,
             exclude_none=True,
-            exclude_unset=True,  # опционально: исключить неустановленные поля
+            exclude_unset=True,
         )
 
-        # Дополнительные преобразования
+        # Применяем маппинг алиасов и преобразования
         result: dict[str, Any] = {}
-        for alias, value in data.items():
-            if isinstance(value, bool):
-                if alias in (
-                    "UF_CRM_60D2AFAEB32CC",
-                    "UF_CRM_1632738559",
-                    "UF_CRM_1623830089",
-                    "UF_CRM_60D97EF75E465",
-                    "UF_CRM_61974C16DBFBF",
-                ):
-                    result[alias] = "1" if value else "0"
-                elif alias == "webformId":
-                    result[alias] = 1 if value else 0
-                else:
-                    # Булёвы значения -> "Y"/"N"
-                    result[alias] = "Y" if value else "N"
-            elif isinstance(value, datetime):
-                # Особый формат для last_communication_time
-                if alias in (
-                    "LAST_COMMUNICATION_TIME",
-                    "lastCommunicationTime",
-                ):
-                    result[alias] = value.strftime("%d.%m.%Y %H:%M:%S")
-                # Стандартный ISO формат для остальных дат
-                else:
-                    iso_format = value.strftime("%Y-%m-%dT%H:%M:%S%z")
-                    if iso_format and iso_format[-5] in ("+", "-"):
-                        iso_format = f"{iso_format[:-2]}:{iso_format[-2:]}"
-                    result[alias] = iso_format
-            elif alias in (
-                FIELDS_BY_TYPE["int_none"] + FIELDS_BY_TYPE["enums"]
-            ):
-                result[alias] = "" if value == 0 else value
-            elif alias in ("ID", "external_id"):
+
+        for field_name, value in data.items():
+            # Получаем финальный алиас для поля
+            field_alias = alias_mapping.get(field_name, field_name)
+
+            # Пропускаем исключенные поля
+            if field_alias in self._EXCLUDED_FIELDS:
                 continue
-            else:
-                # Остальные значения без изменений (проверка ссылочных полей)
-                result[alias] = value
+
+            # Применяем преобразования
+            transformed_value = self._apply_field_transformations(
+                field_alias, value, alias_choice
+            )
+            result[field_alias] = transformed_value
+
         return result
 
 
