@@ -48,6 +48,9 @@ class Lead(CommunicationIntIdEntity):
     def tablename(self) -> str:
         return self.__tablename__
 
+    def __str__(self) -> str:
+        return str(self.title)
+
     # Идентификаторы и основные данные
     title: Mapped[str] = mapped_column(
         comment="Название лида"

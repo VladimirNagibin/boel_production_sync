@@ -13,7 +13,7 @@ b24_router = APIRouter(dependencies=[Depends(request_context)])
 b24_router.include_router(
     departments_router, prefix="/b24", tags=["departments"]
 )
-b24_router.include_router(deals_router, prefix="/b24", tags=["load_deals"])
+b24_router.include_router(deals_router, prefix="/b24", tags=["deals"])
 b24_router.include_router(
     messages_router, prefix="/b24", tags=["messages_rabbitmq"]
 )

@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from typing import Any, Optional
 
-from pydantic import Field, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 from models.enums import (
     DualTypePaymentEnum,
@@ -294,3 +294,28 @@ class AddInfoUpdate(CommonFieldMixin):
 
     deal_id: int | None = Field(default=None)
     comment: str | None = Field(default=None)
+
+
+# Модели данных для вебхука
+class BitrixWebhookAuth(BaseModel):  # type: ignore[misc]
+    domain: str
+    client_endpoint: str
+    server_endpoint: str
+    member_id: str
+    application_token: str
+
+
+class BitrixWebhookPayload(BaseModel):  # type: ignore[misc]
+    event: str
+    event_handler_id: str
+    data: dict[str, Any]
+    ts: str
+    auth: BitrixWebhookAuth
+
+    @property
+    def deal_id(self) -> int | None:
+        """Извлекает ID сделки из данных"""
+        try:
+            return int(self.data.get("FIELDS", {}).get("ID", 0))
+        except (ValueError, TypeError):
+            return None

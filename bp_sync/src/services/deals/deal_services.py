@@ -1,9 +1,12 @@
+import time
 from datetime import datetime
 from typing import Any
 
-from fastapi import HTTPException, status
+from fastapi import HTTPException, Request, status
+from fastapi.responses import JSONResponse
 
 from core.logger import logger
+from core.settings import settings
 from models.deal_models import Deal as DealDB
 from models.enums import StageSemanticEnum
 from schemas.company_schemas import CompanyCreate
@@ -12,9 +15,15 @@ from schemas.deal_schemas import DealCreate, DealUpdate
 from schemas.invoice_schemas import InvoiceCreate, InvoiceUpdate
 from schemas.lead_schemas import LeadCreate
 from schemas.product_schemas import EntityTypeAbbr
+from services.bitrix_services.webhook_service import WebhookService
 
 from ..base_services.base_service import BaseEntityClient
-from ..exceptions import BitrixApiError
+from ..exceptions import (
+    BitrixApiError,
+    DealProcessingError,
+    WebhookSecurityError,
+    WebhookValidationError,
+)
 from ..products.product_bitrix_services import ProductBitrixClient
 from ..timeline_comments.timeline_comment_bitrix_services import (
     TimeLineCommentBitrixClient,
@@ -28,6 +37,7 @@ from .deal_report_helpers import (
 )
 from .deal_repository import DealRepository
 from .deal_source_classifier import WEBSITE_CREATOR, identify_source
+from .deal_source_handler import DealSourceHandler
 from .deal_stage_handler import DealStageHandler
 from .deal_update_tracker import DealUpdateTracker
 from .deal_with_invoice_handler import DealWithInvioceHandler
@@ -41,6 +51,27 @@ from .site_order_handler import SiteOrderHandler
 
 SOURCE_SITE_ORDER = "21"
 STAGE_INVOICE_FAIL = "DT31_1:D"
+CONDITION_MOVING_STAGE = {
+    1: (
+        "Для перехода на стадию ВЫЯВЛЕНИЕ ПОТРЕБНОСТИ должны быть заполнены "
+        "контактные данные (компания или контакт)"
+    ),
+    2: (
+        "Для перехода на стадию ЗАИНТЕРЕСОВАН должны быть заполнены "
+        "товары, основная деятельность и город"
+    ),
+    3: (
+        "Для перехода на стадию СОГЛАСОВАНИЕ УСЛОВИЙ должны быть заполнены "
+        "компания покупателя и фирма отгрузки"
+    ),
+    4: (
+        "Для перехода на стадию ВЫСТАВЛЕНИЕ СЧЁТА должно быть наличие "
+        "договора с компанией по фирме отгрузки. "
+        "Исключения: Отгрузка по Системам - договор не требуется. "
+        "Предоплата по ИП Воробьёву - используется счет-оферта без заключения "
+        "договора."
+    ),
+}
 
 
 class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
@@ -63,6 +94,8 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
         self.update_tracker = DealUpdateTracker()
         self.site_order_handler = SiteOrderHandler(self)
         self.deal_with_invoice_handler = DealWithInvioceHandler(self)
+        self.deal_source_handler = DealSourceHandler(self)
+        self.webhook_service = WebhookService()
 
     @property
     def entity_name(self) -> str:
@@ -344,6 +377,12 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
             and available_stage
             and current_stage != available_stage
         ):
+
+            if current_stage > available_stage:
+                await self._send_message_unavailable_stage(
+                    current_stage, available_stage, deal_b24
+                )
+
             stage_id = await self.repo.get_external_id_by_sort_order_stage(
                 available_stage
             )
@@ -366,6 +405,29 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
             )
 
         return current_stage
+
+    async def _send_message_unavailable_stage(
+        self, current_stage: int, available_stage: int, deal_b24: DealCreate
+    ) -> None:
+        await self.bitrix_client.send_message_b24(
+            171,
+            (
+                f"Cur:{current_stage}, Ava:{available_stage}, "
+                f"Usr:{deal_b24.assigned_by_id}"
+            ),
+        )
+        messages: list[str] = []
+        for i in range(available_stage, current_stage):
+            messages.append(CONDITION_MOVING_STAGE[i])
+        link = (
+            f"[url={self.bitrix_client.get_link(deal_b24.external_id)}]"
+            f"{deal_b24.title}[/url]"
+        )
+        await self.bitrix_client.send_message_b24(
+            171,
+            f"{link}: {'; '.join(messages)}",
+            # deal_b24.assigned_by_id, "; ".join(messages)
+        )
 
     async def _handle_deal_with_invoice(
         self,
@@ -654,3 +716,117 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
                 f"{deal_b24.external_id}: {str(e)}"
             )
             return False
+
+    async def set_deal_source(
+        self,
+        user_id: str,
+        key: str,
+        deal_id: str,
+        creation_source: str | None,
+        source: str | None,
+        type_deal: str | None,
+    ) -> bool:
+        try:
+            return await self.deal_source_handler.set_deal_source(
+                user_id, key, deal_id, creation_source, source, type_deal
+            )
+        except HTTPException:
+            # Re-raise HTTP exceptions to be handled by FastAPI
+            raise
+        except Exception as e:
+            logger.error(
+                f"Error in process_deal_source: {str(e)}", exc_info=True
+            )
+            return False
+
+    async def deal_processing(self, request: Request) -> JSONResponse:
+        """
+        Основной метод обработки вебхука сделки
+        """
+        ADMIN_ID = 171
+        try:
+            webhook_payload = await self.webhook_service.process_webhook(
+                request
+            )
+
+            deal_id = webhook_payload.deal_id
+            if not deal_id:
+                return self._success_response(
+                    "Webhook received but no deal ID found",
+                    webhook_payload.event,
+                )
+
+            if settings.WEB_HOOK_TEST and deal_id != settings.DEAL_ID_TEST:
+                return self._success_response(
+                    "Test mode: Webhook received but deal not test",
+                    webhook_payload.event,
+                )
+
+            await self.bitrix_client.send_message_b24(
+                ADMIN_ID, f"START NEW PROCESS DEAL ID: {deal_id}"
+            )
+
+            success = await self.handle_deal(deal_id)
+
+            if success:
+                return self._success_response(
+                    f"Deal {deal_id} processed successfully",
+                    webhook_payload.event,
+                )
+            else:
+                raise DealProcessingError(f"Failed to process deal {deal_id}")
+
+        except WebhookSecurityError as e:
+            logger.warning(f"Webhook security error: {e}")
+            return self._error_response(
+                status.HTTP_401_UNAUTHORIZED,
+                "Security validation failed",
+                "Security error",
+            )
+        except WebhookValidationError as e:
+            logger.warning(f"Webhook validation error: {e}")
+            return self._error_response(
+                status.HTTP_400_BAD_REQUEST,
+                "Webhook validation failed",
+                "Validation error",
+            )
+        except DealProcessingError as e:
+            logger.error(f"Deal processing error: {e}")
+            return self._error_response(
+                status.HTTP_500_INTERNAL_SERVER_ERROR,
+                "Deal processing failed",
+                "Processing error",
+            )
+        except Exception as e:
+            logger.error(f"Unexpected error in deal processing: {e}")
+            return self._error_response(
+                status.HTTP_500_INTERNAL_SERVER_ERROR,
+                "Internal server error",
+                "Unexpected error",
+            )
+
+    def _success_response(self, message: str, event: str) -> JSONResponse:
+        """Успешный ответ"""
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={
+                "status": "success",
+                "message": message,
+                "event": event,
+                "timestamp": time.time(),
+            },
+        )
+
+    def _error_response(
+        self, status_code: int, message: str, error_type: str
+    ) -> JSONResponse:
+        """Ответ с ошибкой"""
+        return JSONResponse(
+            status_code=status_code,
+            content={
+                "status": "error",
+                "message": message,
+                "error_type": error_type,
+                "timestamp": time.time(),
+            },
+        )
