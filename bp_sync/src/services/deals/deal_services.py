@@ -21,6 +21,8 @@ from ..base_services.base_service import BaseEntityClient
 from ..exceptions import (
     BitrixApiError,
     DealProcessingError,
+    LockAcquisitionError,
+    MaxRetriesExceededError,
     WebhookSecurityError,
     WebhookValidationError,
 )
@@ -30,6 +32,7 @@ from ..timeline_comments.timeline_comment_bitrix_services import (
 )
 from .deal_bitrix_services import DealBitrixClient
 from .deal_data_provider import DealDataProvider
+from .deal_lock_service import LockService
 from .deal_report_helpers import (
     create_dataframe,
     create_excel_file,
@@ -83,11 +86,13 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
         deal_repo: DealRepository,
         timeline_comments_bitrix_client: TimeLineCommentBitrixClient,
         product_bitrix_client: ProductBitrixClient,
+        lock_service: LockService,
     ):
         self._bitrix_client = deal_bitrix_client
         self._repo = deal_repo
         self.timeline_comments_bitrix_client = timeline_comments_bitrix_client
         self.product_bitrix_client = product_bitrix_client
+        self.lock_service = lock_service
 
         self.stage_handler = DealStageHandler(self)
         self.data_provider = DealDataProvider(self)
@@ -96,6 +101,14 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
         self.deal_with_invoice_handler = DealWithInvioceHandler(self)
         self.deal_source_handler = DealSourceHandler(self)
         self.webhook_service = WebhookService()
+
+        self.retry_config: dict[str, Any] = {
+            "max_retries": getattr(settings, "lock_max_retries", 3),
+            "base_delay": getattr(settings, "lock_base_delay", 1.0),
+            "max_delay": getattr(settings, "lock_max_delay", 30.0),
+            "jitter": getattr(settings, "lock_jitter", True),
+            "lock_timeout": getattr(settings, "default_lock_timeout", 300),
+        }
 
     @property
     def entity_name(self) -> str:
@@ -767,16 +780,52 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
             await self.bitrix_client.send_message_b24(
                 ADMIN_ID, f"START NEW PROCESS DEAL ID: {deal_id}"
             )
+            try:
+                async with self.lock_service.acquire_deal_lock_with_retry(
+                    deal_id,
+                    timeout=self.retry_config["lock_timeout"],
+                    max_retries=self.retry_config["max_retries"],
+                    base_delay=self.retry_config["base_delay"],
+                    max_delay=self.retry_config["max_delay"],
+                    jitter=self.retry_config["jitter"],
+                ):
 
-            success = await self.handle_deal(deal_id)
+                    success = await self.handle_deal(deal_id)
 
-            if success:
-                return self._success_response(
-                    f"Deal {deal_id} processed successfully",
-                    webhook_payload.event,
+                    if success:
+                        return self._success_response(
+                            f"Deal {deal_id} processed successfully",
+                            webhook_payload.event,
+                        )
+                    else:
+                        raise DealProcessingError(
+                            f"Failed to process deal {deal_id}"
+                        )
+
+            except MaxRetriesExceededError:
+                # Все попытки исчерпаны
+                remain_time = await self.lock_service.get_remaining_lock_time(
+                    deal_id
                 )
-            else:
-                raise DealProcessingError(f"Failed to process deal {deal_id}")
+                error_msg = (
+                    f"Deal {deal_id} is still locked after "
+                    f"{self.retry_config['max_retries']} retries"
+                )
+                if remain_time:
+                    error_msg += f", lock expires in {remain_time:.1f}s"
+
+                logger.warning(error_msg)
+                return self._concurrent_processing_response(
+                    deal_id, webhook_payload.event
+                )
+
+            except LockAcquisitionError as e:
+                logger.warning(
+                    f"Lock acquisition failed for deal {deal_id}: {e}"
+                )
+                return self._concurrent_processing_response(
+                    deal_id, webhook_payload.event
+                )
 
         except WebhookSecurityError as e:
             logger.warning(f"Webhook security error: {e}")
@@ -830,5 +879,23 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
                 "message": message,
                 "error_type": error_type,
                 "timestamp": time.time(),
+            },
+        )
+
+    def _concurrent_processing_response(
+        self, deal_id: int, event: str
+    ) -> JSONResponse:
+        """Ответ при параллельной обработке после исчерпания попыток"""
+        return JSONResponse(
+            status_code=status.HTTP_409_CONFLICT,
+            content={
+                "status": "skipped",
+                "message": (
+                    f"Deal {deal_id} is still being processed by another "
+                    "worker"
+                ),
+                "event": event,
+                "timestamp": time.time(),
+                "suggestion": "Please try again later",
             },
         )

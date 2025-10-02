@@ -70,3 +70,15 @@ class WebhookSecurityError(Exception):
     """Кастомное исключение для ошибок безопасности вебхуков"""
 
     pass
+
+
+class LockAcquisitionError(Exception):
+    """Ошибка получения блокировки"""
+
+    pass
+
+
+class MaxRetriesExceededError(LockAcquisitionError):
+    """Достигнуто максимальное количество попыток"""
+
+    pass

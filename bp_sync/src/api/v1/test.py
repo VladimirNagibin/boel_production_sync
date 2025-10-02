@@ -82,11 +82,30 @@ async def check(
         get_timeline_comment_repository_dep
     ),
 ) -> JSONResponse:
+    import asyncio
+    import os
+    import time
+
+    process_id = os.getpid()
+    start_time = time.time()
+    # Имитация долгой операции
+    await asyncio.sleep(5)
+    return {
+        "process_id": process_id,
+        "start_time": start_time,
+        "end_time": time.time(),
+    }
 
     deal_id = 54195  # 49935
     # comm = await get_comm(deal_id, timeline_client, timeline_repo)
-    await deal_client.handle_deal(deal_id)
-    result = ""  # invoice_client.send_invoice_request_to_fail(123)
+    await deal_client.deal_processing_(deal_id, 1)
+    await deal_client.deal_processing_(deal_id, 2)
+    await deal_client.deal_processing_(deal_id, 3)
+    await deal_client.deal_processing_(deal_id, 4)
+    await deal_client.deal_processing_(deal_id, 5)
+    result = await deal_client.deal_processing_(deal_id, 6)
+
+    # result = ""  # invoice_client.send_invoice_request_to_fail(123)
     # try:
     #    result = await company_bitrix_client.get(6533)
     # except BitrixAuthError as e:
@@ -99,7 +118,7 @@ async def check(
     # result = await contact_bitrix_client.get(18281)
     if result:
         ...
-        # print(f"{result}-------DEAL--UPDATE")
+        print(f"{result}-------DEAL--UPDATE")
     # print(f"{products_deal}-------DEAL")
     # products_invoice = await product_bitrix_client.get_entity_products(
     #    26309, EntityTypeAbbr.INVOICE)
