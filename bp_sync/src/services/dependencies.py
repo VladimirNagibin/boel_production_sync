@@ -29,6 +29,7 @@ from .contacts.contact_bitrix_services import ContactBitrixClient
 from .contacts.contact_repository import ContactRepository
 from .contacts.contact_services import ContactClient
 from .deals.deal_bitrix_services import DealBitrixClient
+from .deals.deal_lock_service import LockService
 from .deals.deal_repository import DealRepository
 from .deals.deal_services import DealClient
 from .delivery_notes.delivery_note_repository import DeliveryNoteRepository
@@ -220,6 +221,14 @@ async def create_deal_repository() -> DealRepository:
     )
 
 
+async def get_lock_service() -> LockService:
+    """Фабрика для получения экземпляра LockService"""
+    redis: Redis | None = await get_redis()
+    if redis:
+        return LockService(redis)
+    raise RuntimeError("Redis is not initialized")
+
+
 async def create_deal_client() -> DealClient:
     return DealClient(
         deal_bitrix_client=await create_deal_bitrix_client(),
@@ -228,6 +237,7 @@ async def create_deal_client() -> DealClient:
             await create_timeline_comment_bitrix_client()
         ),
         product_bitrix_client=await create_product_bitrix_client(),
+        lock_service=await get_lock_service(),
     )
 
 
