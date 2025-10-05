@@ -6,8 +6,6 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import JSONResponse
 
 from core.logger import logger
-
-# from services.bitrix_services.webhook_service import verify_webhook
 from services.deals.deal_bitrix_services import DealBitrixClient
 from services.deals.deal_import_services import DealProcessor
 from services.deals.deal_services import DealClient
