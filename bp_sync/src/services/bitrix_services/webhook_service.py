@@ -17,13 +17,17 @@ class WebhookService:
 
     MAX_AGE = 300
 
-    def __init__(self) -> None:
-        self.allowed_events = set(
+    def __init__(
+        self,
+        allowed_events: set[Any] = set(
             settings.web_hook_config.get("allowed_events", [])
-        )
-        self.expected_tokens = settings.web_hook_config.get(
+        ),
+        expected_tokens: dict[str, Any] = settings.web_hook_config.get(
             "expected_tokens", {}
-        )
+        ),
+    ) -> None:
+        self.allowed_events = allowed_events
+        self.expected_tokens = expected_tokens
 
     async def process_webhook(self, request: Request) -> BitrixWebhookPayload:
         """
