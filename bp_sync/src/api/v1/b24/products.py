@@ -39,15 +39,3 @@ async def handle_bitrix24_webhook(
                 "timestamp": time.time(),
             },
         )
-
-
-@products_router.post("/process_")  # type: ignore
-async def handle_bitrix24_webhook_(
-    product_id: int,
-    product_handler: ProductHandler = Depends(get_products_service),
-) -> bool:
-    try:
-        return await product_handler._transformation_fields(product_id)
-    except Exception:  # as e:
-        # logger.error(f"Unhandled error in webhook handler: {e}")
-        return False

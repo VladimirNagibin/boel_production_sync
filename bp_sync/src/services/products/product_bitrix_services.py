@@ -212,12 +212,14 @@ class ProductBitrixClient(
         products: ListProductEntity,
     ) -> bool:
         """Обработка товара-вариации"""
+        product_origin = deepcopy(product_entity)
         res_upd, xml_upd = await self._handle_catalog_variation(
             product_entity, product_catalog.xml_id
         )
 
         if not res_upd or not self.code_service.is_valid_code(xml_upd):
             products.result.remove(product_entity)
+            product_entity = product_origin
             return True
         return True
 
