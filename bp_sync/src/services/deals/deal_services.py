@@ -411,8 +411,8 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
             )
             if removed_products:
                 removed_info = (
-                    f"Удалены товары: {len(removed_products)}шт. в сделке "
-                    f"{link}: {[p.product_name for p in removed_products]}"
+                    f"Сделка {link}: удалены товары {len(removed_products)}шт."
+                    f"\n{[p.product_name for p in removed_products]}"
                 )
                 await self.bitrix_client.send_message_b24(
                     deal_b24.assigned_by_id, removed_info
@@ -423,9 +423,10 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
                     f"{change['new_product'].product_name}"
                     for change in replaced_products
                 ]
+                products_replaced_ = "\n".join(products_replaced)
                 replaced_info = (
-                    f"Заменены товары: {len(replaced_products)}шт. в сделке "
-                    f"{link}:/n{'/n'.join(products_replaced)}"
+                    f"Сделка {link}: заменены товары {len(replaced_products)}"
+                    f"шт.\n{products_replaced_}"
                 )
                 await self.bitrix_client.send_message_b24(
                     deal_b24.assigned_by_id, replaced_info
@@ -459,13 +460,6 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
     async def _send_message_unavailable_stage(
         self, current_stage: int, available_stage: int, deal_b24: DealCreate
     ) -> None:
-        await self.bitrix_client.send_message_b24(
-            171,
-            (
-                f"Cur:{current_stage}, Ava:{available_stage}, "
-                f"Usr:{deal_b24.assigned_by_id}"
-            ),
-        )
         messages: list[str] = []
         for i in range(available_stage, current_stage):
             messages.append(CONDITION_MOVING_STAGE[i])
@@ -474,8 +468,8 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
             f"{deal_b24.title}[/url]"
         )
         await self.bitrix_client.send_message_b24(
-            171,
-            f"{link}: {'; '.join(messages)}",
+            deal_b24.assigned_by_id,
+            f"Сделка {link}: {'; '.join(messages)}",
             # deal_b24.assigned_by_id, "; ".join(messages)
         )
 
