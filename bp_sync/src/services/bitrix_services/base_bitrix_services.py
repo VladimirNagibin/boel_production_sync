@@ -397,3 +397,8 @@ class BaseBitrixEntityClient(Generic[SchemaTypeCreate, SchemaTypeUpdate]):
             f"{settings.BITRIX_PORTAL}/crm/{self.entity_name}/details/"
             f"{external_id if external_id else ''}/"
         )
+
+    def get_formatted_link(
+        self, external_id: int | str | None, titlt: str
+    ) -> str:
+        return f"[url={self.get_link(external_id)}]{titlt}[/url]"
