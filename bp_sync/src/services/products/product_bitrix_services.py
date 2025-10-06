@@ -1,7 +1,7 @@
 from copy import deepcopy
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import Any, cast
+from typing import Any, Awaitable, Callable, cast
 
 from fastapi import status
 
@@ -205,6 +205,62 @@ class ProductBitrixClient(
             return True
         return False
 
+    async def _process_product_with_handler(
+        self,
+        product_entity: ProductEntityCreate,
+        product_catalog: ProductCreate,
+        products: ListProductEntity,
+        handler_method: Callable[
+            [ProductEntityCreate, str | None],
+            Awaitable[tuple[bool, str | None]],
+        ],
+        handler_name: str,
+    ) -> bool:
+        """
+        Общий метод обработки товара с использованием указанного обработчика
+        для каталогов variation_catalog и site_catalog
+        """
+        product_origin = deepcopy(product_entity)
+
+        try:
+            res_upd, xml_upd = await handler_method(
+                product_entity, product_catalog.xml_id
+            )
+
+            if not res_upd or not self.code_service.is_valid_code(xml_upd):
+                products.result.remove(product_entity)
+                self._restore_product_entity(product_entity, product_origin)
+                logger.debug(
+                    f"Removed invalid product from {handler_name}: "
+                    f"product_id={product_origin.product_id}, "
+                    f"xml_id={product_catalog.xml_id}"
+                )
+                return True
+
+            logger.debug(
+                f"Successfully processed product from {handler_name}: "
+                f"product_id={product_entity.product_id}"
+            )
+            return True
+
+        except Exception as e:
+            logger.error(
+                f"Error processing product from {handler_name}: "
+                f"product_id={product_entity.product_id}, error: {str(e)}"
+            )
+            return False
+
+    def _restore_product_entity(
+        self,
+        product_entity: ProductEntityCreate,
+        product_origin: ProductEntityCreate,
+    ) -> None:
+        """Восстановление исходных значений продукта"""
+        product_entity.product_id = product_origin.product_id
+        product_entity.product_name = product_origin.product_name
+        product_entity.measure_code = product_origin.measure_code
+        product_entity.measure_name = product_origin.measure_name
+
     async def _process_variation_product(
         self,
         product_entity: ProductEntityCreate,
@@ -212,16 +268,13 @@ class ProductBitrixClient(
         products: ListProductEntity,
     ) -> bool:
         """Обработка товара-вариации"""
-        product_origin = deepcopy(product_entity)
-        res_upd, xml_upd = await self._handle_catalog_variation(
-            product_entity, product_catalog.xml_id
+        return await self._process_product_with_handler(
+            product_entity,
+            product_catalog,
+            products,
+            self._handle_catalog_variation,
+            "variation_catalog",
         )
-
-        if not res_upd or not self.code_service.is_valid_code(xml_upd):
-            products.result.remove(product_entity)
-            product_entity = product_origin
-            return True
-        return True
 
     async def _process_site_product(
         self,
@@ -230,14 +283,13 @@ class ProductBitrixClient(
         products: ListProductEntity,
     ) -> bool:
         """Обработка товара из сайт-каталога"""
-        res_upd, xml_upd = await self._handle_catalog_site(
-            product_entity, product_catalog.xml_id
+        return await self._process_product_with_handler(
+            product_entity,
+            product_catalog,
+            products,
+            self._handle_catalog_site,
+            "site_catalog",
         )
-
-        if not res_upd or not self.code_service.is_valid_code(xml_upd):
-            products.result.remove(product_entity)
-            return True
-        return True
 
     async def _process_product_entity(
         self, product_entity: ProductEntityCreate, products: ListProductEntity
