@@ -2,6 +2,7 @@ services:
   bp_sync:
     volumes:
       - ./bp_sync/src:/opt/app
+      - code-data:/opt/app/data
     env_file:
       - ./.env
     ports:
