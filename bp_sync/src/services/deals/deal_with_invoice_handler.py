@@ -31,12 +31,28 @@ class DealWithInvioceHandler:
         changes: dict[str, dict[str, Any]] | None,
     ) -> bool:
         # TODO: Реализовать логику обработки сделки с выставленным счётом
+
+        await self.deal_client.check_source(deal_b24, deal_db)
+
         if invoice.company_id and (
             (not deal_b24.company_id)
             or deal_b24.company_id != invoice.company_id
         ):
             self.deal_client.update_tracker.update_field(
                 "company_id", invoice.company_id, deal_b24
+            )
+
+        if invoice.contact_id and (
+            (not deal_b24.contact_id)
+            or deal_b24.contact_id != invoice.contact_id
+        ):
+            self.deal_client.update_tracker.update_field(
+                "contact_id", invoice.contact_id, deal_b24
+            )
+
+        if not invoice.contact_id and deal_b24.contact_id:
+            self.deal_client.update_tracker.update_field(
+                "contact_id", 0, deal_b24
             )
 
         if invoice.closedate and (

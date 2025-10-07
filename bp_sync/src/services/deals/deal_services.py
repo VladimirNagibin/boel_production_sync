@@ -291,7 +291,7 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
         """Обработка провала сделки"""
         logger.info(f"Processing fail deal: {deal_b24.external_id}")
 
-        await self._check_source(deal_b24, deal_db)
+        await self.check_source(deal_b24, deal_db)
 
         if deal_b24.stage_id != deal_b24.current_stage_id:
             self.update_tracker.update_field(
@@ -366,7 +366,7 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
             )
             return False
 
-        await self._check_source(deal_b24, deal_db)
+        await self.check_source(deal_b24, deal_db)
 
         await self._check_update_products(deal_b24, external_id)
 
@@ -540,7 +540,7 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
             )
             return False
 
-    async def _check_source(
+    async def check_source(
         self,
         deal_b24: DealCreate,
         deal_db: DealCreate | None,
