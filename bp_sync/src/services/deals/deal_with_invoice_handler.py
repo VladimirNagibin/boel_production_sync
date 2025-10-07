@@ -81,13 +81,14 @@ class DealWithInvioceHandler:
                 )
             except Exception:
                 ...
-        if invoice.shipping_company_id and (
-            (not deal_b24.shipping_company_id)
-            or ship != deal_b24.shipping_company_id
-        ):
-            self.deal_client.update_tracker.update_field(
-                "shipping_company_id", ship, deal_b24
-            )
+        if ship:
+            if invoice.shipping_company_id and (
+                (not deal_b24.shipping_company_id)
+                or ship != deal_b24.shipping_company_id
+            ):
+                self.deal_client.update_tracker.update_field(
+                    "shipping_company_id", ship, deal_b24
+                )
 
         if invoice.payment_type and (
             (not deal_b24.payment_type)
@@ -95,6 +96,14 @@ class DealWithInvioceHandler:
         ):
             self.deal_client.update_tracker.update_field(
                 "payment_type", invoice.payment_type, deal_b24
+            )
+
+        if invoice.shipment_type and (
+            (not deal_b24.shipment_type)
+            or deal_b24.shipment_type != invoice.shipment_type
+        ):
+            self.deal_client.update_tracker.update_field(
+                "shipment_type", invoice.shipment_type, deal_b24
             )
 
         if invoice.invoice_stage_id in (InvoiceStage.NEW, InvoiceStage.SEND):
