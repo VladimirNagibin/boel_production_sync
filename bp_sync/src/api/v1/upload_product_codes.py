@@ -7,9 +7,6 @@ from services.products.code_services import CodeService
 
 from .deps import verify_api_key
 
-# from fastapi.security import APIKeyHeader
-
-
 upload_codes_router = APIRouter(
     dependencies=[Depends(request_context), Depends(verify_api_key)]
 )

@@ -4,8 +4,8 @@ services:
     env_file:
       - .env
     volumes:
-    #  - ./bp_sync/src:/opt/app
       - code-data:/opt/app/data
+      - logs-data:/opt/app/logs
     ports:
      - 8000:8000
     depends_on:
@@ -65,3 +65,4 @@ volumes:
   db_data:
   redis-data:
   code-data:
+  logs-data:
