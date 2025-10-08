@@ -4,7 +4,12 @@ from typing import TYPE_CHECKING, ClassVar, Type, TypeVar
 
 from sqlalchemy import DateTime, ForeignKey
 from sqlalchemy.ext.declarative import declared_attr
-from sqlalchemy.orm import Mapped, class_mapper, mapped_column, relationship
+from sqlalchemy.orm import (
+    Mapped,
+    class_mapper,
+    mapped_column,
+    relationship,
+)
 
 from db.postgres import Base
 from schemas.base_schemas import CommonFieldMixin
@@ -330,6 +335,24 @@ class CommunicationMixin:
             lazy="selectin",
             overlaps="communications",
         )
+        """
+        condition = (
+            "and_("
+            "foreign(CommunicationChannel.entity_type) == '{}',"
+            "foreign(CommunicationChannel.entity_id) == {}.external_id"
+            ")"
+        ).format(
+            cls.__name__, cls.__name__  # type: ignore[attr-defined]
+        )
+        return relationship(
+            "CommunicationChannel",
+            primaryjoin=condition,
+            viewonly=True,
+            lazy="selectin",
+            overlaps="communications",
+            # Добавьте eager load для channel_type
+            # **{"_sa_": {"innerjoin": False}},  # не обязательно, но можно
+        )"""
 
     @property
     def phones(self) -> list[str]:

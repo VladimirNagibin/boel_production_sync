@@ -28,36 +28,62 @@ from services.rabbitmq_client import get_rabbitmq
 # key_str = new_key.decode('utf-8')
 # print("Сгенерированный ключ:", key_str)
 
-# rabbitmq_client = RabbitMQClient()
 
-
-@asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+async def _init_redis() -> None:
     redis.redis = Redis(
         host=settings.REDIS_HOST,
         port=settings.REDIS_PORT,
         db=0,
         password=settings.REDIS_PASSWORD,
         decode_responses=True,
-        ssl=False,  # Для продакшена используйте True
+        ssl=False,
     )
-    rabbitmq_client = get_rabbitmq()
-    await rabbitmq_client.startup()
     try:
-        # Проверка подключения и аутентификации
         await redis.redis.ping()
-        print("✅ Успешное подключение к Redis")
+        logger.info("Успешное подключение к Redis.")
     except aredis.AuthenticationError:
-        print("❌ Ошибка аутентификации: неверный пароль Redis")
+        logger.error("Ошибка аутентификации: неверный пароль Redis")
         raise
     except aredis.ConnectionError:
-        print("❌ Не удалось подключиться к Redis")
+        logger.error("Не удалось подключиться к Redis")
         raise
-    yield
-    await redis.redis.save()
-    await redis.redis.aclose()
+
+
+async def _shutdown_redis() -> None:
+    if redis.redis:
+        await redis.redis.save()
+        await redis.redis.aclose()
+
+
+async def _init_rabbitmq() -> None:
+    rabbitmq_client = get_rabbitmq()
+    await rabbitmq_client.startup()
+
+
+async def _shutdown_rabbitmq() -> None:
     rabbitmq_client = get_rabbitmq()
     await rabbitmq_client.shutdown()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    await _init_redis()
+    await _init_rabbitmq()
+    yield
+    await _shutdown_redis()
+    await _shutdown_rabbitmq()
+
+
+def start_server() -> None:
+    logger.info("Start bp_sync.")
+    uvicorn.run(
+        "main:app",
+        host=settings.APP_HOST,
+        port=settings.APP_PORT,
+        log_config=LOGGING,
+        log_level=settings.LOG_LEVEL.lower(),
+        reload=settings.APP_RELOAD,
+    )
 
 
 app = FastAPI(
@@ -68,25 +94,34 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-
 app.include_router(b24_router, prefix="/api/v1", tags=["b24"])
-app.include_router(reports_router, prefix="/api/v1/reports", tags=["reports"])
 app.include_router(
-    upload_codes_router, prefix="/api/v1/codes", tags=["product_codes_1C"]
+    reports_router,
+    prefix="/api/v1/reports",
+    tags=["reports"],
 )
-app.include_router(account_router, prefix="/api/v1/account", tags=["account"])
+app.include_router(
+    upload_codes_router,
+    prefix="/api/v1/codes",
+    tags=["product_codes_1C"],
+)
+app.include_router(
+    account_router,
+    prefix="/api/v1/account",
+    tags=["account"],
+)
 app.include_router(test_router, prefix="/api/v1/test", tags=["test"])
+
 auth_backend = BasicAuthBackend()
-admin = Admin(app, engine, authentication_backend=auth_backend)
+admin = Admin(
+    app,
+    engine,
+    title="Админка",
+    templates_dir="templates/admin",
+    authentication_backend=auth_backend,
+)
 register_models(admin)
 
+
 if __name__ == "__main__":
-    logger.info("Start bp_sync.")
-    uvicorn.run(
-        "main:app",
-        host=settings.APP_HOST,
-        port=settings.APP_PORT,
-        log_config=LOGGING,
-        log_level=settings.LOG_LEVEL.lower(),
-        reload=settings.APP_RELOAD,
-    )
+    start_server()
