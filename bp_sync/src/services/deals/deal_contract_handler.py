@@ -54,7 +54,13 @@ class DealContractHandler:
                 and shipp == company_b24.shipping_company_obj
                 and company_b24.current_contract
             ):
-                return True
+                if company_b24.current_contract != "Счет-оферта":
+                    return True
+                if (
+                    deal_b24.payment_type  # type: ignore[comparison-overlap]
+                    == DualTypePaymentEnum.PREPAYMENT.value
+                ):
+                    return True
 
             # Проверяем договоры компании
             if company_b24.contracts:

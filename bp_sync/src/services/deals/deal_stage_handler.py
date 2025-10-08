@@ -242,8 +242,11 @@ class DealStageHandler:
         - обработка разных фирм отгрузки
         """
         if (
-            deal_b24.payment_type == DualTypePaymentEnum.NOT_DEFINE
-            or deal_b24.shipment_type == DualTypeShipmentEnum.NOT_DEFINE
+            deal_b24.payment_type
+            == DualTypePaymentEnum.NOT_DEFINE.value  # type: ignore
+        ) or (
+            deal_b24.shipment_type
+            == DualTypeShipmentEnum.NOT_DEFINE.value  # type: ignore
         ):
             return False
         return await self.contract_handler.process_contracts(deal_b24)
