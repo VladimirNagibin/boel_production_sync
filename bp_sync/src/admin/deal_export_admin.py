@@ -2,7 +2,6 @@ from datetime import datetime
 from typing import Any
 
 from fastapi import Request
-from fastapi.templating import TemplateResponse
 from sqladmin import BaseView, expose
 
 
@@ -12,7 +11,7 @@ class DealExportAdmin(BaseView):  # type: ignore[misc]
     category = "Отчеты"
 
     @expose("/export-deals", methods=["GET", "POST"])  # type: ignore[misc]
-    async def export_deals_page(self, request: Request) -> TemplateResponse:
+    async def export_deals_page(self, request: Request) -> Any:
         """
         Упрощенная страница для экспорта сделок
         """
