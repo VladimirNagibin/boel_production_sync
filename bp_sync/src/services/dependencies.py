@@ -15,6 +15,7 @@ from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import DeclarativeBase
 
+from core.logger import logger
 from core.settings import settings
 from db.postgres import get_session
 from db.redis import get_redis
@@ -353,10 +354,26 @@ async def request_context(
     session_token = _session_ctx.set(session)
     cache_token = _services_cache_ctx.set({})
     exists_cache_token = _exists_cache_ctx.set({})
+    updated_cache_token = _updated_cache_ctx.set(set())
+    creation_cache_token = _creation_cache_ctx.set({})
+    update_needed_cache_token = _update_needed_cache_ctx.set(set())
     try:
         yield
     finally:
+        # Логируем очистку
+        cache_stats = {
+            "services": len(_services_cache_ctx.get()),
+            "exists_checks": len(_exists_cache_ctx.get()),
+            "updated_objects": len(_updated_cache_ctx.get()),
+            "created_entities": len(_creation_cache_ctx.get()),
+            "update_needed": len(_update_needed_cache_ctx.get()),
+        }
+        logger.debug(f"Cleaning request context. Cache stats: {cache_stats}")
+
         # Очищаем кеш и сбрасываем контекст после завершения запроса
+        _update_needed_cache_ctx.reset(update_needed_cache_token)
+        _creation_cache_ctx.reset(creation_cache_token)
+        _updated_cache_ctx.reset(updated_cache_token)
         _exists_cache_ctx.reset(exists_cache_token)
         _services_cache_ctx.reset(cache_token)
         _session_ctx.reset(session_token)
@@ -534,6 +551,7 @@ def reset_cache() -> None:
     """
     Сбрасывает кэш
     """
+    print("RESET CACHE")
     _update_needed_cache_ctx.set(set())
     _creation_cache_ctx.set({})
     _updated_cache_ctx.set(set())
