@@ -57,7 +57,7 @@ async def load_deals(
         get_timeline_comment_repository_dep
     ),
 ) -> JSONResponse:
-
+    logger.info("Start loading deals")
     deal_ids: list[int] = (
         [int(deal_id)]
         if deal_id
@@ -65,7 +65,7 @@ async def load_deals(
             start_date, end_date
         )
     )
-
+    logger.info(f"Loading deals total: {len(deal_ids)}")
     # Инициализируем процессор
     processor = DealProcessor(
         deal_client=deal_client,
@@ -83,7 +83,7 @@ async def load_deals(
     for current_deal_id in deal_ids:
         if not current_deal_id:
             continue
-
+        logger.info(f"Start loading deal id: {current_deal_id}")
         is_success, message = await processor.process_single_deal(
             int(current_deal_id)
         )

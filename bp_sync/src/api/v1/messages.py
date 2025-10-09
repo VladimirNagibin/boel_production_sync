@@ -5,7 +5,9 @@ from fastapi.responses import JSONResponse
 
 from services.rabbitmq_client import RabbitMQClient, get_rabbitmq
 
-messages_router = APIRouter()
+from .deps import verify_api_key
+
+messages_router = APIRouter(dependencies=[Depends(verify_api_key)])
 
 
 @messages_router.get(

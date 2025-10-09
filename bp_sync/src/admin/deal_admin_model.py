@@ -24,6 +24,7 @@ class DealAdmin(
         "external_id",
         "title",
         "opportunity",
+        "company",
         "stage",
         "type",
         "creation_source",
