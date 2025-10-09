@@ -14,7 +14,11 @@ from services.dependencies import (
 )
 from services.exceptions import ConflictException
 
-account_router = APIRouter(dependencies=[Depends(request_context)])
+from .deps import verify_api_key
+
+account_router = APIRouter(
+    dependencies=[Depends(request_context), Depends(verify_api_key)]
+)
 
 
 @account_router.post("/billing")  # type: ignore

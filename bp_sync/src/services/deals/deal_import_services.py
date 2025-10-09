@@ -117,7 +117,6 @@ class DealProcessor:
         timeline_create = TimelineCommentCreate(
             **comment_data.model_dump(by_alias=True, exclude_unset=True)
         )
-
         try:
             await self.timeline_repo.create_entity(timeline_create)
         except ConflictException:

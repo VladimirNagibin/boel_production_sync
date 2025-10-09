@@ -16,6 +16,7 @@ from schemas.invoice_schemas import InvoiceCreate, InvoiceUpdate
 from schemas.lead_schemas import LeadCreate
 from schemas.product_schemas import EntityTypeAbbr
 from services.bitrix_services.webhook_service import WebhookService
+from services.products.product_bitrix_services import ProductUpdateResult
 
 from ..base_services.base_service import BaseEntityClient
 from ..exceptions import (
@@ -290,7 +291,7 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
         """Обработка провала сделки"""
         logger.info(f"Processing fail deal: {deal_b24.external_id}")
 
-        await self._check_source(deal_b24, deal_db)
+        await self.check_source(deal_b24, deal_db)
 
         if deal_b24.stage_id != deal_b24.current_stage_id:
             self.update_tracker.update_field(
@@ -365,20 +366,9 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
             )
             return False
 
-        await self._check_source(deal_b24, deal_db)
+        await self.check_source(deal_b24, deal_db)
 
-        product_client = self.product_bitrix_client
-        products = await product_client.check_update_products_entity(
-            external_id, EntityTypeAbbr.DEAL
-        )
-        # TODO: Если товары заменялись, тогда сообщение ответственному,
-        # кроме заказов с сайта.
-        if products:
-            self.data_provider.set_cached_products(products)
-            logger.debug(
-                f"Cached {products.count_products} products for deal "
-                f"{external_id}"
-            )
+        await self._check_update_products(deal_b24, external_id)
 
         if deal_b24.source_id and deal_b24.source_id == SOURCE_SITE_ORDER:
             await self.site_order_handler.handle_site_order(deal_b24)
@@ -391,7 +381,6 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
             and available_stage
             and current_stage != available_stage
         ):
-
             if current_stage > available_stage:
                 await self._send_message_unavailable_stage(
                     current_stage, available_stage, deal_b24
@@ -402,6 +391,54 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
             )
             self.update_tracker.update_field("stage_id", stage_id, deal_b24)
         return True
+
+    async def _check_update_products(
+        self, deal_b24: DealCreate, external_id: int
+    ) -> None:
+        product_client = self.product_bitrix_client
+        products_update: ProductUpdateResult = (
+            await product_client.check_update_products_entity(
+                external_id, EntityTypeAbbr.DEAL
+            )
+        )
+        # Если товары заменялись, тогда сообщение ответственному
+        # (кроме заказов с сайта).
+        if products_update.has_changes:
+            removed_products = products_update.removed_products
+            replaced_products = products_update.replaced_products
+            link = self.bitrix_client.get_formatted_link(
+                deal_b24.external_id, deal_b24.title
+            )
+            if removed_products:
+                removed_info = (
+                    f"Сделка {link}: удалены товары {len(removed_products)}шт."
+                    f"\n{[p.product_name for p in removed_products]}"
+                )
+                await self.bitrix_client.send_message_b24(
+                    deal_b24.assigned_by_id, removed_info
+                )
+            if replaced_products:
+                products_replaced = [
+                    f"{change['old_product'].product_name} -> "
+                    f"{change['new_product'].product_name}"
+                    for change in replaced_products
+                ]
+                products_replaced_ = "\n".join(products_replaced)
+                replaced_info = (
+                    f"Сделка {link}: заменены товары {len(replaced_products)}"
+                    f"шт.\n{products_replaced_}"
+                )
+                await self.bitrix_client.send_message_b24(
+                    deal_b24.assigned_by_id, replaced_info
+                )
+
+        products = products_update.products
+        if products:
+            self.data_provider.set_cached_products(products)
+            logger.debug(
+                f"Cached {products.count_products} products for deal "
+                f"{external_id}"
+            )
 
     async def _get_current_stage_order(
         self, deal_b24: DealCreate
@@ -423,13 +460,6 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
     async def _send_message_unavailable_stage(
         self, current_stage: int, available_stage: int, deal_b24: DealCreate
     ) -> None:
-        await self.bitrix_client.send_message_b24(
-            171,
-            (
-                f"Cur:{current_stage}, Ava:{available_stage}, "
-                f"Usr:{deal_b24.assigned_by_id}"
-            ),
-        )
         messages: list[str] = []
         for i in range(available_stage, current_stage):
             messages.append(CONDITION_MOVING_STAGE[i])
@@ -438,8 +468,8 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
             f"{deal_b24.title}[/url]"
         )
         await self.bitrix_client.send_message_b24(
-            171,
-            f"{link}: {'; '.join(messages)}",
+            deal_b24.assigned_by_id,
+            f"Сделка {link}: {'; '.join(messages)}",
             # deal_b24.assigned_by_id, "; ".join(messages)
         )
 
@@ -510,7 +540,7 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
             )
             return False
 
-    async def _check_source(
+    async def check_source(
         self,
         deal_b24: DealCreate,
         deal_db: DealCreate | None,
@@ -569,7 +599,7 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
                 type_corr.value,
             )
             needs_update |= await self._handle_assignment(
-                deal_b24, creation_corr, deal_db
+                deal_b24, creation_corr, type_corr, deal_db
             )
             logger.debug(
                 f"Source check for deal {deal_b24.external_id} completed, "
@@ -607,6 +637,7 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
         self,
         deal_b24: DealCreate,
         creation_source: CreationSourceEnum,
+        type_corr: DealTypeEnum,
         deal_db: DealCreate | None,
     ) -> bool:
         """
@@ -615,7 +646,11 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
         """
         needs_update = False
 
-        if creation_source == CreationSourceEnum.AUTO and not deal_db:
+        if (
+            creation_source == CreationSourceEnum.AUTO
+            and type_corr == DealTypeEnum.ONLINE_SALES
+            and not deal_db
+        ):
             if deal_b24.assigned_by_id != WEBSITE_CREATOR:
                 self.update_tracker.update_field(
                     "assigned_by_id", WEBSITE_CREATOR, deal_b24

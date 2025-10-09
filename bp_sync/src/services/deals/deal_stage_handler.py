@@ -2,6 +2,10 @@ from typing import TYPE_CHECKING
 
 from core.logger import logger
 from models.bases import EntityType
+from models.enums import (
+    DualTypePaymentEnum,
+    DualTypeShipmentEnum,
+)
 from schemas.contact_schemas import ContactCreate
 from schemas.deal_schemas import DealCreate
 
@@ -237,6 +241,14 @@ class DealStageHandler:
         - наличие договора с компанией по фирме отгрузки
         - обработка разных фирм отгрузки
         """
+        if (
+            deal_b24.payment_type
+            == DualTypePaymentEnum.NOT_DEFINE.value  # type: ignore
+        ) or (
+            deal_b24.shipment_type
+            == DualTypeShipmentEnum.NOT_DEFINE.value  # type: ignore
+        ):
+            return False
         return await self.contract_handler.process_contracts(deal_b24)
 
     async def _has_required_stage6_data(self, deal_b24: DealCreate) -> bool:

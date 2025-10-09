@@ -1,5 +1,7 @@
+from copy import deepcopy
+from dataclasses import dataclass
 from enum import IntEnum
-from typing import Any, cast
+from typing import Any, Awaitable, Callable, cast
 
 from fastapi import status
 
@@ -25,6 +27,16 @@ class CatalogType(IntEnum):
     PRODUCT = 25
     VARIATION = 27
     SITE = 41
+
+
+@dataclass
+class ProductUpdateResult:
+    """Результат обновления товаров сущности"""
+
+    products: ListProductEntity | None
+    removed_products: list[ProductEntityCreate]
+    replaced_products: list[dict[str, Any]]
+    has_changes: bool
 
 
 PRODUCT_CATALOG = 25
@@ -193,6 +205,62 @@ class ProductBitrixClient(
             return True
         return False
 
+    async def _process_product_with_handler(
+        self,
+        product_entity: ProductEntityCreate,
+        product_catalog: ProductCreate,
+        products: ListProductEntity,
+        handler_method: Callable[
+            [ProductEntityCreate, str | None],
+            Awaitable[tuple[bool, str | None]],
+        ],
+        handler_name: str,
+    ) -> bool:
+        """
+        Общий метод обработки товара с использованием указанного обработчика
+        для каталогов variation_catalog и site_catalog
+        """
+        product_origin = deepcopy(product_entity)
+
+        try:
+            res_upd, xml_upd = await handler_method(
+                product_entity, product_catalog.xml_id
+            )
+
+            if not res_upd or not self.code_service.is_valid_code(xml_upd):
+                products.result.remove(product_entity)
+                self._restore_product_entity(product_entity, product_origin)
+                logger.debug(
+                    f"Removed invalid product from {handler_name}: "
+                    f"product_id={product_origin.product_id}, "
+                    f"xml_id={product_catalog.xml_id}"
+                )
+                return True
+
+            logger.debug(
+                f"Successfully processed product from {handler_name}: "
+                f"product_id={product_entity.product_id}"
+            )
+            return True
+
+        except Exception as e:
+            logger.error(
+                f"Error processing product from {handler_name}: "
+                f"product_id={product_entity.product_id}, error: {str(e)}"
+            )
+            return False
+
+    def _restore_product_entity(
+        self,
+        product_entity: ProductEntityCreate,
+        product_origin: ProductEntityCreate,
+    ) -> None:
+        """Восстановление исходных значений продукта"""
+        product_entity.product_id = product_origin.product_id
+        product_entity.product_name = product_origin.product_name
+        product_entity.measure_code = product_origin.measure_code
+        product_entity.measure_name = product_origin.measure_name
+
     async def _process_variation_product(
         self,
         product_entity: ProductEntityCreate,
@@ -200,14 +268,13 @@ class ProductBitrixClient(
         products: ListProductEntity,
     ) -> bool:
         """Обработка товара-вариации"""
-        res_upd, xml_upd = await self._handle_catalog_variation(
-            product_entity, product_catalog.xml_id
+        return await self._process_product_with_handler(
+            product_entity,
+            product_catalog,
+            products,
+            self._handle_catalog_variation,
+            "variation_catalog",
         )
-
-        if not res_upd or not self.code_service.is_valid_code(xml_upd):
-            products.result.remove(product_entity)
-            return True
-        return True
 
     async def _process_site_product(
         self,
@@ -216,19 +283,30 @@ class ProductBitrixClient(
         products: ListProductEntity,
     ) -> bool:
         """Обработка товара из сайт-каталога"""
-        res_upd, xml_upd = await self._handle_catalog_site(
-            product_entity, product_catalog.xml_id
+        return await self._process_product_with_handler(
+            product_entity,
+            product_catalog,
+            products,
+            self._handle_catalog_site,
+            "site_catalog",
         )
-
-        if not res_upd or not self.code_service.is_valid_code(xml_upd):
-            products.result.remove(product_entity)
-            return True
-        return True
 
     async def _process_product_entity(
         self, product_entity: ProductEntityCreate, products: ListProductEntity
-    ) -> bool:
-        """Обработка отдельного продукта и возврат флага обновления"""
+    ) -> tuple[bool, ProductEntityCreate | None, ProductEntityCreate | None]:
+        """
+        Обработка отдельного продукта с возвратом детализации изменений
+
+        Returns:
+            tuple[
+                bool,
+                ProductEntityCreate | None,
+                ProductEntityCreate | None,
+            ]:
+            (были_ли_изменения, исходный_товар, обновленный_товар)
+        """
+        original_product = deepcopy(product_entity)
+
         try:
             product_catalog = await self._get_product_catalog(
                 product_entity.product_id
@@ -236,16 +314,16 @@ class ProductBitrixClient(
         except BitrixApiError as e:
             if e.is_bitrix_error("product does not exist."):
                 products.result.remove(product_entity)
-                return True
-            return False
+                return True, original_product, None
+            return False, None, None
         if product_catalog.catalog_id is None:
             products.result.remove(product_entity)
-            return True
+            return True, original_product, None
         try:
             catalog_type = CatalogType(product_catalog.catalog_id)
         except ValueError:
             products.result.remove(product_entity)
-            return True
+            return True, original_product, None
         handlers = {
             CatalogType.PRODUCT: self._process_catalog_product,
             CatalogType.VARIATION: self._process_variation_product,
@@ -253,30 +331,78 @@ class ProductBitrixClient(
         }
 
         if handler := handlers.get(catalog_type):
-            return await handler(product_entity, product_catalog, products)
+            was_processed = await handler(
+                product_entity, product_catalog, products
+            )
+
+            # Если товар был изменен, возвращаем и исходный и обновленный
+            if was_processed and product_entity != original_product:
+                return True, original_product, deepcopy(product_entity)
+            elif was_processed:
+                return True, original_product, None
         else:
             products.result.remove(product_entity)
-            return True
+            return True, original_product, None
+        return False, None, None
 
     @handle_bitrix_errors()
     async def _check_products_entity(
         self, owner_id: int, owner_type: EntityTypeAbbr
-    ) -> tuple[ListProductEntity, bool]:
+    ) -> tuple[
+        ListProductEntity,
+        bool,
+        list[ProductEntityCreate],
+        list[dict[str, Any]],
+    ]:
         """
-        Проверка товаров в сущности
-        Возврат обновлённого списка товаров и флага изменения списка
+        Проверка товаров в сущности с детализацией изменений
+
+        Returns:
+            Tuple:
+            - обновлённый список товаров
+            - флаг изменения списка
+            - список удаленных товаров
+            - список замененных товаров (с информацией о старом и новом товаре)
         """
+
         products = await self._get_entity_products(owner_id, owner_type)
         update_flag = False
+        removed_products: list[ProductEntityCreate] = []
+        replaced_products: list[dict[str, Any]] = []
         products_to_process = products.result.copy()
 
         for product_entity in products_to_process:
-            product_update_flag = await self._process_product_entity(
+            result_process = await self._process_product_entity(
                 product_entity, products
             )
-            update_flag = update_flag or product_update_flag
+            was_changed, original_product, updated_product = result_process
+            if was_changed:
+                update_flag = True
 
-        return products, update_flag
+                # Если товар был удален
+                if (
+                    updated_product is None
+                    and original_product
+                    and original_product not in products.result
+                ):
+                    removed_products.append(original_product)
+
+                # Если товар был заменен/обновлен
+                elif (
+                    updated_product is not None
+                    and original_product != updated_product
+                ):
+                    replaced_products.append(
+                        {
+                            "old_product": original_product,
+                            "new_product": updated_product,
+                            "change_type": "replaced",
+                            "owner_type": owner_type.value,
+                            "owner_id": owner_id,
+                        }
+                    )
+
+        return products, update_flag, removed_products, replaced_products
 
     async def _get_product_by_xml_id(
         self, xml_id: str | None
@@ -352,16 +478,91 @@ class ProductBitrixClient(
 
     async def check_update_products_entity(
         self, owner_id: int, owner_type: EntityTypeAbbr
-    ) -> ListProductEntity | None:
+    ) -> ProductUpdateResult:
         """
-        Проверяет и обновляет продукты сущности при необходимости.
+        Проверяет и обновляет продукты сущности с детализацией изменений
 
         Args:
             owner_id: ID сущности-владельца
             owner_type: Тип сущности-владельца
 
         Returns:
-            Кортеж (успех_операции, данные_продуктов)
+            ProductUpdateResult: Детализированный результат обновления
+        """
+        try:
+            logger.info(
+                "Starting product update check for "
+                f"{owner_type.value} {owner_id}"
+            )
+
+            res = await self._check_products_entity(owner_id, owner_type)
+            products, needs_update, removed_products, replaced_products = res
+            if not needs_update:
+                logger.info(
+                    "No product update needed for "
+                    f"{owner_type.value} {owner_id}"
+                )
+                return ProductUpdateResult(
+                    products=products,
+                    removed_products=removed_products,
+                    replaced_products=replaced_products,
+                    has_changes=False,
+                )
+
+            # Логируем детали изменений перед применением
+            if removed_products:
+                logger.info(
+                    f"Removing {len(removed_products)} products from "
+                    f"{owner_type.value} {owner_id}: "
+                    f"{[p.product_id for p in removed_products]}"
+                )
+
+            if replaced_products:
+                logger.info(
+                    f"Replacing {len(replaced_products)} products in "
+                    f"{owner_type.value} {owner_id}"
+                )
+                for change in replaced_products:
+                    logger.debug(
+                        "Product replacement: "
+                        f"{change['old_product'].product_id} -> "
+                        f"{change['new_product'].product_id}"
+                    )
+
+            # Применяем изменения
+            products_upd = await self._set_product_rows(
+                owner_id, owner_type, products
+            )
+
+            logger.info(
+                "Successfully updated products for "
+                f"{owner_type.value} {owner_id}. "
+                f"Removed: {len(removed_products)}, "
+                f"Replaced: {len(replaced_products)}"
+            )
+
+            return ProductUpdateResult(
+                products=products_upd,
+                removed_products=removed_products,
+                replaced_products=replaced_products,
+                has_changes=True,
+            )
+
+        except Exception as e:
+            logger.error(
+                (
+                    f"Error updating products for {owner_type.value} "
+                    f"{owner_id}: {str(e)}"
+                ),
+                exc_info=True,
+            )
+            return ProductUpdateResult(
+                products=None,
+                removed_products=[],
+                replaced_products=[],
+                has_changes=False,
+            )
+
         """
         try:
             products, needs_update = await self._check_products_entity(
@@ -388,6 +589,7 @@ class ProductBitrixClient(
                 f"{str(e)}"
             )
             return None
+        """
 
     async def update_deal_product_from_invoice(
         self, deal_id: int, invoice_id: int

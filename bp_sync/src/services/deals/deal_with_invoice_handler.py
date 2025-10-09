@@ -31,12 +31,28 @@ class DealWithInvioceHandler:
         changes: dict[str, dict[str, Any]] | None,
     ) -> bool:
         # TODO: Реализовать логику обработки сделки с выставленным счётом
+
+        await self.deal_client.check_source(deal_b24, deal_db)
+
         if invoice.company_id and (
             (not deal_b24.company_id)
             or deal_b24.company_id != invoice.company_id
         ):
             self.deal_client.update_tracker.update_field(
                 "company_id", invoice.company_id, deal_b24
+            )
+
+        if invoice.contact_id and (
+            (not deal_b24.contact_id)
+            or deal_b24.contact_id != invoice.contact_id
+        ):
+            self.deal_client.update_tracker.update_field(
+                "contact_id", invoice.contact_id, deal_b24
+            )
+
+        if not invoice.contact_id and deal_b24.contact_id:
+            self.deal_client.update_tracker.update_field(
+                "contact_id", 0, deal_b24
             )
 
         if invoice.closedate and (
@@ -65,13 +81,14 @@ class DealWithInvioceHandler:
                 )
             except Exception:
                 ...
-        if invoice.shipping_company_id and (
-            (not deal_b24.shipping_company_id)
-            or ship != deal_b24.shipping_company_id
-        ):
-            self.deal_client.update_tracker.update_field(
-                "shipping_company_id", ship, deal_b24
-            )
+        if ship:
+            if invoice.shipping_company_id and (
+                (not deal_b24.shipping_company_id)
+                or ship != deal_b24.shipping_company_id
+            ):
+                self.deal_client.update_tracker.update_field(
+                    "shipping_company_id", ship, deal_b24
+                )
 
         if invoice.payment_type and (
             (not deal_b24.payment_type)
@@ -79,6 +96,14 @@ class DealWithInvioceHandler:
         ):
             self.deal_client.update_tracker.update_field(
                 "payment_type", invoice.payment_type, deal_b24
+            )
+
+        if invoice.shipment_type and (
+            (not deal_b24.shipment_type)
+            or deal_b24.shipment_type != invoice.shipment_type
+        ):
+            self.deal_client.update_tracker.update_field(
+                "shipment_type", invoice.shipment_type, deal_b24
             )
 
         if invoice.invoice_stage_id in (InvoiceStage.NEW, InvoiceStage.SEND):

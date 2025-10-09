@@ -12,6 +12,10 @@ class CodeService:
         self.code_file = "valid_codes.txt"
         self.data_dir = Path("data")
         self.file_path = self.data_dir / self.code_file
+
+        logger.debug(f"Data directory path: {self.data_dir.absolute()}")
+        logger.debug(f"File path: {self.file_path.absolute()}")
+
         self.ensure_directory()
         self.load_codes()
 
@@ -21,10 +25,13 @@ class CodeService:
         """
         try:
             self.data_dir.mkdir(exist_ok=True, parents=True)
-            logger.debug(f"Директория {self.data_dir} проверена/создана")
+            logger.debug(
+                f"Директория {self.data_dir.absolute()} проверена/создана"
+            )
         except Exception as e:
             logger.error(
-                f"Ошибка при создании директории {self.data_dir}: {str(e)}"
+                "Ошибка при создании директории "
+                f"{self.data_dir.absolute()}: {str(e)}"
             )
             raise
 

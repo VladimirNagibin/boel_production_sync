@@ -3,8 +3,9 @@ services:
     image: vlnag/bp_sync
     env_file:
       - .env
-    #volumes:
-    #  - ./bp_sync/src/logs:/opt/app/logs
+    volumes:
+      - code-data:/opt/app/data
+      - logs-data:/opt/app/logs
     ports:
      - 8000:8000
     depends_on:
@@ -63,3 +64,5 @@ services:
 volumes:
   db_data:
   redis-data:
+  code-data:
+  logs-data:
