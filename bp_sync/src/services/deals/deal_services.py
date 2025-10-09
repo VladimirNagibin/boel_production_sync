@@ -599,7 +599,7 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
                 type_corr.value,
             )
             needs_update |= await self._handle_assignment(
-                deal_b24, creation_corr, deal_db
+                deal_b24, creation_corr, type_corr, deal_db
             )
             logger.debug(
                 f"Source check for deal {deal_b24.external_id} completed, "
@@ -637,6 +637,7 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
         self,
         deal_b24: DealCreate,
         creation_source: CreationSourceEnum,
+        type_corr: DealTypeEnum,
         deal_db: DealCreate | None,
     ) -> bool:
         """
@@ -645,7 +646,11 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
         """
         needs_update = False
 
-        if creation_source == CreationSourceEnum.AUTO and not deal_db:
+        if (
+            creation_source == CreationSourceEnum.AUTO
+            and type_corr == DealTypeEnum.ONLINE_SALES
+            and not deal_db
+        ):
             if deal_b24.assigned_by_id != WEBSITE_CREATOR:
                 self.update_tracker.update_field(
                     "assigned_by_id", WEBSITE_CREATOR, deal_b24

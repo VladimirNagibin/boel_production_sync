@@ -2,7 +2,7 @@ from collections.abc import Awaitable
 from typing import Any, Callable, Generic, Optional, Type, TypeVar
 
 from fastapi import HTTPException, status
-from sqlalchemy import delete, exists, select, update
+from sqlalchemy import Integer, delete, exists, select, update
 from sqlalchemy.exc import IntegrityError, NoResultFound, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -97,9 +97,10 @@ class BaseRepository(
         field_type = self.model.external_id.type
 
         # Явное приведение типа для Integer полей
-        if isinstance(field_type, int) and isinstance(external_id, str):
+        if isinstance(field_type, Integer) and isinstance(external_id, str):
             try:
                 external_id = int(external_id)
+                data.external_id = external_id
             except ValueError:
                 raise ValueError("ID is not correct type")
 
@@ -154,7 +155,9 @@ class BaseRepository(
 
             field_type = self.model.external_id.type
 
-            if isinstance(field_type, int) and isinstance(external_id, str):
+            if isinstance(field_type, Integer) and isinstance(
+                external_id, str
+            ):
                 try:
                     external_id = int(external_id)  # type: ignore[assignment]
                 except ValueError:
@@ -191,6 +194,16 @@ class BaseRepository(
             raise ValueError("ID is required for update")
 
         external_id = data.external_id
+
+        field_type = self.model.external_id.type
+
+        if isinstance(field_type, Integer) and isinstance(external_id, str):
+            try:
+                external_id = int(external_id)
+                data.external_id = external_id
+            except ValueError:
+                raise ValueError("ID is not correct type")
+
         if not await self._exists(external_id):  # type: ignore[arg-type]
             logger.warning(
                 f"Update failed: {self.model.__name__} "
@@ -249,7 +262,7 @@ class BaseRepository(
 
         field_type = self.model.external_id.type
 
-        if isinstance(field_type, int) and isinstance(external_id, str):
+        if isinstance(field_type, Integer) and isinstance(external_id, str):
             try:
                 external_id = int(external_id)  # type: ignore[assignment]
             except ValueError:
