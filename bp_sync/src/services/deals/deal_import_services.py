@@ -50,14 +50,15 @@ class DealProcessor:
             )
 
             await asyncio.sleep(DEALS_SLEEP_INTERVAL)
+            logger.info(f"Deal id: {deal_id}. Need refresh: {needs_refresh}")
 
             if needs_refresh:
                 reset_cache()
                 await self.deal_client.import_from_bitrix(deal_id)
-
+            logger.info(f"Deal id: {deal_id}. Start update related invoice")
             # Обработка связанного инвойса
             await self._process_deal_invoice(deal_id)
-
+            logger.info(f"Deal id: {deal_id}. Start load comments")
             # Загрузка комментариев
             await self._load_deal_comments(deal_id)
 
