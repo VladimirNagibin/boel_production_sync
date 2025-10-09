@@ -2,6 +2,7 @@ import asyncio
 import json
 from typing import Any
 
+from core.logger import logger
 from models.bases import EntityType
 from schemas.timeline_comment_schemas import TimelineCommentCreate
 from services.deals.deal_services import DealClient
@@ -41,11 +42,13 @@ class DealProcessor:
 
     async def process_single_deal(self, deal_id: int) -> tuple[bool, str]:
         """Обработать одну сделку"""
+        logger.info(f"Processing deal id: {deal_id}")
         try:
             # Импорт сделки
             _, needs_refresh = await self.deal_client.import_from_bitrix(
                 deal_id
             )
+
             await asyncio.sleep(DEALS_SLEEP_INTERVAL)
 
             if needs_refresh:
