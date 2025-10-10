@@ -813,7 +813,8 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
                 )
 
             await self.bitrix_client.send_message_b24(
-                ADMIN_ID, f"START NEW PROCESS DEAL ID: {deal_id}"
+                ADMIN_ID,
+                f"START NEW PROCESS DEAL ID: {deal_id} {webhook_payload.ts}",
             )
             try:
                 async with self.lock_service.acquire_deal_lock_with_retry(
