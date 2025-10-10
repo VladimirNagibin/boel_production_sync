@@ -243,19 +243,19 @@ class BaseProduct(CommonFieldMixin):
         None,
         validation_alias=AliasChoices("PROPERTY_109", "property109"),
     )  # Артикул
-    remains_spb: int | None = Field(
+    remains_spb: float | None = Field(
         None,
         validation_alias=AliasChoices("PROPERTY_113", "property113"),
     )  # Остаток СПб
-    remains_kdr: int | None = Field(
+    remains_kdr: float | None = Field(
         None,
         validation_alias=AliasChoices("PROPERTY_115", "property115"),
     )  # Остаток Кдр
-    remains_msk: int | None = Field(
+    remains_msk: float | None = Field(
         None,
         validation_alias=AliasChoices("PROPERTY_117", "property117"),
     )  # Остаток Мск
-    remains_nsk: int | None = Field(
+    remains_nsk: float | None = Field(
         None,
         validation_alias=AliasChoices("PROPERTY_119", "property119"),
     )  # Остаток Нск
