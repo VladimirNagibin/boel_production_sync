@@ -96,7 +96,7 @@ async def check(
     #    "end_time": time.time(),
     # }
 
-    deal_id = 54195  # 49935
+    deal_id = 56783  # 49935
     # comm = await get_comm(deal_id, timeline_client, timeline_repo)
     result = await deal_client.handle_deal(deal_id)
     # await deal_client.deal_processing_(deal_id, 2)
