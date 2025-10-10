@@ -91,12 +91,7 @@ class BaseEntityClient(ABC, Generic[T, R, C]):
 
         creation_cache = get_creation_cache()
         update_needed_cache = get_update_needed_cache()
-        print(f"{creation_cache}=========================================")
-        print(
-            f"{update_needed_cache}========================================="
-        )
         entity_key = (self.repo.model, entity_id)  # type: ignore[attr-defined]
-        print(f"{entity_key}+++++++++++++++++++++++++++++++++++++++++")
         if entity_key in creation_cache.keys():
             raise CyclicCallException
         creation_cache[entity_key] = True
