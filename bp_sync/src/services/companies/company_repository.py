@@ -230,36 +230,50 @@ class CompanyRepository(
     ) -> None:
         """Обрабатывает контракты после создания/обновления компании"""
         if not hasattr(data, "contracts") or not data.contracts:
+            await self._mark_all_contracts_as_deleted(obj.id)
             return
+
+        processed_contracts: set[str] = set()
 
         for contract_str in data.contracts:
             try:
-                await self._process_single_contract(contract_str, obj.id)
+                contract_number = await self._process_single_contract(
+                    contract_str, obj.id
+                )
+                if contract_number:
+                    processed_contracts.add(contract_number)
             except Exception as e:
                 logger.error(
                     f"Ошибка обработки контракта '{contract_str}': {e}"
                 )
                 continue
+        await self._mark_missing_contracts_as_deleted(
+            obj.id, processed_contracts
+        )
 
     async def _process_single_contract(
         self, contract_str: str, company_id: UUID
-    ) -> None:
+    ) -> str | None:
         """Обрабатывает один контракт"""
         contract_data = DealContractHandler.parse_contract_info(contract_str)
 
         if not contract_data.get("firm") or not contract_data["firm"]:
             logger.warning("Пропуск контракта без указания фирмы")
-            return
+            return None
 
         shipping_company_id = await self.get_id_by_name(contract_data["firm"])
         if not shipping_company_id:
             logger.error(f"Фирма '{contract_data['firm']}' не найдена")
-            return
+            return None
 
         contract_record = await self._prepare_contract_record(
             contract_data, company_id, shipping_company_id
         )
-
+        if not contract_record["number_contract"]:
+            logger.warning(
+                f"Пропуск контракта с пустым номером: {contract_str}"
+            )
+            return None
         existing_contract = await self._find_existing_contract(
             company_id, shipping_company_id, contract_record["number_contract"]
         )
@@ -271,6 +285,88 @@ class CompanyRepository(
         else:
             await self._create_new_contract(contract_record)
 
+        return contract_record["number_contract"]  # type: ignore
+
+    async def _mark_all_contracts_as_deleted(self, company_id: UUID) -> None:
+        """Помечает все контракты компании как удаленные в Битриксе"""
+        try:
+            stmt = select(Contract).where(
+                Contract.company_id == company_id,
+                Contract.is_deleted_in_bitrix.is_(False),
+            )
+            result = await self.session.execute(stmt)
+            contracts = result.scalars().all()
+
+            for contract in contracts:
+                contract.is_deleted_in_bitrix = True
+                logger.info(
+                    f"Контракт {contract.number_contract} помечен как "
+                    "удаленный в Битриксе"
+                )
+
+            if contracts:
+                await self.session.flush()
+                logger.info(
+                    f"Все контракты компании {company_id} помечены как "
+                    "удаленные в Битриксе"
+                )
+            else:
+                logger.info(
+                    f"У компании {company_id} нет контрактов для пометки как "
+                    "удаленных"
+                )
+
+        except Exception as e:
+            logger.error(
+                "Ошибка при пометке всех контрактов как удаленных для "
+                f"компании {company_id}: {e}"
+            )
+            raise
+
+    async def _mark_missing_contracts_as_deleted(
+        self, company_id: UUID, processed_contract_numbers: set[str]
+    ) -> None:
+        """
+        Помечает как удаленные контракты, которых нет в обработанном списке
+        """
+        try:
+            # Находим все контракты компании
+            stmt = select(Contract).where(
+                Contract.company_id == company_id,
+                Contract.is_deleted_in_bitrix.is_(False),
+            )
+            result = await self.session.execute(stmt)
+            all_contracts = result.scalars().all()
+
+            contracts_marked = 0
+            for contract in all_contracts:
+                if contract.number_contract not in processed_contract_numbers:
+                    contract.is_deleted_in_bitrix = True
+                    contracts_marked += 1
+                    logger.info(
+                        f"Контракт {contract.number_contract} помечен как "
+                        "удаленный в Битриксе"
+                    )
+
+            if contracts_marked > 0:
+                await self.session.flush()
+                logger.info(
+                    f"Помечено {contracts_marked} контрактов как удаленные в "
+                    f"Битриксе для компании {company_id}"
+                )
+            else:
+                logger.info(
+                    "Не найдено контрактов для пометки как удаленных у "
+                    f"компании {company_id}"
+                )
+
+        except Exception as e:
+            logger.error(
+                "Ошибка при пометке отсутствующих контрактов как удаленных "
+                f"для компании {company_id}: {e}"
+            )
+            raise
+
     async def _prepare_contract_record(
         self,
         contract_data: dict[str, str | None],
@@ -278,13 +374,16 @@ class CompanyRepository(
         shipping_company_id: UUID,
     ) -> dict[str, Any]:
         """Подготавливает данные контракта для сохранения"""
+        contract_number = contract_data.get("contract_number", "б/н")
+        if not contract_number or contract_number.strip() == "":
+            contract_number = "б/н"
         return {
             "shipping_company_id": shipping_company_id,
             "company_id": company_id,
             "type_contract": (
                 contract_data.get("contract_type") or "С покупателем"
             ),
-            "number_contract": contract_data.get("contract_number", ""),
+            "number_contract": contract_number,
             "date_contract": (
                 self._parse_date(contract_data.get("contract_date"))
             ),
@@ -332,6 +431,9 @@ class CompanyRepository(
                 != contract_record["period_contract"]
             ):
                 contract.period_contract = contract_record["period_contract"]
+
+            if contract.is_deleted_in_bitrix:
+                contract.is_deleted_in_bitrix = False
 
             await self.session.flush()
             logger.info(f"Контракт {contract.number_contract} обновлен")
