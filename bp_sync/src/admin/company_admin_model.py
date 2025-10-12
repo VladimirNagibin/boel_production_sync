@@ -1,11 +1,12 @@
 from typing import Any
 
-from fastapi import HTTPException
+from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from models.communications import CommunicationChannel
 from models.company_models import Company
+from models.deal_documents import Contract
 
 from .base_admin import BaseAdmin
 from .mixins import AdminListAndDetailMixin
@@ -25,7 +26,29 @@ class CompanyAdmin(
             .options(
                 selectinload(Company.communications).selectinload(
                     CommunicationChannel.channel_type
-                )
+                ),
+                # Добавляем загрузку контрактов с связанными объектами
+                selectinload(Company.contracts).selectinload(
+                    Contract.shipping_company
+                ),
+                # Добавляем загрузку других связанных объектов, которые могут
+                # понадобиться
+                selectinload(Company.assigned_user),
+                selectinload(Company.created_user),
+                selectinload(Company.modify_user),
+                selectinload(Company.last_activity_user),
+                selectinload(Company.company_type),
+                selectinload(Company.industry),
+                selectinload(Company.employees),
+                selectinload(Company.source),
+                selectinload(Company.currency),
+                selectinload(Company.main_activity),
+                selectinload(Company.shipping_company),
+                selectinload(Company.contact),
+                selectinload(Company.lead),
+                selectinload(Company.deal_failure_reason),
+                selectinload(Company.deal_type),
+                selectinload(Company.parent_company),
             )
             .where(Company.id == pk)
         )
@@ -33,7 +56,7 @@ class CompanyAdmin(
             result = await session.execute(stmt)
             obj = result.scalar_one_or_none()
             if obj is None:
-                raise HTTPException(status_code=404)
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
             return obj
 
     column_list = [  # Поля в списке
@@ -66,6 +89,22 @@ class CompanyAdmin(
     }
 
     column_labels = {  # Надписи полей в списке
+        "assigned_user": "Ответственный",
+        "created_user": "Создатель",
+        "modify_user": "Изменил",
+        "last_activity_user": "Последняя активность",
+        "date_create": "Дата создания",
+        "date_modify": "Дата изменения",
+        "last_activity_time": "Дата последней активности",
+        "last_communication_time": "Дата последней коммуникации",
+        "phones": "Телефоны",
+        "emails": "Email",
+        "webs": "Сайты",
+        "ims": "IM",
+        "links": "Ссылки",
+        "address": "Адрес",
+        "comments": "Комментарии",
+        "opened": "Доступна всем",
         "external_id": "Внешний код",
         "title": "Название компании",
         "is_my_company": "Моя компания",
@@ -135,9 +174,34 @@ class CompanyAdmin(
     column_details_list = [  # Поля на форме просмотра
         "external_id",
         "title",
-        "is_my_company",
         "revenue",
         "currency",
+        "comments",  # from BusinessEntityCore
+        # addsess
+        "city",  # from BusinessEntityCore
+        "address",  # from AddressMixin
+        "address_legal",
+        "address_company",
+        "province_company",
+        # Группа пользователей
+        "assigned_user",  # from UserRelationsMixin
+        "created_user",  # from UserRelationsMixin
+        "modify_user",  # from UserRelationsMixin
+        "last_activity_user",
+        # Временные метки
+        "date_last_shipment",
+        "date_create",  # TimestampsMixin
+        "date_modify",  # TimestampsMixin
+        "last_activity_time",  # TimestampsMixin
+        "last_communication_time",  # TimestampsMixin
+        # Коммуникации
+        "phones",  # CommunicationMixin
+        "emails",  # CommunicationMixin
+        "webs",  # CommunicationMixin
+        "ims",  # CommunicationMixin
+        "links",  # CommunicationMixin
+        # Договора
+        "contracts",
         "company_type",
         "industry",
         "employees",
@@ -145,24 +209,6 @@ class CompanyAdmin(
         "main_activity",
         "shipping_company",
         "banking_details",
-        "address_legal",
-        "address_company",
-        "province_company",
-        "is_shipment_approved",
-        "date_last_shipment",
-        "assigned_user",
-        "created_user",
-        "modify_user",
-        "last_activity_user",
-        "date_create",
-        "date_modify",
-        "last_activity_time",
-        "last_communication_time",
-        "phones",
-        "emails",
-        # "webs",
-        # "ims",
-        # "links",
         "origin_version",
         "parent_company",
         "contact",
@@ -177,6 +223,15 @@ class CompanyAdmin(
         "full_name_genitive",
         "current_contract",
         "current_number_contract",
+        # Статусы и флаги
+        "is_shipment_approved",
+        "is_my_company",
+        "opened",  # from BusinessEntityCore
+        # Связи
+        "deals",
+        "leads",
+        "contacts",
+        "invoices",
     ]
     """
     # Настройки AJAX для связанных полей

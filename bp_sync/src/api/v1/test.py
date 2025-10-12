@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, status
 from fastapi.responses import JSONResponse
 
 from services.companies.company_bitrix_services import CompanyBitrixClient
+from services.companies.company_services import CompanyClient
 from services.contacts.contact_bitrix_services import ContactBitrixClient
 
 # from services.deals.deal_bitrix_services import (
@@ -13,6 +14,7 @@ from services.deals.deal_services import (
 )
 from services.dependencies import (
     get_company_bitrix_client_dep,
+    get_company_client_dep,
     get_contact_bitrix_client_dep,
     get_deal_client_dep,
     get_deal_repository_dep,
@@ -62,6 +64,7 @@ async def check(
     company_bitrix_client: CompanyBitrixClient = Depends(
         get_company_bitrix_client_dep
     ),
+    company_client: CompanyClient = Depends(get_company_client_dep),
     contact_bitrix_client: ContactBitrixClient = Depends(
         get_contact_bitrix_client_dep
     ),
@@ -96,9 +99,10 @@ async def check(
     #    "end_time": time.time(),
     # }
 
-    deal_id = 56783  # 49935
+    # deal_id = 56783  # 49935
     # comm = await get_comm(deal_id, timeline_client, timeline_repo)
-    result = await deal_client.handle_deal(deal_id)
+    # result = await deal_client.handle_deal(deal_id)
+    result = await company_client.refresh_from_bitrix(5543)
     # await deal_client.deal_processing_(deal_id, 2)
     # await deal_client.deal_processing_(deal_id, 3)
     # await deal_client.deal_processing_(deal_id, 4)

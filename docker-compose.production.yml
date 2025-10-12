@@ -54,6 +54,8 @@ services:
     ports:
       - 5672:5672
       - 15672:15672
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
     healthcheck:
       test: rabbitmq-diagnostics -q ping
       interval: 30s
@@ -66,3 +68,4 @@ volumes:
   redis-data:
   code-data:
   logs-data:
+  rabbitmq-data:
