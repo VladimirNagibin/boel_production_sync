@@ -793,7 +793,7 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
         """
         Основной метод обработки вебхука сделки
         """
-        ADMIN_ID = 171
+        # ADMIN_ID = 171
         try:
             webhook_payload = await self.webhook_service.process_webhook(
                 request
@@ -812,10 +812,10 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
                     webhook_payload.event,
                 )
 
-            await self.bitrix_client.send_message_b24(
-                ADMIN_ID,
-                f"START NEW PROCESS DEAL ID: {deal_id} {webhook_payload.ts}",
-            )
+            # await self.bitrix_client.send_message_b24(
+            #    ADMIN_ID,
+            #    f"START NEW PROCESS DEAL ID: {deal_id} {webhook_payload.ts}",
+            # )
             try:
                 async with self.lock_service.acquire_deal_lock_with_retry(
                     deal_id,
@@ -829,6 +829,7 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
                     success = await self.handle_deal(deal_id)
 
                     if success:
+                        # TODO: send a message about successful in service
                         return self._success_response(
                             f"Deal {deal_id} processed successfully",
                             webhook_payload.event,

@@ -457,6 +457,25 @@ class AddInfoAdmin(BaseAdmin, model=AdditionalInfo):  # type: ignore[call-arg]
     icon = "fa-solid fa-note-sticky"
 
 
+class ContractAdmin(BaseAdmin, model=Contract):  # type: ignore[call-arg]
+    name = "Договор"
+    name_plural = "Договоры"
+    category = "Бух документы"
+    column_list = [
+        "type_contract",
+        "number_contract",
+        "date_contract",
+        "company",
+    ]
+    form_columns = [
+        "type_contract",
+        "number_contract",
+        "date_contract",
+        "company",
+    ]
+    icon = "fa-solid fa-file-contract"
+
+
 """
 class ContactAdmin(BaseAdmin):
     column_list = ["name", "last_name", "post", "company", "created_at"]
@@ -511,14 +530,6 @@ class UserAdmin(BaseAdmin):
 
 
 # Документы
-class ContractAdmin(BaseAdmin):
-    column_list = [
-        "type_contract", "number_contract", "date_contract", "company"
-    ]
-    form_columns = [
-        "type_contract", "number_contract", "date_contract", "company"
-    ]
-    icon = "fa-solid fa-file-contract"
 
 
 class DeliveryNoteAdmin(BaseAdmin):
@@ -547,6 +558,8 @@ def register_models(admin: Admin) -> None:
     admin.add_view(AddInfoAdmin)
     admin.add_view(UserAdmin)
     admin.add_view(DealExportAdmin)
+    admin.add_view(ContractAdmin)
+
     """
     admin.add_view(ContactAdmin(Contact, name="Контакты"))
     admin.add_view(DealAdmin(Deal, name="Сделки"))

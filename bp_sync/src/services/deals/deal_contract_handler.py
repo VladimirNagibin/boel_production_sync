@@ -186,13 +186,13 @@ class DealContractHandler:
                 result["contract_type"] = contract_type_match.group(1).strip()
 
             # Извлекаем информацию о договоре (номер и дату)
-            contract_info_match = re.search(r"//([^/]+)//", contract_string)
+            contract_info_match = re.search(r"//(.*?)//", contract_string)
             if contract_info_match:
                 contract_info = contract_info_match.group(1).strip()
                 result["contract_info"] = contract_info
                 # Извлекаем номер договора
                 number_match = re.search(
-                    r"Договор\s*[№N]?\s*([\d/]+)", contract_info
+                    r"Договор\s*[№N]?\s*([\w\d/.-_]+)", contract_info
                 )
                 if number_match:
                     result["contract_number"] = number_match.group(1).strip()
