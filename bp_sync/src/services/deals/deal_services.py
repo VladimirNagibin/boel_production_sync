@@ -2,7 +2,7 @@ import time
 from datetime import datetime
 from typing import Any
 
-from fastapi import HTTPException, Request, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.responses import JSONResponse
 
 from core.logger import logger
@@ -33,6 +33,10 @@ from ..timeline_comments.timeline_comment_bitrix_services import (
 )
 from .deal_bitrix_services import DealBitrixClient
 from .deal_data_provider import DealDataProvider
+from .deal_extend_processing import (
+    DealProcessingClient,
+    get_deal_processing_client,
+)
 from .deal_lock_service import LockService
 from .deal_report_helpers import (
     create_dataframe,
@@ -789,7 +793,13 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
             )
             return False
 
-    async def deal_processing(self, request: Request) -> JSONResponse:
+    async def deal_processing(
+        self,
+        request: Request,
+        deal_ext_service: DealProcessingClient = Depends(
+            get_deal_processing_client
+        ),
+    ) -> JSONResponse:
         """
         Основной метод обработки вебхука сделки
         """
@@ -829,7 +839,9 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
                     success = await self.handle_deal(deal_id)
 
                     if success:
-                        # TODO: send a message about successful in service
+                        await deal_ext_service.send_deal_processing_request(
+                            deal_id, int(webhook_payload.ts)
+                        )
                         return self._success_response(
                             f"Deal {deal_id} processed successfully",
                             webhook_payload.event,
