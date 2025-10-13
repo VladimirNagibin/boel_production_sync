@@ -12,6 +12,7 @@ from pydantic import (
 
 from .base_schemas import CommonFieldMixin, EntityAwareSchema
 from .fields import FIELDS_PRODUCT, FIELDS_PRODUCT_ALT
+from .helpers import parse_numeric_string
 
 
 class EntityTypeAbbr(StrEnum):
@@ -284,6 +285,13 @@ class BaseProduct(CommonFieldMixin):
         validation_alias=AliasChoices("PROPERTY_151", "property151"),
     )  # Группы товара для мотивации продаж
     # 75:A, 77:B, 79:C, 81:Товар месяца, 83:Не товар, 85:Искл
+
+    @field_validator(  # type: ignore[misc]
+        "price", "remains_spb", "price_minimal", mode="before"
+    )  # добавьте нужные поля
+    @classmethod
+    def clean_other_numeric_fields(cls, v: Any) -> float | None:
+        return parse_numeric_string(v)
 
 
 class ProductCreate(BaseProduct, EntityAwareSchema):
