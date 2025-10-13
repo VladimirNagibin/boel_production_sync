@@ -40,7 +40,7 @@ class InvoiceClient(
         """
         url = (
             f"{settings.WEB_HOOK_PORTAL}/"
-            f"{settings.ENDPOINT_SERND_FAIL_INVOICE}?"
+            f"{settings.ENDPOINT_SEND_FAIL_INVOICE}?"
             f"id_invoice={invoice_id}&key={settings.WEB_HOOK_KEY}"
         )
 
