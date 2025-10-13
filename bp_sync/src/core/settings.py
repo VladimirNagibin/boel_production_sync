@@ -51,7 +51,8 @@ class Settings(BaseSettings):  # type: ignore
 
     WEB_HOOK_PORTAL: str = ""
     WEB_HOOK_KEY: str = ""
-    ENDPOINT_SERND_FAIL_INVOICE: str = ""
+    ENDPOINT_SEND_FAIL_INVOICE: str = ""
+    ENDPOINT_SEND_DEAL_STATUS: str = ""
     WEB_HOOK_DEAL_UPDATE_TOKEN: str = "token"
     WEB_HOOK_TEST: bool = True
     DEAL_ID_TEST: int = 1

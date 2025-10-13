@@ -36,8 +36,10 @@ from models.user_models import Manager, User  # noqa: F401
 
 from .base_admin import BaseAdmin
 from .company_admin_model import CompanyAdmin
+from .contact_admin_model import ContactAdmin
 from .deal_admin_model import DealAdmin
 from .deal_export_admin import DealExportAdmin
+from .invoice_admin_model import InvoiceAdmin
 
 # from wtforms import Form, StringField
 # from wtforms.validators import Optional
@@ -559,6 +561,8 @@ def register_models(admin: Admin) -> None:
     admin.add_view(UserAdmin)
     admin.add_view(DealExportAdmin)
     admin.add_view(ContractAdmin)
+    admin.add_view(ContactAdmin)
+    admin.add_view(InvoiceAdmin)
 
     """
     admin.add_view(ContactAdmin(Contact, name="Контакты"))

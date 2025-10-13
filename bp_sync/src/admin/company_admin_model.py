@@ -7,6 +7,7 @@ from sqlalchemy.orm import selectinload
 from models.communications import CommunicationChannel
 from models.company_models import Company
 from models.deal_documents import Contract
+from models.user_models import Manager
 
 from .base_admin import BaseAdmin
 from .mixins import AdminListAndDetailMixin
@@ -30,6 +31,9 @@ class CompanyAdmin(
                 # Добавляем загрузку контрактов с связанными объектами
                 selectinload(Company.contracts).selectinload(
                     Contract.shipping_company
+                ),
+                selectinload(Company.default_manager).selectinload(
+                    Manager.user
                 ),
                 # Добавляем загрузку других связанных объектов, которые могут
                 # понадобиться
@@ -120,6 +124,7 @@ class CompanyAdmin(
         "deal_failure_reason": "Причина провала",
         "deal_type": "Тип сделки",
         "shipping_company": "Фирма отгрузки",
+        "shipping_company_id": "ID фирмы отгрузки",
         "banking_details": "Банковские реквизиты",
         "address_legal": "Юридический адрес",
         "address_company": "Адрес компании",
@@ -145,6 +150,7 @@ class CompanyAdmin(
         "current_number_contract": "Номер договора",
         "city": "Город",
         "is_deleted_in_bitrix": "Удален в Битрикс",
+        "default_manager": "Менеджер по умолчанию",
     }
 
     column_sortable_list = [
@@ -176,6 +182,7 @@ class CompanyAdmin(
         "title",
         "revenue",
         "currency",
+        "banking_details",
         "comments",  # from BusinessEntityCore
         # addsess
         "city",  # from BusinessEntityCore
@@ -202,36 +209,37 @@ class CompanyAdmin(
         "links",  # CommunicationMixin
         # Договора
         "contracts",
-        "company_type",
-        "industry",
-        "employees",
-        "source",
-        "main_activity",
         "shipping_company",
-        "banking_details",
-        "origin_version",
-        "parent_company",
-        "contact",
-        "lead",
-        "deal_failure_reason",
-        "deal_type",
+        "shipping_company_id",
         "position_head",
-        "basis_operates",
         "position_head_genitive",
+        "basis_operates",
         "basis_operates_genitive",
         "payment_delay_genitive",
         "full_name_genitive",
         "current_contract",
         "current_number_contract",
+        # Типы и справочники
+        "company_type",
+        "industry",
+        "employees",
+        "source",
+        "main_activity",
+        "deal_type",
+        "default_manager",
+        "origin_version",
         # Статусы и флаги
         "is_shipment_approved",
         "is_my_company",
         "opened",  # from BusinessEntityCore
         # Связи
         "deals",
+        "lead",
         "leads",
-        "contacts",
         "invoices",
+        "delivery_notes",
+        "contact",
+        "contacts",
     ]
     """
     # Настройки AJAX для связанных полей
