@@ -1,4 +1,7 @@
+from typing import Type
+
 from sqladmin import Admin
+from wtforms import Form
 
 # from .mixins import AdminListAndDetailMixin
 from models.communications import (  # noqa: F401
@@ -284,18 +287,30 @@ class DeliveryNoteAdmin(
 
 
 class ManagerAdmin(BaseAdmin, model=Manager):  # type: ignore[call-arg]
+    from sqladmin.forms import get_model_form
+    from sqlalchemy import select
+    from wtforms import SelectField
+
     name = "Менеджер"
     name_plural = "Менеджеры"
     category = "Сотрудники"
+    icon = "fa-solid fa-id-card"
+
     column_list = [  # Поля в списке
         "user_id",
+        "user",
         "is_active",
         "default_company_id",
+        "default_company",
+        "disk_id",
     ]
     column_labels = {  # Надписи полей в списке
         "user_id": "Код пользователя",
+        "user": "Пользователь",
         "is_active": "Менеджер активный",
-        "default_company_id": "Компания по умолчанию",
+        "default_company_id": "Код компании по умолчанию",
+        "default_company": "Компания по умолчанию",
+        "disk_id": "Код диска",
     }
     column_default_sort = [("user_id", True)]  # Сортировка по умолчанию
     column_sortable_list = [  # Список полей по которым возможна сортировка
@@ -308,26 +323,53 @@ class ManagerAdmin(BaseAdmin, model=Manager):  # type: ignore[call-arg]
         "default_company_id",
     ]
     form_columns = [
-        "user",
-        "is_active",
-        "default_company",
-    ]
-    form_ajax_refs = {
-        "user": {
-            "fields": ("name",),
-            "order_by": "name",
-        },
-        "default_company": {
-            "fields": ("title",),
-            "order_by": "title",
-        },
-    }
-    column_details_list = [
-        "user_id",
         "is_active",
         "default_company_id",
-    ]  #
-    icon = "fa-solid fa-id-card"
+        "disk_id",
+    ]
+
+    # Переопределяем форму
+    form_include_pk = True
+
+    async def get_form(self) -> Type[Form]:
+        Form_class = await super().get_form()
+
+        # Получаем список компаний для выпадающего списка
+        # async with self.session_maker(expire_on_commit=False) as session:
+        #    result = await session.execute(select(Company))
+        #    companies = result.scalars().all()
+        #    choices = [(c.external_id, str(c)) for c in companies]
+
+        # Динамически добавляем choices к полю default_company_id
+        Form_class.default_company_id.kwargs["choices"] = []  # choices
+        Form_class.default_company_id.kwargs["coerce"] = int
+
+        return Form_class  # type: ignore
+
+    # form_ajax_refs = {
+    #    "default_company": {
+    #        "fields": ("external_id",),  # Укажите поля для поиска
+    #        "order_by": "external_id",
+    #    }
+    # }
+    # form_ajax_refs = {
+    #    "user": {
+    #        "fields": ("name",),
+    #        "order_by": "name",
+    #    },
+    #    "default_company": {
+    #        "fields": ("title",),
+    #        "order_by": "title",
+    #    },
+    # }
+    column_details_list = [
+        "user_id",
+        "user",
+        "is_active",
+        "default_company_id",
+        "default_company",
+        "disk_id",
+    ]
 
     """
     async def insert_model(
