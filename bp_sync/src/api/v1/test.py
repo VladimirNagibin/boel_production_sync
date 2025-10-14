@@ -99,11 +99,16 @@ async def check(
     #    "start_time": start_time,
     #    "end_time": time.time(),
     # }
+    if not id_entity:
+        id_entity = 56731
 
-    # deal_id = 50927  # 49935
     # comm = await get_comm(deal_id, timeline_client, timeline_repo)
 
-    # result = await deal_client.handle_deal(deal_id)
+    result = await deal_client.handle_deal(id_entity)  # type: ignore
+    if result:
+        ...
+        print(f"{result}-------DEAL--UPDATE")
+
     if not id_entity:
         id_entity = 5543
     result = await company_client.import_from_bitrix(id_entity)  # type: ignore
@@ -126,7 +131,7 @@ async def check(
     # result = await contact_bitrix_client.get(18281)
     if result:
         ...
-        print(f"{result}-------DEAL--UPDATE")
+        print(f"{result}-------COMPANY--UPDATE")
     # print(f"{products_deal}-------DEAL")
     # products_invoice = await product_bitrix_client.get_entity_products(
     #    26309, EntityTypeAbbr.INVOICE)

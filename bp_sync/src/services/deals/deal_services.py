@@ -33,6 +33,7 @@ from ..timeline_comments.timeline_comment_bitrix_services import (
 )
 from .deal_bitrix_services import DealBitrixClient
 from .deal_data_provider import DealDataProvider
+from .deal_extend_processing import DealProcessingClient
 from .deal_lock_service import LockService
 from .deal_report_helpers import (
     create_dataframe,
@@ -102,6 +103,7 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
         self.deal_with_invoice_handler = DealWithInvioceHandler(self)
         self.deal_source_handler = DealSourceHandler(self)
         self.webhook_service = WebhookService()
+        self.deal_ext_service = DealProcessingClient()
 
         self.retry_config: dict[str, Any] = {
             "max_retries": getattr(settings, "lock_max_retries", 3),
@@ -792,9 +794,6 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
     async def deal_processing(
         self,
         request: Request,
-        # deal_ext_service: DealProcessingClient = Depends(
-        #    get_deal_processing_client
-        # ),
     ) -> JSONResponse:
         """
         Основной метод обработки вебхука сделки
@@ -835,9 +834,17 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
                     success = await self.handle_deal(deal_id)
 
                     if success:
-                        # await deal_ext_service.send_deal_processing_request(
-                        #    deal_id, int(webhook_payload.ts)
-                        # )
+                        try:
+                            ext_service = self.deal_ext_service
+                            await ext_service.send_deal_processing_request(
+                                deal_id, int(webhook_payload.ts)
+                            )
+                        except HTTPException as e:
+                            logger.error(
+                                f"Failed to send deal processing request for "
+                                f"deal {deal_id}-{webhook_payload.ts}: "
+                                f"{str(e)}"
+                            )
                         return self._success_response(
                             f"Deal {deal_id} processed successfully",
                             webhook_payload.event,

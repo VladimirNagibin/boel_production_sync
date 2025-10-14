@@ -29,7 +29,11 @@ class DealProcessingClient:
         Returns:
             Ответ от PHP сервера
         """
-        payload = {"deal_id": deal_id, "timestamp": timestamp}
+        payload: dict[str, Any] = {
+            "key": settings.WEB_HOOK_KEY,
+            "deal_id": deal_id,
+            "timestamp": timestamp,
+        }
 
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
