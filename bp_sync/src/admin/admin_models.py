@@ -323,6 +323,7 @@ class ManagerAdmin(BaseAdmin, model=Manager):  # type: ignore[call-arg]
         "default_company_id",
     ]
     form_columns = [
+        "user_id",
         "is_active",
         "default_company_id",
         "disk_id",
@@ -343,7 +344,8 @@ class ManagerAdmin(BaseAdmin, model=Manager):  # type: ignore[call-arg]
         # Динамически добавляем choices к полю default_company_id
         Form_class.default_company_id.kwargs["choices"] = []  # choices
         Form_class.default_company_id.kwargs["coerce"] = int
-
+        Form_class.user_id.kwargs["choices"] = []  # choices
+        Form_class.user_id.kwargs["coerce"] = int
         return Form_class  # type: ignore
 
     # form_ajax_refs = {
