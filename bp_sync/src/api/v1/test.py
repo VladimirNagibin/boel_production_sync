@@ -57,6 +57,7 @@ test_router = APIRouter(dependencies=[Depends(request_context)])
     description="Information about persistency redis.",
 )  # type: ignore
 async def check(
+    id_entity: int | str | None = None,
     measure_repo: MeasureRepository = Depends(get_measure_repository_dep),
     product_bitrix_client: ProductBitrixClient = Depends(
         get_product_bitrix_client_dep
@@ -101,8 +102,11 @@ async def check(
 
     # deal_id = 50927  # 49935
     # comm = await get_comm(deal_id, timeline_client, timeline_repo)
+
     # result = await deal_client.handle_deal(deal_id)
-    result = await company_client.refresh_from_bitrix(7925)
+    if not id_entity:
+        id_entity = 5543
+    result = await company_client.import_from_bitrix(id_entity)  # type: ignore
     # await deal_client.deal_processing_(deal_id, 2)
     # await deal_client.deal_processing_(deal_id, 3)
     # await deal_client.deal_processing_(deal_id, 4)
