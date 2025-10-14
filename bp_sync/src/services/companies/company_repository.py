@@ -374,18 +374,19 @@ class CompanyRepository(
         shipping_company_id: UUID,
     ) -> dict[str, Any]:
         """Подготавливает данные контракта для сохранения"""
-        contract_number = contract_data.get("contract_number", "б/н")
-        if not contract_number or contract_number.strip() == "":
-            contract_number = "б/н"
+        number_contract = contract_data.get("contract_number", "б/н")
+        if not number_contract or number_contract.strip() == "":
+            number_contract = "б/н"
         return {
             "shipping_company_id": shipping_company_id,
             "company_id": company_id,
             "type_contract": (
                 contract_data.get("contract_type") or "С покупателем"
             ),
-            "number_contract": contract_number,
+            "number_contract": number_contract,
             "date_contract": (
                 self._parse_date(contract_data.get("contract_date"))
+                or date.today()
             ),
             "period_contract": (
                 self._parse_date(contract_data.get("contract_period"))
@@ -393,14 +394,14 @@ class CompanyRepository(
         }
 
     async def _find_existing_contract(
-        self, company_id: UUID, shipping_company_id: UUID, contract_number: str
+        self, company_id: UUID, shipping_company_id: UUID, number_contract: str
     ) -> Contract | None:
         """Находит существующий контракт"""
         try:
             stmt = select(Contract).where(
                 Contract.company_id == company_id,
                 Contract.shipping_company_id == shipping_company_id,
-                Contract.number_contract == contract_number,
+                Contract.number_contract == number_contract,
             )
             result = await self.session.execute(stmt)
             return result.scalar_one_or_none()  # type: ignore[no-any-return]

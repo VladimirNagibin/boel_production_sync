@@ -287,8 +287,8 @@ class BaseProduct(CommonFieldMixin):
     # 75:A, 77:B, 79:C, 81:Товар месяца, 83:Не товар, 85:Искл
 
     @field_validator(  # type: ignore[misc]
-        "price", "remains_spb", "price_minimal", mode="before"
-    )  # добавьте нужные поля
+        "price", "price_distributor", "price_minimal", mode="before"
+    )
     @classmethod
     def clean_other_numeric_fields(cls, v: Any) -> float | None:
         return parse_numeric_string(v)

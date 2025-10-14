@@ -461,13 +461,16 @@ class AddInfoAdmin(BaseAdmin, model=AdditionalInfo):  # type: ignore[call-arg]
 
 class ContractAdmin(BaseAdmin, model=Contract):  # type: ignore[call-arg]
     name = "Договор"
-    name_plural = "Договоры"
+    name_plural = "Договора"
     category = "Бух документы"
     column_list = [
-        "type_contract",
+        "shipping_company",
+        "company",
         "number_contract",
         "date_contract",
-        "company",
+        "type_contract",
+        "is_deleted_in_bitrix",
+        "period_contract",
     ]
     form_columns = [
         "type_contract",
