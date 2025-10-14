@@ -27,7 +27,7 @@ class InvoiceAdmin(
 ):  # type: ignore[call-arg]
     name = "Счет"
     name_plural = "Счета"
-    category = "Финансы"
+    category = "Сущности"
     icon = "fa-solid fa-file-invoice-dollar"
 
     async def get_object_for_details(self, pk: Any) -> Any:

@@ -99,10 +99,10 @@ async def check(
     #    "end_time": time.time(),
     # }
 
-    deal_id = 50927  # 49935
+    # deal_id = 50927  # 49935
     # comm = await get_comm(deal_id, timeline_client, timeline_repo)
-    result = await deal_client.handle_deal(deal_id)
-    # result = await company_client.refresh_from_bitrix(5543)
+    # result = await deal_client.handle_deal(deal_id)
+    result = await company_client.refresh_from_bitrix(7925)
     # await deal_client.deal_processing_(deal_id, 2)
     # await deal_client.deal_processing_(deal_id, 3)
     # await deal_client.deal_processing_(deal_id, 4)
