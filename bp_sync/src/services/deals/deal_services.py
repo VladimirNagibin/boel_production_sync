@@ -1,5 +1,5 @@
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import HTTPException, Request, status
@@ -401,6 +401,10 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
             if current_stage > available_stage:
                 await self._send_message_unavailable_stage(
                     current_stage, available_stage, deal_b24
+                )
+            if current_stage < available_stage:
+                self.update_tracker.update_field(
+                    "moved_date", datetime.now(timezone.utc), deal_b24
                 )
 
             stage_id = await self.repo.get_external_id_by_sort_order_stage(
