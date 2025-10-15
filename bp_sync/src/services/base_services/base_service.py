@@ -1,5 +1,9 @@
+import time
 from abc import ABC, abstractmethod
 from typing import Any, Generic, Protocol, TypeVar
+
+from fastapi import Request, status
+from fastapi.responses import JSONResponse
 
 from core.logger import logger
 from models.bases import IntIdEntity
@@ -266,4 +270,70 @@ class BaseEntityClient(ABC, Generic[T, R, C]):
             schema_b24,
             schema_db,
             schema_b24.get_changes(pydantic_db, exclude_fields=exclude_fields),
+        )
+
+    async def entity_processing(
+        self,
+        request: Request,
+        entity_type_id: int | None = None,
+    ) -> JSONResponse:
+        """
+        Основной метод обработки вебхука сущности
+        """
+        # ADMIN_ID = 171
+        try:
+            webhook_payload = await self.webhook_service.process_webhook(
+                request
+            )
+
+            entity_id = webhook_payload.entity_id
+            if not entity_id:
+                return self._success_response(
+                    "Webhook received but no entity ID found",
+                    webhook_payload.event,
+                )
+            if entity_type_id:
+                if webhook_payload.entity_type_id != entity_type_id:
+                    return self._error_response(
+                        status.HTTP_400_BAD_REQUEST,
+                        "Entity type ID mismatch",
+                        "TypeMismatchError",
+                    )
+            await self.import_from_bitrix(entity_id, entity_type_id)
+            return self._success_response(
+                f"{self.entity_name} {entity_id} processed successfully",
+                webhook_payload.event,
+            )
+        except Exception as e:
+            logger.error(f"Unexpected error in entity_processing: {e}")
+            return self._error_response(
+                status.HTTP_500_INTERNAL_SERVER_ERROR,
+                "Internal server error",
+                "Unexpected error",
+            )
+
+    def _success_response(self, message: str, event: str) -> JSONResponse:
+        """Успешный ответ"""
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={
+                "status": "success",
+                "message": message,
+                "event": event,
+                "timestamp": time.time(),
+            },
+        )
+
+    def _error_response(
+        self, status_code: int, message: str, error_type: str
+    ) -> JSONResponse:
+        """Ответ с ошибкой"""
+        return JSONResponse(
+            status_code=status_code,
+            content={
+                "status": "error",
+                "message": message,
+                "error_type": error_type,
+                "timestamp": time.time(),
+            },
         )

@@ -20,6 +20,7 @@ class UserClient(
         user_bitrix_client: UserBitrixClient,
         user_repo: UserRepository,
     ):
+        super().__init__()
         self._bitrix_client = user_bitrix_client
         self._repo = user_repo
 

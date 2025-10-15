@@ -14,6 +14,7 @@ class LeadClient(BaseEntityClient[LeadDB, LeadRepository, LeadBitrixClient]):
         lead_bitrix_client: LeadBitrixClient,
         lead_repo: LeadRepository,
     ):
+        super().__init__()
         self._bitrix_client = lead_bitrix_client
         self._repo = lead_repo
 

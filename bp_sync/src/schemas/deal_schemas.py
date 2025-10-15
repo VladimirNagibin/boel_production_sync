@@ -319,3 +319,19 @@ class BitrixWebhookPayload(BaseModel):  # type: ignore[misc]
             return int(self.data.get("FIELDS", {}).get("ID", 0))
         except (ValueError, TypeError):
             return None
+
+    @property
+    def entity_id(self) -> int | None:
+        """Извлекает ID сделки из данных"""
+        try:
+            return int(self.data.get("FIELDS", {}).get("ID", 0))
+        except (ValueError, TypeError):
+            return None
+
+    @property
+    def entity_type_id(self) -> int | None:
+        """Извлекает ID сделки из данных"""
+        try:
+            return int(self.data.get("FIELDS", {}).get("ENTITY_TYPE_ID", 0))
+        except (ValueError, TypeError):
+            return None
