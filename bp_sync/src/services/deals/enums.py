@@ -8,6 +8,7 @@ EXCLUDE_FIELDS_FOR_COMPARE = {
     "parent_deal_id",
     "is_frozen",
     "is_setting_source",
+    "moved_date",
 }
 
 

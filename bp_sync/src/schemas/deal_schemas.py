@@ -124,6 +124,8 @@ class BaseDeal:
     is_frozen: Optional[bool] = Field(default=None)
     is_setting_source: Optional[bool] = Field(default=None)
 
+    moved_date: Optional[datetime] = Field(default=None)
+
     @field_validator("external_id", mode="before")  # type: ignore[misc]
     @classmethod
     def convert_str_to_int(cls, value: str | int) -> int:

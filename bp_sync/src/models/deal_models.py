@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, false
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, false, func
 from sqlalchemy.dialects.postgresql import ENUM as PgEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -360,6 +360,13 @@ class Deal(BusinessEntity):
         default=False,
         server_default=false(),
         comment="Источники установлены вручную",
+    )
+
+    # Вспомогательное поле для хранения реальной даты перехода на стадию
+    moved_date: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),  # Текущее время по умолчанию
+        comment="Дата перемещения (резервное поле)",
     )
 
     """ remaining fields:

@@ -73,9 +73,9 @@ async def handle_bitrix24_webhook_invoice(
     """
     Обработчик вебхуков Bitrix24 для счетов
     """
-    # ENTITY_TYPE_ID = 31
+    ENTITY_TYPE_ID = 31
     return await _handle_bitrix24_webhook(
-        request, invoice_client  # , ENTITY_TYPE_ID
+        request, invoice_client, ENTITY_TYPE_ID
     )
 
 
