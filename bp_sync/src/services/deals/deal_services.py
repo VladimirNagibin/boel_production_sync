@@ -8,7 +8,7 @@ from fastapi.responses import JSONResponse
 from core.logger import logger
 from core.settings import settings
 from models.deal_models import Deal as DealDB
-from models.enums import StageSemanticEnum
+from models.enums import ProcessingStatusEnum, StageSemanticEnum
 from schemas.company_schemas import CompanyCreate
 from schemas.contact_schemas import ContactCreate
 from schemas.deal_schemas import DealCreate, DealUpdate
@@ -292,7 +292,7 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
             deal_update = DealUpdate(external_id=deal_b24.external_id)
             for key, value in changes.items():
                 setattr(deal_update, key, value["external"])
-            print(deal_update)
+            # print(deal_update)
             await self.bitrix_client.update(deal_update)
             return True
         except Exception:
@@ -389,6 +389,13 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
 
         if deal_b24.source_id and deal_b24.source_id == SOURCE_SITE_ORDER:
             await self.site_order_handler.handle_site_order(deal_b24)
+        if changes:
+            if change_status := changes.get("processing_status"):
+                self.update_tracker.update_field(
+                    "processing_status",
+                    change_status["external"],
+                    deal_b24,
+                )
 
         available_stage = await self.stage_handler.check_available_stage(
             deal_b24
@@ -406,7 +413,11 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
                 self.update_tracker.update_field(
                     "moved_date", datetime.now(timezone.utc), deal_b24
                 )
-
+                self.update_tracker.update_field(
+                    "processing_status",
+                    ProcessingStatusEnum.NOT_DEFINE,
+                    deal_b24,
+                )
             stage_id = await self.repo.get_external_id_by_sort_order_stage(
                 available_stage
             )
