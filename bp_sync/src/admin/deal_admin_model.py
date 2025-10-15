@@ -120,6 +120,7 @@ class DealAdmin(
         "shipping_company": "Фирма отгрузки",
         "warehouse": "Склад",
         "add_info": "Дополнительная информация",
+        "moved_date": "Дата перемещения сделки",
     }
     column_sortable_list = [  # Список полей по которым возможна сортировка
         "external_id",
@@ -161,6 +162,7 @@ class DealAdmin(
         "last_activity_user",
         "begindate",
         "closedate",
+        "moved_date",
         "moved_time",
         "payment_deadline",
         "date_create",
