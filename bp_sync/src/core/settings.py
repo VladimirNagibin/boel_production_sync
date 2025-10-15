@@ -139,7 +139,12 @@ class Settings(BaseSettings):  # type: ignore
     def web_hook_config_invoice(self) -> dict[str, Any]:
         return self.web_hook_config_entity(
             self.WEB_HOOK_INVOICE_UPDATE_TOKEN,
-            {"ONCRMINVOICEUPDATE", "ONCRMINVOICEADD", "ONCRMINVOICEDELETE"},
+            {
+                "ONCRMDYNAMICITEMUPDATE",
+                "ONCRMINVOICEUPDATE",
+                "ONCRMINVOICEADD",
+                "ONCRMINVOICEDELETE",
+            },
         )
 
 

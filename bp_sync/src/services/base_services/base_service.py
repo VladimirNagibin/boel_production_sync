@@ -292,6 +292,13 @@ class BaseEntityClient(ABC, Generic[T, R, C]):
                     "Webhook received but no entity ID found",
                     webhook_payload.event,
                 )
+            if entity_type_id:
+                if webhook_payload.entity_type_id != entity_type_id:
+                    return self._error_response(
+                        status.HTTP_400_BAD_REQUEST,
+                        "Entity type ID mismatch",
+                        "TypeMismatchError",
+                    )
             await self.import_from_bitrix(entity_id, entity_type_id)
             return self._success_response(
                 f"{self.entity_name} {entity_id} processed successfully",
