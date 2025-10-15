@@ -18,6 +18,7 @@ class ContactClient(
         contact_bitrix_client: ContactBitrixClient,
         contact_repo: ContactRepository,
     ):
+        super().__init__()
         self._bitrix_client = contact_bitrix_client
         self._repo = contact_repo
 

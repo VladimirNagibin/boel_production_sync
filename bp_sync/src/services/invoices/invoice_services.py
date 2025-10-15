@@ -21,6 +21,7 @@ class InvoiceClient(
         invoice_bitrix_client: InvoiceBitrixClient,
         invoice_repo: InvoiceRepository,
     ):
+        super().__init__()
         self._bitrix_client = invoice_bitrix_client
         self._repo = invoice_repo
 

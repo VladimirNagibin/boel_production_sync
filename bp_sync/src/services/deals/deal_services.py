@@ -922,31 +922,31 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
                 "Unexpected error",
             )
 
-    def _success_response(self, message: str, event: str) -> JSONResponse:
-        """Успешный ответ"""
-        return JSONResponse(
-            status_code=status.HTTP_200_OK,
-            content={
-                "status": "success",
-                "message": message,
-                "event": event,
-                "timestamp": time.time(),
-            },
-        )
+    # def _success_response(self, message: str, event: str) -> JSONResponse:
+    #    """Успешный ответ"""
+    #    return JSONResponse(
+    #        status_code=status.HTTP_200_OK,
+    #        content={
+    #            "status": "success",
+    #            "message": message,
+    #            "event": event,
+    #            "timestamp": time.time(),
+    #        },
+    #    )
 
-    def _error_response(
-        self, status_code: int, message: str, error_type: str
-    ) -> JSONResponse:
-        """Ответ с ошибкой"""
-        return JSONResponse(
-            status_code=status_code,
-            content={
-                "status": "error",
-                "message": message,
-                "error_type": error_type,
-                "timestamp": time.time(),
-            },
-        )
+    # def _error_response(
+    #    self, status_code: int, message: str, error_type: str
+    # ) -> JSONResponse:
+    #    """Ответ с ошибкой"""
+    #    return JSONResponse(
+    #        status_code=status_code,
+    #        content={
+    #            "status": "error",
+    #            "message": message,
+    #            "error_type": error_type,
+    #            "timestamp": time.time(),
+    #        },
+    #    )
 
     def _concurrent_processing_response(
         self, deal_id: int, event: str

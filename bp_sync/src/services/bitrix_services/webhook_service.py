@@ -44,7 +44,7 @@ class WebhookService:
 
             logger.info(
                 f"Webhook processed: {validated_payload.event} "
-                f"for deal {validated_payload.deal_id}"
+                f"for entity {validated_payload.entity_id}"
             )
 
             return validated_payload

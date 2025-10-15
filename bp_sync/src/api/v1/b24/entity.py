@@ -4,18 +4,30 @@ from fastapi import APIRouter, Depends, Request, status
 from fastapi.responses import JSONResponse
 
 from core.logger import logger
-from services.deals.deal_services import DealClient
+from services.base_services.base_service import BaseEntityClient
+from services.companies.company_services import CompanyClient
 from services.dependencies import (
-    get_deal_client_dep,
+    get_company_client_dep,
 )
 
 entity_router = APIRouter(prefix="/entities")
 
 
-@entity_router.post("/handle-webhook")  # type: ignore
-async def handle_bitrix24_webhook(
+@entity_router.post("/handle-webhook/company")  # type: ignore
+async def handle_bitrix24_webhook_company(
     request: Request,
-    deal_client: DealClient = Depends(get_deal_client_dep),
+    company_client: CompanyClient = Depends(get_company_client_dep),
+) -> JSONResponse:
+    """
+    Обработчик вебхуков Bitrix24 для компаний
+    """
+    return await _handle_bitrix24_webhook(request, company_client)
+
+
+async def _handle_bitrix24_webhook(
+    request: Request,
+    entity_client: BaseEntityClient,  # type: ignore[type-arg]
+    entity_type_id: int | None = None,
 ) -> JSONResponse:
     """
     Обработчик вебхуков Bitrix24 для сделок
@@ -27,14 +39,14 @@ async def handle_bitrix24_webhook(
     """
     logger.info("Received Bitrix24 webhook request")
     try:
-        return await deal_client.deal_processing(request)
+        return await entity_client.entity_processing(request, entity_type_id)
     except Exception as e:
         logger.error(f"Unhandled error in webhook handler: {e}")
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={
                 "status": "fail",
-                "message": "Deal processing failed",
+                "message": "Entity processing failed",
                 "error": str(e),
                 "timestamp": time.time(),
             },
