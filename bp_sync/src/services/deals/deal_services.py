@@ -92,6 +92,7 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
         product_bitrix_client: ProductBitrixClient,
         lock_service: LockService,
     ):
+        super().__init__()
         self._bitrix_client = deal_bitrix_client
         self._repo = deal_repo
         self.timeline_comments_bitrix_client = timeline_comments_bitrix_client
