@@ -22,6 +22,7 @@ class CompanyClient(
         company_bitrix_client: CompanyBitrixClient,
         company_repo: CompanyRepository,
     ):
+        super().__init__()
         self._bitrix_client = company_bitrix_client
         self._repo = company_repo
 
