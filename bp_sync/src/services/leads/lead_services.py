@@ -1,10 +1,11 @@
-# from fastapi import Depends
+from typing import Any
 
+from core.settings import settings
 from models.lead_models import Lead as LeadDB
 
 from ..base_services.base_service import BaseEntityClient
-from .lead_bitrix_services import LeadBitrixClient  # , get_lead_bitrix_client
-from .lead_repository import LeadRepository  # , get_lead_repository
+from .lead_bitrix_services import LeadBitrixClient
+from .lead_repository import LeadRepository
 
 
 class LeadClient(BaseEntityClient[LeadDB, LeadRepository, LeadBitrixClient]):
@@ -28,9 +29,6 @@ class LeadClient(BaseEntityClient[LeadDB, LeadRepository, LeadBitrixClient]):
     def repo(self) -> LeadRepository:
         return self._repo
 
-
-# def get_lead_client(
-#    lead_bitrix_client: LeadBitrixClient = Depends(get_lead_bitrix_client),
-#    lead_repo: LeadRepository = Depends(get_lead_repository),
-# ) -> LeadClient:
-#    return LeadClient(lead_bitrix_client, lead_repo)
+    @property
+    def webhook_config(self) -> dict[str, Any]:
+        return settings.web_hook_config_lead

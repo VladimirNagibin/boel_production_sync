@@ -15,7 +15,8 @@ from schemas.deal_schemas import DealCreate, DealUpdate
 from schemas.invoice_schemas import InvoiceCreate, InvoiceUpdate
 from schemas.lead_schemas import LeadCreate
 from schemas.product_schemas import EntityTypeAbbr
-from services.bitrix_services.webhook_service import WebhookService
+
+# from services.bitrix_services.webhook_service import WebhookService
 from services.products.product_bitrix_services import ProductUpdateResult
 
 from ..base_services.base_service import BaseEntityClient
@@ -77,6 +78,7 @@ CONDITION_MOVING_STAGE = {
         "договора."
     ),
 }
+MAX_AGE = 300
 
 
 class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
@@ -102,7 +104,7 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
         self.site_order_handler = SiteOrderHandler(self)
         self.deal_with_invoice_handler = DealWithInvioceHandler(self)
         self.deal_source_handler = DealSourceHandler(self)
-        self.webhook_service = WebhookService()
+        # self.webhook_service = WebhookService()
         self.deal_ext_service = DealProcessingClient()
 
         self.retry_config: dict[str, Any] = {
@@ -124,6 +126,18 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
     @property
     def repo(self) -> DealRepository:
         return self._repo
+
+    @property
+    def webhook_config(self) -> dict[str, Any]:
+        return {
+            "allowed_events": set(
+                settings.web_hook_config.get("allowed_events", [])
+            ),
+            "expected_tokens": settings.web_hook_config.get(
+                "expected_tokens", {}
+            ),
+            "max_age": MAX_AGE,
+        }
 
     # deal report for the period
     async def _prepare_data_report(
@@ -204,7 +218,7 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
             if deal_db and deal_db.is_frozen:
                 return True
 
-            if self.update_tracker.has_changes() or changes:
+            if self.update_tracker.has_changes() or changes or not deal_db:
                 sync_result = await self._synchronize_deal_data(
                     deal_b24, deal_db, changes
                 )
@@ -520,7 +534,6 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
                         # self.update_tracker.update_field(
                         #    key, change["internal"], deal_b24
                         # )
-
             if deal_db:
                 await self.repo.update_entity(deal_update)
                 logger.debug(

@@ -111,7 +111,8 @@ async def check(
 
     if not id_entity:
         id_entity = 5543
-    result = await company_client.import_from_bitrix(id_entity)  # type: ignore
+    # result = await company_client.import_from_bitrix(id_entity)
+    # # type: ignore
     # await deal_client.deal_processing_(deal_id, 2)
     # await deal_client.deal_processing_(deal_id, 3)
     # await deal_client.deal_processing_(deal_id, 4)

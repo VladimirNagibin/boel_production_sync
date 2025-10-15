@@ -1,3 +1,5 @@
+from typing import Any
+
 import requests  # type: ignore[import-untyped]
 
 from core.logger import logger
@@ -33,6 +35,10 @@ class InvoiceClient(
     @property
     def repo(self) -> InvoiceRepository:
         return self._repo
+
+    @property
+    def webhook_config(self) -> dict[str, Any]:
+        return settings.web_hook_config_invoice
 
     def send_invoice_request_to_fail(self, invoice_id: int) -> bool:
         """
