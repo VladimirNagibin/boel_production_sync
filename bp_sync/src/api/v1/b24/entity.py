@@ -4,8 +4,10 @@ from fastapi import APIRouter, Depends, Request, status
 from fastapi.responses import JSONResponse
 
 from core.logger import logger
+from services.companies.company_services import CompanyClient
 from services.deals.deal_services import DealClient
 from services.dependencies import (
+    get_company_client_dep,
     get_deal_client_dep,
 )
 
@@ -16,6 +18,7 @@ entity_router = APIRouter(prefix="/entities")
 async def handle_bitrix24_webhook(
     request: Request,
     deal_client: DealClient = Depends(get_deal_client_dep),
+    company_client: CompanyClient = Depends(get_company_client_dep),
 ) -> JSONResponse:
     """
     Обработчик вебхуков Bitrix24 для сделок
@@ -27,14 +30,14 @@ async def handle_bitrix24_webhook(
     """
     logger.info("Received Bitrix24 webhook request")
     try:
-        return await deal_client.deal_processing(request)
+        return await company_client.entity_processing(request)
     except Exception as e:
         logger.error(f"Unhandled error in webhook handler: {e}")
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={
                 "status": "fail",
-                "message": "Deal processing failed",
+                "message": "Entity processing failed",
                 "error": str(e),
                 "timestamp": time.time(),
             },
