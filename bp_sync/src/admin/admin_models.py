@@ -404,7 +404,7 @@ class UserAdmin(BaseAdmin, model=User):  # type: ignore[call-arg]
     ]
     form_columns = [
         "external_id",
-        "full_name",
+        # "full_name",
     ]
     # form_ajax_refs = {
     #    "user": {
