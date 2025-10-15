@@ -125,7 +125,7 @@ class Settings(BaseSettings):  # type: ignore
     def web_hook_config_user(self) -> dict[str, Any]:
         return self.web_hook_config_entity(
             self.WEB_HOOK_USER_UPDATE_TOKEN,
-            {"ONCRMUSERUPDATE", "ONCRMUSERADD", "ONCRMUSERDELETE"},
+            {"ONUSERADD"},
         )
 
     @property
