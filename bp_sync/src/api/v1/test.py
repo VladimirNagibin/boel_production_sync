@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, status
 from fastapi.responses import JSONResponse
 
 from services.companies.company_bitrix_services import CompanyBitrixClient
+from services.companies.company_services import CompanyClient
 from services.contacts.contact_bitrix_services import ContactBitrixClient
 
 # from services.deals.deal_bitrix_services import (
@@ -13,6 +14,7 @@ from services.deals.deal_services import (
 )
 from services.dependencies import (
     get_company_bitrix_client_dep,
+    get_company_client_dep,
     get_contact_bitrix_client_dep,
     get_deal_client_dep,
     get_deal_repository_dep,
@@ -55,6 +57,7 @@ test_router = APIRouter(dependencies=[Depends(request_context)])
     description="Information about persistency redis.",
 )  # type: ignore
 async def check(
+    id_entity: int | str | None = None,
     measure_repo: MeasureRepository = Depends(get_measure_repository_dep),
     product_bitrix_client: ProductBitrixClient = Depends(
         get_product_bitrix_client_dep
@@ -62,6 +65,7 @@ async def check(
     company_bitrix_client: CompanyBitrixClient = Depends(
         get_company_bitrix_client_dep
     ),
+    company_client: CompanyClient = Depends(get_company_client_dep),
     contact_bitrix_client: ContactBitrixClient = Depends(
         get_contact_bitrix_client_dep
     ),
@@ -95,10 +99,20 @@ async def check(
     #    "start_time": start_time,
     #    "end_time": time.time(),
     # }
+    if not id_entity:
+        id_entity = 56731
 
-    deal_id = 54195  # 49935
     # comm = await get_comm(deal_id, timeline_client, timeline_repo)
-    result = await deal_client.handle_deal(deal_id)
+
+    result = await deal_client.handle_deal(id_entity)  # type: ignore
+    if result:
+        ...
+        print(f"{result}-------DEAL--UPDATE")
+
+    if not id_entity:
+        id_entity = 5543
+    # result = await company_client.import_from_bitrix(id_entity)
+    # # type: ignore
     # await deal_client.deal_processing_(deal_id, 2)
     # await deal_client.deal_processing_(deal_id, 3)
     # await deal_client.deal_processing_(deal_id, 4)
@@ -118,7 +132,7 @@ async def check(
     # result = await contact_bitrix_client.get(18281)
     if result:
         ...
-        print(f"{result}-------DEAL--UPDATE")
+        print(f"{result}-------COMPANY--UPDATE")
     # print(f"{products_deal}-------DEAL")
     # products_invoice = await product_bitrix_client.get_entity_products(
     #    26309, EntityTypeAbbr.INVOICE)

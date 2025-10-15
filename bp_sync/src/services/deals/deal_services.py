@@ -15,7 +15,8 @@ from schemas.deal_schemas import DealCreate, DealUpdate
 from schemas.invoice_schemas import InvoiceCreate, InvoiceUpdate
 from schemas.lead_schemas import LeadCreate
 from schemas.product_schemas import EntityTypeAbbr
-from services.bitrix_services.webhook_service import WebhookService
+
+# from services.bitrix_services.webhook_service import WebhookService
 from services.products.product_bitrix_services import ProductUpdateResult
 
 from ..base_services.base_service import BaseEntityClient
@@ -33,6 +34,7 @@ from ..timeline_comments.timeline_comment_bitrix_services import (
 )
 from .deal_bitrix_services import DealBitrixClient
 from .deal_data_provider import DealDataProvider
+from .deal_extend_processing import DealProcessingClient
 from .deal_lock_service import LockService
 from .deal_report_helpers import (
     create_dataframe,
@@ -76,6 +78,7 @@ CONDITION_MOVING_STAGE = {
         "договора."
     ),
 }
+MAX_AGE = 300
 
 
 class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
@@ -101,7 +104,8 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
         self.site_order_handler = SiteOrderHandler(self)
         self.deal_with_invoice_handler = DealWithInvioceHandler(self)
         self.deal_source_handler = DealSourceHandler(self)
-        self.webhook_service = WebhookService()
+        # self.webhook_service = WebhookService()
+        self.deal_ext_service = DealProcessingClient()
 
         self.retry_config: dict[str, Any] = {
             "max_retries": getattr(settings, "lock_max_retries", 3),
@@ -122,6 +126,18 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
     @property
     def repo(self) -> DealRepository:
         return self._repo
+
+    @property
+    def webhook_config(self) -> dict[str, Any]:
+        return {
+            "allowed_events": set(
+                settings.web_hook_config.get("allowed_events", [])
+            ),
+            "expected_tokens": settings.web_hook_config.get(
+                "expected_tokens", {}
+            ),
+            "max_age": MAX_AGE,
+        }
 
     # deal report for the period
     async def _prepare_data_report(
@@ -202,7 +218,7 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
             if deal_db and deal_db.is_frozen:
                 return True
 
-            if self.update_tracker.has_changes() or changes:
+            if self.update_tracker.has_changes() or changes or not deal_db:
                 sync_result = await self._synchronize_deal_data(
                     deal_b24, deal_db, changes
                 )
@@ -518,7 +534,6 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
                         # self.update_tracker.update_field(
                         #    key, change["internal"], deal_b24
                         # )
-
             if deal_db:
                 await self.repo.update_entity(deal_update)
                 logger.debug(
@@ -789,11 +804,14 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
             )
             return False
 
-    async def deal_processing(self, request: Request) -> JSONResponse:
+    async def deal_processing(
+        self,
+        request: Request,
+    ) -> JSONResponse:
         """
         Основной метод обработки вебхука сделки
         """
-        ADMIN_ID = 171
+        # ADMIN_ID = 171
         try:
             webhook_payload = await self.webhook_service.process_webhook(
                 request
@@ -812,9 +830,10 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
                     webhook_payload.event,
                 )
 
-            await self.bitrix_client.send_message_b24(
-                ADMIN_ID, f"START NEW PROCESS DEAL ID: {deal_id}"
-            )
+            # await self.bitrix_client.send_message_b24(
+            #    ADMIN_ID,
+            #    f"START NEW PROCESS DEAL ID: {deal_id} {webhook_payload.ts}",
+            # )
             try:
                 async with self.lock_service.acquire_deal_lock_with_retry(
                     deal_id,
@@ -828,6 +847,17 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
                     success = await self.handle_deal(deal_id)
 
                     if success:
+                        try:
+                            ext_service = self.deal_ext_service
+                            await ext_service.send_deal_processing_request(
+                                deal_id, int(webhook_payload.ts)
+                            )
+                        except HTTPException as e:
+                            logger.error(
+                                f"Failed to send deal processing request for "
+                                f"deal {deal_id}-{webhook_payload.ts}: "
+                                f"{str(e)}"
+                            )
                         return self._success_response(
                             f"Deal {deal_id} processed successfully",
                             webhook_payload.event,

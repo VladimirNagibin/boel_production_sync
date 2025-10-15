@@ -1,3 +1,5 @@
+from typing import Any
+
 import requests  # type: ignore[import-untyped]
 
 from core.logger import logger
@@ -34,13 +36,17 @@ class InvoiceClient(
     def repo(self) -> InvoiceRepository:
         return self._repo
 
+    @property
+    def webhook_config(self) -> dict[str, Any]:
+        return settings.web_hook_config_invoice
+
     def send_invoice_request_to_fail(self, invoice_id: int) -> bool:
         """
         Отправляет запрос к сервису для пометки счёта на удаление
         """
         url = (
             f"{settings.WEB_HOOK_PORTAL}/"
-            f"{settings.ENDPOINT_SERND_FAIL_INVOICE}?"
+            f"{settings.ENDPOINT_SEND_FAIL_INVOICE}?"
             f"id_invoice={invoice_id}&key={settings.WEB_HOOK_KEY}"
         )
 

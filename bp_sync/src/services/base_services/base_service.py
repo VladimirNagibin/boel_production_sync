@@ -4,6 +4,7 @@ from typing import Any, Generic, Protocol, TypeVar
 from core.logger import logger
 from models.bases import IntIdEntity
 
+from ..bitrix_services.webhook_service import WebhookService
 from ..exceptions import BitrixApiError, ConflictException, CyclicCallException
 
 ExternalIdType = TypeVar("ExternalIdType", int, str)
@@ -64,6 +65,22 @@ C = TypeVar("C", bound=BitrixClientProtocol)  # Тип для Bitrix клиен�
 class BaseEntityClient(ABC, Generic[T, R, C]):
     """Базовый сервис для работы с сущностями"""
 
+    def __init__(self) -> None:
+        self._webhook_service: WebhookService | None = None
+
+    @property
+    @abstractmethod
+    def webhook_config(self) -> dict[str, Any]:
+        """Конфигурация вебхука для конкретной сущности"""
+        pass
+
+    @property
+    def webhook_service(self) -> WebhookService:
+        """Сервис для обработки вебхуков с индивидуальной конфигурацией"""
+        if self._webhook_service is None:
+            self._webhook_service = WebhookService(**self.webhook_config)
+        return self._webhook_service
+
     @property
     @abstractmethod
     def entity_name(self) -> str:
@@ -91,7 +108,6 @@ class BaseEntityClient(ABC, Generic[T, R, C]):
 
         creation_cache = get_creation_cache()
         update_needed_cache = get_update_needed_cache()
-
         entity_key = (self.repo.model, entity_id)  # type: ignore[attr-defined]
         if entity_key in creation_cache.keys():
             raise CyclicCallException

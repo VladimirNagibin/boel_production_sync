@@ -25,9 +25,11 @@ class WebhookService:
         expected_tokens: dict[str, Any] = settings.web_hook_config.get(
             "expected_tokens", {}
         ),
+        max_age: int = MAX_AGE,
     ) -> None:
         self.allowed_events = allowed_events
         self.expected_tokens = expected_tokens
+        self.max_age = max_age
 
     async def process_webhook(self, request: Request) -> BitrixWebhookPayload:
         """
@@ -158,6 +160,6 @@ class WebhookService:
             timestamp = int(ts)
             current_time = int(time.time())
             age = abs(current_time - timestamp)
-            return age <= self.MAX_AGE
+            return age <= self.max_age
         except ValueError:
             return False

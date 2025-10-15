@@ -1,12 +1,13 @@
-# from fastapi import Depends
+from typing import Any
 
+from core.settings import settings
 from models.company_models import Company as CompanyDB
 
 from ..base_services.base_service import BaseEntityClient
-from .company_bitrix_services import (  # get_company_bitrix_client,
+from .company_bitrix_services import (
     CompanyBitrixClient,
 )
-from .company_repository import CompanyRepository  # , get_company_repository
+from .company_repository import CompanyRepository
 
 
 class CompanyClient(
@@ -36,11 +37,6 @@ class CompanyClient(
     def repo(self) -> CompanyRepository:
         return self._repo
 
-
-# def get_company_client(
-#    company_bitrix_client: CompanyBitrixClient = Depends(
-#        get_company_bitrix_client
-#    ),
-#    company_repo: CompanyRepository = Depends(get_company_repository),
-# ) -> CompanyClient:
-#    return CompanyClient(company_bitrix_client, company_repo)
+    @property
+    def webhook_config(self) -> dict[str, Any]:
+        return settings.web_hook_config_company

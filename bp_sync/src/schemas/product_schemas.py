@@ -12,6 +12,7 @@ from pydantic import (
 
 from .base_schemas import CommonFieldMixin, EntityAwareSchema
 from .fields import FIELDS_PRODUCT, FIELDS_PRODUCT_ALT
+from .helpers import parse_numeric_string
 
 
 class EntityTypeAbbr(StrEnum):
@@ -243,19 +244,19 @@ class BaseProduct(CommonFieldMixin):
         None,
         validation_alias=AliasChoices("PROPERTY_109", "property109"),
     )  # Артикул
-    remains_spb: int | None = Field(
+    remains_spb: float | None = Field(
         None,
         validation_alias=AliasChoices("PROPERTY_113", "property113"),
     )  # Остаток СПб
-    remains_kdr: int | None = Field(
+    remains_kdr: float | None = Field(
         None,
         validation_alias=AliasChoices("PROPERTY_115", "property115"),
     )  # Остаток Кдр
-    remains_msk: int | None = Field(
+    remains_msk: float | None = Field(
         None,
         validation_alias=AliasChoices("PROPERTY_117", "property117"),
     )  # Остаток Мск
-    remains_nsk: int | None = Field(
+    remains_nsk: float | None = Field(
         None,
         validation_alias=AliasChoices("PROPERTY_119", "property119"),
     )  # Остаток Нск
@@ -284,6 +285,13 @@ class BaseProduct(CommonFieldMixin):
         validation_alias=AliasChoices("PROPERTY_151", "property151"),
     )  # Группы товара для мотивации продаж
     # 75:A, 77:B, 79:C, 81:Товар месяца, 83:Не товар, 85:Искл
+
+    @field_validator(  # type: ignore[misc]
+        "price", "price_distributor", "price_minimal", mode="before"
+    )
+    @classmethod
+    def clean_other_numeric_fields(cls, v: Any) -> float | None:
+        return parse_numeric_string(v)
 
 
 class ProductCreate(BaseProduct, EntityAwareSchema):

@@ -1,12 +1,13 @@
-# from fastapi import Depends
+from typing import Any
 
+from core.settings import settings
 from models.contact_models import Contact as ContactDB
 
 from ..base_services.base_service import BaseEntityClient
-from .contact_bitrix_services import (  # get_contact_bitrix_client,
+from .contact_bitrix_services import (
     ContactBitrixClient,
 )
-from .contact_repository import ContactRepository  # , get_contact_repository
+from .contact_repository import ContactRepository
 
 
 class ContactClient(
@@ -32,11 +33,6 @@ class ContactClient(
     def repo(self) -> ContactRepository:
         return self._repo
 
-
-# def get_contact_client(
-#    contact_bitrix_client: ContactBitrixClient = Depends(
-#        get_contact_bitrix_client
-#    ),
-#    contact_repo: ContactRepository = Depends(get_contact_repository),
-# ) -> ContactClient:
-#    return ContactClient(contact_bitrix_client, contact_repo)
+    @property
+    def webhook_config(self) -> dict[str, Any]:
+        return settings.web_hook_config_contact

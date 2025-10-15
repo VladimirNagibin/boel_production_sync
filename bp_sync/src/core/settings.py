@@ -51,7 +51,8 @@ class Settings(BaseSettings):  # type: ignore
 
     WEB_HOOK_PORTAL: str = ""
     WEB_HOOK_KEY: str = ""
-    ENDPOINT_SERND_FAIL_INVOICE: str = ""
+    ENDPOINT_SEND_FAIL_INVOICE: str = ""
+    ENDPOINT_SEND_DEAL_STATUS: str = ""
     WEB_HOOK_DEAL_UPDATE_TOKEN: str = "token"
     WEB_HOOK_TEST: bool = True
     DEAL_ID_TEST: int = 1
@@ -59,6 +60,13 @@ class Settings(BaseSettings):  # type: ignore
     BOLASHAQ_BITRIX_PORTAL: str = "bolashaq"
     BOLASHAQ_WEB_HOOK_PRODUCT_UPDATE_TOKEN: str = "token"
     BOLASHAQ_WEB_HOOK_TOKEN: str = "/rest/token/"
+
+    WEB_HOOK_COMPANY_UPDATE_TOKEN: str = "company_update_token"
+    WEB_HOOK_CONTACT_UPDATE_TOKEN: str = "contact_update_token"
+    WEB_HOOK_USER_UPDATE_TOKEN: str = "user_update_token"
+    WEB_HOOK_LEAD_UPDATE_TOKEN: str = "lead_update_token"
+    WEB_HOOK_INVOICE_UPDATE_TOKEN: str = "invoice_update_token"
+    MAX_AGE_WEBHOOK: int = 300  # seconds, 5 minutes
 
     @property
     def dsn(self) -> str:
@@ -87,6 +95,52 @@ class Settings(BaseSettings):  # type: ignore
             ],
             "webhook_key": self.WEB_HOOK_KEY,
         }
+
+    def web_hook_config_entity(
+        self, token: str, events: set[str]
+    ) -> dict[str, Any]:
+        return {
+            "expected_tokens": {
+                token: self.BITRIX_PORTAL.replace("https://", "")
+            },
+            "allowed_events": events,
+            "max_age": self.MAX_AGE_WEBHOOK,
+        }
+
+    @property
+    def web_hook_config_company(self) -> dict[str, Any]:
+        return self.web_hook_config_entity(
+            self.WEB_HOOK_COMPANY_UPDATE_TOKEN,
+            {"ONCRMCOMPANYUPDATE", "ONCRMCOMPANYADD", "ONCRMCOMPANYDELETE"},
+        )
+
+    @property
+    def web_hook_config_contact(self) -> dict[str, Any]:
+        return self.web_hook_config_entity(
+            self.WEB_HOOK_CONTACT_UPDATE_TOKEN,
+            {"ONCRMCONTACTUPDATE", "ONCRMCONTACTADD", "ONCRMCONTACTDELETE"},
+        )
+
+    @property
+    def web_hook_config_user(self) -> dict[str, Any]:
+        return self.web_hook_config_entity(
+            self.WEB_HOOK_USER_UPDATE_TOKEN,
+            {"ONUSERADD"},
+        )
+
+    @property
+    def web_hook_config_lead(self) -> dict[str, Any]:
+        return self.web_hook_config_entity(
+            self.WEB_HOOK_LEAD_UPDATE_TOKEN,
+            {"ONCRMLEADUPDATE", "ONCRMLEADADD", "ONCRMLEADDELETE"},
+        )
+
+    @property
+    def web_hook_config_invoice(self) -> dict[str, Any]:
+        return self.web_hook_config_entity(
+            self.WEB_HOOK_INVOICE_UPDATE_TOKEN,
+            {"ONCRMINVOICEUPDATE", "ONCRMINVOICEADD", "ONCRMINVOICEDELETE"},
+        )
 
 
 settings = Settings()

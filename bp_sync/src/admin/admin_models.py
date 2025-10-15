@@ -1,4 +1,7 @@
+from typing import Type
+
 from sqladmin import Admin
+from wtforms import Form
 
 # from .mixins import AdminListAndDetailMixin
 from models.communications import (  # noqa: F401
@@ -36,8 +39,10 @@ from models.user_models import Manager, User  # noqa: F401
 
 from .base_admin import BaseAdmin
 from .company_admin_model import CompanyAdmin
+from .contact_admin_model import ContactAdmin
 from .deal_admin_model import DealAdmin
 from .deal_export_admin import DealExportAdmin
+from .invoice_admin_model import InvoiceAdmin
 
 # from wtforms import Form, StringField
 # from wtforms.validators import Optional
@@ -282,18 +287,27 @@ class DeliveryNoteAdmin(
 
 
 class ManagerAdmin(BaseAdmin, model=Manager):  # type: ignore[call-arg]
+
     name = "Менеджер"
     name_plural = "Менеджеры"
     category = "Сотрудники"
+    icon = "fa-solid fa-id-card"
+
     column_list = [  # Поля в списке
         "user_id",
+        "user",
         "is_active",
         "default_company_id",
+        "default_company",
+        "disk_id",
     ]
     column_labels = {  # Надписи полей в списке
         "user_id": "Код пользователя",
+        "user": "Пользователь",
         "is_active": "Менеджер активный",
-        "default_company_id": "Компания по умолчанию",
+        "default_company_id": "Код компании по умолчанию",
+        "default_company": "Компания по умолчанию",
+        "disk_id": "Код диска",
     }
     column_default_sort = [("user_id", True)]  # Сортировка по умолчанию
     column_sortable_list = [  # Список полей по которым возможна сортировка
@@ -306,26 +320,50 @@ class ManagerAdmin(BaseAdmin, model=Manager):  # type: ignore[call-arg]
         "default_company_id",
     ]
     form_columns = [
-        "user",
-        "is_active",
-        "default_company",
-    ]
-    form_ajax_refs = {
-        "user": {
-            "fields": ("name",),
-            "order_by": "name",
-        },
-        "default_company": {
-            "fields": ("title",),
-            "order_by": "title",
-        },
-    }
-    column_details_list = [
         "user_id",
         "is_active",
         "default_company_id",
-    ]  #
-    icon = "fa-solid fa-id-card"
+        "disk_id",
+    ]
+
+    # Переопределяем форму
+    form_include_pk = True
+
+    async def get_form(self) -> Type[Form]:
+        Form_class = await super().get_form()
+
+        # Получаем список компаний для выпадающего списка
+        # async with self.session_maker(expire_on_commit=False) as session:
+        #    result = await session.execute(select(Company))
+        #    companies = result.scalars().all()
+        #    choices = [(c.external_id, str(c)) for c in companies]
+
+        # Динамически добавляем choices к полю default_company_id
+        Form_class.default_company_id.kwargs["choices"] = []  # choices
+        Form_class.default_company_id.kwargs["coerce"] = int
+        Form_class.user_id.kwargs["choices"] = []  # choices
+        Form_class.user_id.kwargs["coerce"] = int
+        return Form_class  # type: ignore
+
+    # form_ajax_refs = {
+    #    "user": {
+    #        "fields": ("name",),
+    #        "order_by": "name",
+    #    },
+    #    "default_company": {
+    #        "fields": ("title","external_id"),
+    #        "order_by": "title",
+    #    },
+    # }
+
+    column_details_list = [
+        "user_id",
+        "user",
+        "is_active",
+        "default_company_id",
+        "default_company",
+        "disk_id",
+    ]
 
     """
     async def insert_model(
@@ -457,6 +495,28 @@ class AddInfoAdmin(BaseAdmin, model=AdditionalInfo):  # type: ignore[call-arg]
     icon = "fa-solid fa-note-sticky"
 
 
+class ContractAdmin(BaseAdmin, model=Contract):  # type: ignore[call-arg]
+    name = "Договор"
+    name_plural = "Договора"
+    category = "Бух документы"
+    column_list = [
+        "shipping_company",
+        "company",
+        "number_contract",
+        "date_contract",
+        "type_contract",
+        "is_deleted_in_bitrix",
+        "period_contract",
+    ]
+    form_columns = [
+        "type_contract",
+        "number_contract",
+        "date_contract",
+        "company",
+    ]
+    icon = "fa-solid fa-file-contract"
+
+
 """
 class ContactAdmin(BaseAdmin):
     column_list = ["name", "last_name", "post", "company", "created_at"]
@@ -511,14 +571,6 @@ class UserAdmin(BaseAdmin):
 
 
 # Документы
-class ContractAdmin(BaseAdmin):
-    column_list = [
-        "type_contract", "number_contract", "date_contract", "company"
-    ]
-    form_columns = [
-        "type_contract", "number_contract", "date_contract", "company"
-    ]
-    icon = "fa-solid fa-file-contract"
 
 
 class DeliveryNoteAdmin(BaseAdmin):
@@ -547,6 +599,10 @@ def register_models(admin: Admin) -> None:
     admin.add_view(AddInfoAdmin)
     admin.add_view(UserAdmin)
     admin.add_view(DealExportAdmin)
+    admin.add_view(ContractAdmin)
+    admin.add_view(ContactAdmin)
+    admin.add_view(InvoiceAdmin)
+
     """
     admin.add_view(ContactAdmin(Contact, name="Контакты"))
     admin.add_view(DealAdmin(Deal, name="Сделки"))
