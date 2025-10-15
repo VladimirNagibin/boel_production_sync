@@ -1,5 +1,6 @@
-# from fastapi import Depends
+from typing import Any
 
+from core.settings import settings
 from models.user_models import User as UserDB
 
 from ..base_services.base_service import BaseEntityClient
@@ -34,9 +35,6 @@ class UserClient(
     def repo(self) -> UserRepository:
         return self._repo
 
-
-# def get_user_client(
-#    user_bitrix_client: UserBitrixClient = Depends(get_user_bitrix_client),
-#    user_repo: UserRepository = Depends(get_user_repository),
-# ) -> UserClient:
-#    return UserClient(user_bitrix_client, user_repo)
+    @property
+    def webhook_config(self) -> dict[str, Any]:
+        return settings.web_hook_config_user

@@ -287,9 +287,6 @@ class DeliveryNoteAdmin(
 
 
 class ManagerAdmin(BaseAdmin, model=Manager):  # type: ignore[call-arg]
-    from sqladmin.forms import get_model_form
-    from sqlalchemy import select
-    from wtforms import SelectField
 
     name = "Менеджер"
     name_plural = "Менеджеры"
@@ -349,21 +346,16 @@ class ManagerAdmin(BaseAdmin, model=Manager):  # type: ignore[call-arg]
         return Form_class  # type: ignore
 
     # form_ajax_refs = {
-    #    "default_company": {
-    #        "fields": ("external_id",),  # Укажите поля для поиска
-    #        "order_by": "external_id",
-    #    }
-    # }
-    # form_ajax_refs = {
     #    "user": {
     #        "fields": ("name",),
     #        "order_by": "name",
     #    },
     #    "default_company": {
-    #        "fields": ("title",),
+    #        "fields": ("title","external_id"),
     #        "order_by": "title",
     #    },
     # }
+
     column_details_list = [
         "user_id",
         "user",

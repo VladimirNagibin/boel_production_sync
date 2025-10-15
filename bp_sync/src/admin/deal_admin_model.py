@@ -68,7 +68,7 @@ class DealAdmin(
     # Форматирование значений
     column_formatters: dict[str, Any] = {
         "title": AdminListAndDetailMixin.format_title,
-        "opportunity": AdminListAndDetailMixin.format_title,
+        "opportunity": AdminListAndDetailMixin.format_currency,
         "stage_semantic_id": _format_stage_semantic,
     }
 

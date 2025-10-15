@@ -1,3 +1,6 @@
+from typing import Any
+
+from core.settings import settings
 from models.company_models import Company as CompanyDB
 
 from ..base_services.base_service import BaseEntityClient
@@ -33,3 +36,7 @@ class CompanyClient(
     @property
     def repo(self) -> CompanyRepository:
         return self._repo
+
+    @property
+    def webhook_config(self) -> dict[str, Any]:
+        return settings.web_hook_config_company
