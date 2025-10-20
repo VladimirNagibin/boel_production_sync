@@ -177,7 +177,6 @@ class BaseBitrixEntityClient(Generic[SchemaTypeCreate, SchemaTypeUpdate]):
         params = self._prepare_params(
             entity_id=entity_id, data=data, entity_type_id=entity_type_id
         )
-
         response = await self.bitrix_client.call_api(
             method=method, params=params
         )

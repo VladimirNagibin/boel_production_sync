@@ -15,7 +15,7 @@ class ProductHandler(BaseBitrixClient):
 
     def __init__(self) -> None:
         super().__init__()
-        self.portal = settings.BOLASHAQ_BITRIX_PORTAL
+        self.portal: str = settings.BOLASHAQ_BITRIX_PORTAL
         self.webhook_service = WebhookService(
             {"ONCRMPRODUCTUPDATE", "ONCRMPRODUCTADD"},
             {settings.BOLASHAQ_WEB_HOOK_PRODUCT_UPDATE_TOKEN: self.portal},
@@ -25,7 +25,6 @@ class ProductHandler(BaseBitrixClient):
         """
         Основной метод обработки вебхука товаров
         """
-        # ADMIN_ID = 171
         try:
             logger.info("Starting product processing webhook")
 
