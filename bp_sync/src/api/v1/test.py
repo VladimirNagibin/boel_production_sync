@@ -105,6 +105,8 @@ async def check(
     # comm = await get_comm(deal_id, timeline_client, timeline_repo)
 
     result = await deal_client.handle_deal(id_entity)  # type: ignore
+
+    result = await deal_client.update_single_processing_status(int(id_entity))
     if result:
         ...
         print(f"{result}-------DEAL--UPDATE")

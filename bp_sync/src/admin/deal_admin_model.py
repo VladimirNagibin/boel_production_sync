@@ -35,6 +35,7 @@ class DealAdmin(
         "is_setting_source",
         "category",
         "stage_semantic_id",
+        "moved_date",
     ]
 
     @staticmethod
@@ -130,6 +131,7 @@ class DealAdmin(
         "is_deleted_in_bitrix",
         "is_frozen",
         "is_setting_source",
+        "moved_date",
     ]
     column_searchable_list = [  # Список полей по которым возможен поиск
         "external_id",
@@ -142,6 +144,7 @@ class DealAdmin(
         "is_deleted_in_bitrix",
         "is_frozen",
         "is_setting_source",
+        "moved_date",
     ]
     column_details_list = [  # Поля на форме просмотра
         "external_id",

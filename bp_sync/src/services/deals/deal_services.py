@@ -36,6 +36,7 @@ from .deal_bitrix_services import DealBitrixClient
 from .deal_data_provider import DealDataProvider
 from .deal_extend_processing import DealProcessingClient
 from .deal_lock_service import LockService
+from .deal_processing_status_service import DealProcessingStatusService
 from .deal_report_helpers import (
     create_dataframe,
     create_excel_file,
@@ -105,8 +106,8 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
         self.site_order_handler = SiteOrderHandler(self)
         self.deal_with_invoice_handler = DealWithInvioceHandler(self)
         self.deal_source_handler = DealSourceHandler(self)
-        # self.webhook_service = WebhookService()
         self.deal_ext_service = DealProcessingClient()
+        self.deal_processing_status_service = DealProcessingStatusService(self)
 
         self.retry_config: dict[str, Any] = {
             "max_retries": getattr(settings, "lock_max_retries", 3),
@@ -292,7 +293,6 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
             deal_update = DealUpdate(external_id=deal_b24.external_id)
             for key, value in changes.items():
                 setattr(deal_update, key, value["external"])
-            # print(deal_update)
             await self.bitrix_client.update(deal_update)
             return True
         except Exception:
@@ -937,32 +937,6 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
                 "Unexpected error",
             )
 
-    # def _success_response(self, message: str, event: str) -> JSONResponse:
-    #    """Успешный ответ"""
-    #    return JSONResponse(
-    #        status_code=status.HTTP_200_OK,
-    #        content={
-    #            "status": "success",
-    #            "message": message,
-    #            "event": event,
-    #            "timestamp": time.time(),
-    #        },
-    #    )
-
-    # def _error_response(
-    #    self, status_code: int, message: str, error_type: str
-    # ) -> JSONResponse:
-    #    """Ответ с ошибкой"""
-    #    return JSONResponse(
-    #        status_code=status_code,
-    #        content={
-    #            "status": "error",
-    #            "message": message,
-    #            "error_type": error_type,
-    #            "timestamp": time.time(),
-    #        },
-    #    )
-
     def _concurrent_processing_response(
         self, deal_id: int, event: str
     ) -> JSONResponse:
@@ -980,3 +954,35 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
                 "suggestion": "Please try again later",
             },
         )
+
+    async def update_processing_statuses(
+        self, relative_time: datetime | None = None
+    ) -> dict[str, int]:
+        """Обновляет статусы обработки сделок"""
+        try:
+            status_service = self.deal_processing_status_service
+            return await status_service.update_processing_statuses(
+                relative_time
+            )
+        except Exception as e:
+            logger.error(f"Error updating processing statuses: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to update processing statuses: {str(e)}",
+            )
+
+    async def update_single_processing_status(
+        self, deal_id: int, relative_time: datetime | None = None
+    ) -> bool:
+        """Обновляет статус обработки для одной сделки"""
+        try:
+            status_service = self.deal_processing_status_service
+            return await status_service.update_single_deal_status(
+                deal_id, relative_time
+            )
+        except Exception as e:
+            logger.error(f"Error updating single processing status: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to update single processing status: {str(e)}",
+            )
