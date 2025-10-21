@@ -376,6 +376,9 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
             return False
 
         current_stage = await self._get_current_stage_order(deal_b24)
+        current_stage_db = None
+        if deal_db:
+            current_stage_db = await self._get_current_stage_order(deal_db)
         if not current_stage:
             logger.error(
                 "Cannot determine current stage for deal "
@@ -409,7 +412,7 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
                 await self._send_message_unavailable_stage(
                     current_stage, available_stage, deal_b24
                 )
-            if current_stage < available_stage:
+            if current_stage_db and current_stage_db < available_stage:
                 self.update_tracker.update_field(
                     "moved_date", datetime.now(timezone.utc), deal_b24
                 )
