@@ -106,7 +106,7 @@ async def check(
 
     result = await deal_client.handle_deal(id_entity)  # type: ignore
 
-    result = await deal_client.update_single_processing_status(int(id_entity))
+    # result = await deal_client.update_single_processing_status(int(id_entity)
     if result:
         ...
         print(f"{result}-------DEAL--UPDATE")
