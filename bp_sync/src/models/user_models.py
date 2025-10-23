@@ -449,3 +449,4 @@ class Manager(Base):
         "Company", back_populates="default_manager"
     )
     disk_id: Mapped[int | None] = mapped_column(comment="ИД диска")
+    chat_id: Mapped[int | None] = mapped_column(comment="ИД служебного чата")

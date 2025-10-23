@@ -375,13 +375,21 @@ class BaseBitrixEntityClient(Generic[SchemaTypeCreate, SchemaTypeUpdate]):
         return self.create_schema.get_default_entity(external_id)
 
     @handle_bitrix_errors()
-    async def send_message_b24(self, user_id: int, message: str) -> bool:
-        """Получение товаров в сущности по ID"""
+    async def send_message_b24(
+        self, user_id: int, message: str, chat: bool = False
+    ) -> bool:
+        """Отправка сообщения пользователю в Битрикс24"""
         logger.debug(f"Sending message to {user_id}. Message: {message}")
-        params: dict[str, Any] = {
-            "user_id": user_id,
-            "message": message,
-        }
+        if chat:
+            params = {
+                "CHAT_ID": user_id,
+                "message": message,
+            }
+        else:
+            params = {
+                "user_id": user_id,
+                "message": message,
+            }
         try:
             response = await self.bitrix_client.call_api(
                 "im.message.add",
