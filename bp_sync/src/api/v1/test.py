@@ -114,8 +114,8 @@ async def check(
         ...
         print(f"{result}-------DEAL--UPDATE")
 
-    if not id_entity:
-        id_entity = 5543
+    # if not id_entity:
+    #     id_entity = 5543
     # result = await company_client.import_from_bitrix(id_entity)
     # # type: ignore
     # await deal_client.deal_processing_(deal_id, 2)
