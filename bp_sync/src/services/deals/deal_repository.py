@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from typing import Any, Callable, Coroutine, Sequence, Type
 
-from sqlalchemy import select
+from sqlalchemy import and_, select
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -409,7 +409,7 @@ class DealRepository(BaseRepository[DealDB, DealCreate, DealUpdate, int]):
             return result.scalar_one_or_none()  # type: ignore[no-any-return]
         except Exception as e:
             # Логирование ошибки
-            print(
+            logger.error(
                 "Ошибка при получении external_id по sort_order "
                 f"{sort_order}: {e}"
             )
@@ -427,7 +427,7 @@ class DealRepository(BaseRepository[DealDB, DealCreate, DealUpdate, int]):
             return result.scalar_one_or_none()  # type: ignore[no-any-return]
         except Exception as e:
             # Логирование ошибки
-            print(
+            logger.error(
                 "Ошибка при получении sort_order по external_id "
                 f"{external_id}: {e}"
             )
@@ -473,3 +473,45 @@ class DealRepository(BaseRepository[DealDB, DealCreate, DealUpdate, int]):
             ext_alt3_id=main_activity.ext_alt3_id,
             ext_alt4_id=main_activity.ext_alt4_id,
         )
+
+    async def get_deals_for_checking_processing_status(
+        self, current_time: datetime
+    ) -> list[DealDB]:
+        """Получает сделки для проверки статуса обработки"""
+        try:
+            first_stages = await self.get_first_four_stages()
+            if not first_stages:
+                logger.warning("No first stages found")
+                return []
+
+            # Получаем сделки для обновления
+            stmt = select(DealDB).where(
+                and_(
+                    DealDB.stage_id.in_(first_stages),
+                    DealDB.is_frozen.is_(False),
+                    DealDB.moved_date.is_not(None),
+                    DealDB.moved_date <= current_time,
+                )
+            )
+
+            result = await self.session.execute(stmt)
+            return result.scalars().all()  # type: ignore[no-any-return]
+        except SQLAlchemyError as e:
+            logger.error(f"Ошибка при получении сделок: {e}")
+            return []
+
+    async def get_first_four_stages(self) -> list[str]:
+        """Получает ID первых четырех стадий сделок"""
+        try:
+            stage_ids: list[str] = []
+            for i in range(1, 5):
+                external_id = await self.get_external_id_by_sort_order_stage(i)
+                if external_id:
+                    stage_ids.append(external_id)
+
+            logger.debug(f"Found first four stages: {stage_ids}")
+            return stage_ids
+
+        except Exception as e:
+            logger.error(f"Error getting first four stages: {e}")
+            return []

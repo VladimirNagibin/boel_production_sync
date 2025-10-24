@@ -35,6 +35,7 @@ class DealAdmin(
         "is_setting_source",
         "category",
         "stage_semantic_id",
+        "moved_date",
     ]
 
     @staticmethod
@@ -120,6 +121,7 @@ class DealAdmin(
         "shipping_company": "Фирма отгрузки",
         "warehouse": "Склад",
         "add_info": "Дополнительная информация",
+        "moved_date": "Дата перемещения сделки",
     }
     column_sortable_list = [  # Список полей по которым возможна сортировка
         "external_id",
@@ -129,6 +131,7 @@ class DealAdmin(
         "is_deleted_in_bitrix",
         "is_frozen",
         "is_setting_source",
+        "moved_date",
     ]
     column_searchable_list = [  # Список полей по которым возможен поиск
         "external_id",
@@ -141,6 +144,7 @@ class DealAdmin(
         "is_deleted_in_bitrix",
         "is_frozen",
         "is_setting_source",
+        "moved_date",
     ]
     column_details_list = [  # Поля на форме просмотра
         "external_id",
@@ -161,6 +165,7 @@ class DealAdmin(
         "last_activity_user",
         "begindate",
         "closedate",
+        "moved_date",
         "moved_time",
         "payment_deadline",
         "date_create",

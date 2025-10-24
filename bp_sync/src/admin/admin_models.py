@@ -300,6 +300,7 @@ class ManagerAdmin(BaseAdmin, model=Manager):  # type: ignore[call-arg]
         "default_company_id",
         "default_company",
         "disk_id",
+        "chat_id",
     ]
     column_labels = {  # Надписи полей в списке
         "user_id": "Код пользователя",
@@ -308,6 +309,7 @@ class ManagerAdmin(BaseAdmin, model=Manager):  # type: ignore[call-arg]
         "default_company_id": "Код компании по умолчанию",
         "default_company": "Компания по умолчанию",
         "disk_id": "Код диска",
+        "chat_id": "ИД служебного чата",
     }
     column_default_sort = [("user_id", True)]  # Сортировка по умолчанию
     column_sortable_list = [  # Список полей по которым возможна сортировка
@@ -324,6 +326,7 @@ class ManagerAdmin(BaseAdmin, model=Manager):  # type: ignore[call-arg]
         "is_active",
         "default_company_id",
         "disk_id",
+        "chat_id",
     ]
 
     # Переопределяем форму
@@ -363,6 +366,7 @@ class ManagerAdmin(BaseAdmin, model=Manager):  # type: ignore[call-arg]
         "default_company_id",
         "default_company",
         "disk_id",
+        "chat_id",
     ]
 
     """

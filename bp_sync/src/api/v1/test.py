@@ -104,13 +104,18 @@ async def check(
 
     # comm = await get_comm(deal_id, timeline_client, timeline_repo)
 
-    result = await deal_client.handle_deal(id_entity)  # type: ignore
+    # result = await deal_client.handle_deal(id_entity)  # type: ignore
+    message = "Список просрочки"
+    result = await company_bitrix_client.send_message_b24(
+        4883, message, chat=True
+    )
+    # result = await deal_client.update_single_processing_status(int(id_entity)
     if result:
         ...
         print(f"{result}-------DEAL--UPDATE")
 
-    if not id_entity:
-        id_entity = 5543
+    # if not id_entity:
+    #     id_entity = 5543
     # result = await company_client.import_from_bitrix(id_entity)
     # # type: ignore
     # await deal_client.deal_processing_(deal_id, 2)
