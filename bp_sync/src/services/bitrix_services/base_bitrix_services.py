@@ -380,6 +380,7 @@ class BaseBitrixEntityClient(Generic[SchemaTypeCreate, SchemaTypeUpdate]):
     ) -> bool:
         """Отправка сообщения пользователю в Битрикс24"""
         logger.debug(f"Sending message to {user_id}. Message: {message}")
+        params: dict[str, Any] = {}
         if chat:
             params = {
                 "CHAT_ID": user_id,
