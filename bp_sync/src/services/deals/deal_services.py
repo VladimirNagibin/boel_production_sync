@@ -1,3 +1,4 @@
+import asyncio
 import time
 from datetime import datetime, timezone
 from typing import Any
@@ -849,6 +850,11 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
                     webhook_payload.event,
                 )
 
+            if webhook_payload.event == "ONCRMDEALDELETE":
+                try:
+                    await self.repo.set_deleted_in_bitrix(deal_id)
+                except Exception:
+                    ...
             # await self.bitrix_client.send_message_b24(
             #    ADMIN_ID,
             #    f"START NEW PROCESS DEAL ID: {deal_id} {webhook_payload.ts}",
@@ -989,3 +995,119 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to update single processing status: {str(e)}",
             )
+
+    async def checking_deals(self) -> None:
+        """Основная функция обработки проверки всех сделок"""
+        last_id = 0
+        batch_number = 0
+
+        logger.info("Начата проверка всех сделок.")
+        try:
+            while True:
+                try:
+                    deals = await self.repo.get_deals_batch(last_id=last_id)
+                except Exception as e:
+                    logger.error(
+                        "Ошибка при получении пачки сделок (last_id=%s): %s",
+                        last_id,
+                        e,
+                        exc_info=True,
+                    )
+                    raise
+
+                if not deals:
+                    logger.info("Все сделки обработаны.")
+                    break
+
+                logger.info(
+                    "Обрабатывается пачка #%d, количество сделок: %d",
+                    batch_number,
+                    len(deals),
+                )
+
+                for deal in deals:
+                    await self._process_deal_data(deal)
+
+                last_id = deals[-1].external_id
+                batch_number += 1
+
+                await asyncio.sleep(0.1)
+            logger.info("Проверка сделок завершена успешно.")
+
+        except Exception as e:
+            logger.critical(
+                "Критическая ошибка в процессе проверки сделок: %s",
+                e,
+                exc_info=True,
+            )
+            raise
+
+    async def _process_deal_data(self, deal: DealDB) -> None:
+        """Обрабатывает данные одной сделки из БД."""
+        external_id = deal.external_id
+        logger.debug("Обработка сделки с external_id=%s", external_id)
+
+        try:
+            deal_b24 = await self.bitrix_client.get(external_id)
+            await asyncio.sleep(1)  # соблюдение рейт-лимитов API
+
+            if deal_b24.category_id != 0:
+                logger.info(
+                    "Обновление категории для сделки %s: новая категория %s",
+                    external_id,
+                    deal_b24.category_id,
+                )
+                await self._update_category_deal(
+                    external_id, deal_b24.category_id
+                )
+            else:
+                logger.debug(
+                    "Сделка %s имеет категорию 0 — пропуск.", external_id
+                )
+
+        except BitrixApiError as e:
+            if e.is_not_found_error():
+                logger.info(
+                    "Сделка %s не найдена в Б24 — помечена как удалённая.",
+                    external_id,
+                )
+                await self.repo.set_deleted_in_bitrix(external_id)
+            else:
+                logger.error(
+                    "Ошибка API Битрикс24 при обработке сделки %s: %s",
+                    external_id,
+                    e,
+                    exc_info=True,
+                )
+                raise
+        except Exception as e:
+            logger.error(
+                "Неожиданная ошибка при обработке сделки %s: %s",
+                external_id,
+                e,
+                exc_info=True,
+            )
+            raise
+
+    async def _update_category_deal(
+        self, external_id: int, category_id: int
+    ) -> None:
+        """Обновляет категорию сделки в локальной БД."""
+        try:
+            data: dict[str, Any] = {
+                "external_id": external_id,
+                "category_id": category_id,
+            }
+            deal_update = DealUpdate(**data)
+            await self.repo.update(deal_update)
+            logger.debug(
+                "Категория для сделки %s успешно обновлена в БД.", external_id
+            )
+        except Exception as e:
+            logger.error(
+                "Ошибка при обновлении категории сделки %s в БД: %s",
+                external_id,
+                e,
+                exc_info=True,
+            )
+            raise
