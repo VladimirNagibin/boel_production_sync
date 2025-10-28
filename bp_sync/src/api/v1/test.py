@@ -109,7 +109,9 @@ async def check(
     # result = await company_bitrix_client.send_message_b24(
     #    4883, message, chat=True
     # )
-    result = await deal_client.update_processing_statuses()
+    # result = await deal_client.update_processing_statuses()
+    await deal_client.checking_deals()
+    result = None
     if result:
         ...
         print(f"{result}-------DEAL--UPDATE")
