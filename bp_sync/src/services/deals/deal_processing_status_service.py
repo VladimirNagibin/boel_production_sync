@@ -53,7 +53,7 @@ class DealProcessingStatusService:
                 )
 
                 if old_status != new_status:
-                    """
+
                     deal.processing_status = new_status
                     updates.append(deal)
                     deal_data: dict[str, Any] = {
@@ -69,7 +69,7 @@ class DealProcessingStatusService:
                         stats["at_risk"] += 1
                     elif new_status == ProcessingStatusEnum.OVERDUE:
                         stats["overdue"] += 1
-                    """
+
                     logger.info(
                         f"Deal {deal.external_id}: {old_status} -> "
                         f"{new_status}, moved_date: {deal.moved_date}"
