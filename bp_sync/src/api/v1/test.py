@@ -110,12 +110,15 @@ async def check(
     # result = await company_bitrix_client.send_message_b24(
     #    4883, message, chat=True
     # )
-    result = await deal_client.update_processing_statuses()
+
+    result = await deal_client.get_formatted_data_overdue_deals()
+
+    print(result)
     # await deal_client.checking_deals()
     # result = None
     if result:
         ...
-        print(f"{result}-------DEAL--UPDATE")
+        # print(f"{result}-------DEAL--UPDATE")
 
     # if not id_entity:
     #     id_entity = 5543
@@ -140,7 +143,7 @@ async def check(
     # result = await contact_bitrix_client.get(18281)
     if result:
         ...
-        print(f"{result}-------COMPANY--UPDATE")
+        # print(f"{result}-------COMPANY--UPDATE")
     # print(f"{products_deal}-------DEAL")
     # products_invoice = await product_bitrix_client.get_entity_products(
     #    26309, EntityTypeAbbr.INVOICE)
