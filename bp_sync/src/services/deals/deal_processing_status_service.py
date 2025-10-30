@@ -2,7 +2,8 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, Generator
 
 from core.logger import logger
-from models.deal_models import Deal
+
+# from models.deal_models import Deal
 from models.enums import ProcessingStatusEnum
 from schemas.deal_schemas import DealUpdate
 
@@ -10,6 +11,7 @@ from ..helpers.date_servise import DateService
 from .deal_repository import DealRepository
 
 if TYPE_CHECKING:
+    from models.deal_models import Deal
 
     from .deal_services import DealClient
 
@@ -68,14 +70,6 @@ class DealProcessingStatusService:
                         f"crm.deal.update?id={external_id}"
                         f"&fields[UF_CRM_1750571370]={new_status}"
                     )
-                    # deal_data: dict[str, Any] = {
-                    #    "processing_status": new_status,
-                    #    "external_id": deal.external_id,
-                    # }
-                    # TODO: сделать пакетную загрузку
-                    # deal_update = DealUpdate(**deal_data)
-                    # await self.deal_client.bitrix_client.update(deal_update)
-                    # Обновляем статистику
                     stats["updated"] += 1
                     if new_status == ProcessingStatusEnum.AT_RISK:
                         stats["at_risk"] += 1
@@ -89,7 +83,6 @@ class DealProcessingStatusService:
 
             # Сохраняем изменения
             if updates:
-                """
                 repo.session.add_all(updates)
                 await repo.session.commit()
                 for commands_chunk in self._dict_chunks(commands):
@@ -100,8 +93,6 @@ class DealProcessingStatusService:
                     f"Successfully updated {stats['updated']} deals: "
                     f"{stats['at_risk']} AT_RISK, {stats['overdue']} OVERDUE"
                 )
-                """
-                ...
             else:
                 logger.info("No deals required status updates")
 
