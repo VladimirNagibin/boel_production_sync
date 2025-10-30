@@ -52,12 +52,6 @@ class DealProcessingStatusService:
             for deal in deals:
                 external_id = deal.external_id
                 old_status = deal.processing_status
-                # crutch
-                deal_b24 = await self.deal_client.bitrix_client.get(
-                    external_id
-                )
-                old_status = deal_b24.processing_status
-                # end
                 new_status = await self._calculate_new_status(
                     deal.moved_date, current_time
                 )
