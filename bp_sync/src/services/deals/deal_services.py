@@ -998,7 +998,7 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
 
     async def checking_deals(self) -> None:
         """
-        Основная функция обработки проверки всех сделок на удаление и воронку
+        Функция обработки проверки всех сделок на удаление и воронку
         """
         last_id = 0
         batch_number = 0
@@ -1113,3 +1113,110 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
                 exc_info=True,
             )
             raise
+
+    def transform_overdue_deals_data(
+        self, deals_db: list[DealDB]
+    ) -> dict[str, list[dict[str, Any]]]:
+        """
+        Преобразует данные сделок в структурированный формат
+
+        Returns:
+            dict: {
+                "Имя Фамилия": [
+                    {
+                        "stage": "Название стадии",
+                        "link": "ссылка",
+                        "opportunity": 1000.0,
+                        "external_id": 123
+                    }
+                ]
+            }
+        """
+        deals_by_user: dict[str, list[dict[str, Any]]] = {}
+
+        for deal in deals_db:
+            try:
+                user_name = deal.assigned_user.full_name
+                deal_link = self.bitrix_client.get_formatted_link(
+                    deal.external_id, deal.title
+                )
+
+                deal_data: dict[str, Any] = {
+                    "stage": deal.stage.name,
+                    "link": deal_link,
+                    "opportunity": deal.opportunity,
+                    "external_id": deal.external_id,
+                    "moved_date": deal.moved_date,
+                }
+
+                if user_name not in deals_by_user:
+                    deals_by_user[user_name] = []
+
+                deals_by_user[user_name].append(deal_data)
+
+            except Exception as e:
+                logger.error(
+                    f"Error transforming deal {deal.external_id}: {e}"
+                )
+                continue
+
+        return deals_by_user
+
+    async def get_formatted_data_overdue_deals(self) -> str:
+        """
+        Форматирует данные о просроченных сделках в читаемое сообщение
+        """
+        try:
+            deals = await self.repo.get_overdue_deals()
+
+            if not deals:
+                return "Нет просроченных сделок"
+
+            deals_data = self.transform_overdue_deals_data(deals)
+
+            if not deals_data:
+                return "Нет данных для отображения"
+
+            message_parts: list[str] = []
+
+            for user_name, user_deals in deals_data.items():
+                message_parts.append(f" {user_name}")
+
+                for deal in user_deals:
+                    # Вычисляем дни просрочки
+                    overdue_days = self._calculate_overdue_days(
+                        deal["moved_date"]
+                    )
+
+                    message_parts.append(
+                        f"   • Стадия: {deal['stage']}, "
+                        f"Сумма: {deal['opportunity']:,.2f}, "
+                        f"Просрочено: {overdue_days} дн. "
+                        f"{deal['link']}"
+                    )
+
+                message_parts.append("")  # Пустая строка между пользователями
+            await self.bitrix_client.send_message_b24(
+                171, "\n".join(message_parts)
+            )
+            return "\n".join(message_parts)
+
+        except Exception as e:
+            logger.error(f"Error formatting overdue deals data: {e}")
+            return f"Ошибка при формировании данных: {str(e)}"
+
+    def _calculate_overdue_days(self, moved_date: datetime) -> int:
+        """Вычисляет количество дней просрочки"""
+        try:
+            if not moved_date:
+                return 0
+
+            now = datetime.now(timezone.utc)
+            # Нормализуем даты для корректного сравнения
+            moved_date_normalized = moved_date.replace(tzinfo=timezone.utc)
+            days_diff = (now - moved_date_normalized).days
+
+            return max(0, days_diff)  # Не отрицательное значение
+        except Exception as e:
+            logger.error(f"Error calculating overdue days: {e}")
+            return 0

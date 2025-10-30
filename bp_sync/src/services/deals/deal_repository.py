@@ -555,7 +555,10 @@ class DealRepository(BaseRepository[DealDB, DealCreate, DealUpdate, int]):
         return result.scalars().all()  # type: ignore[no-any-return]
 
     async def get_overdue_deals(self) -> list[DealDB]:
-        """Получает сделки с просроченным статусом обработки"""
+        """
+        Получает сделки с просроченным статусом обработки
+        (только на первых 4 стадиях).
+        """
         try:
             first_stages = await self.get_first_four_stages()
             if not first_stages:
