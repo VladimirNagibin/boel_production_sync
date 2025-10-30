@@ -997,7 +997,9 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
             )
 
     async def checking_deals(self) -> None:
-        """Основная функция обработки проверки всех сделок"""
+        """
+        Основная функция обработки проверки всех сделок на удаление и воронку
+        """
         last_id = 0
         batch_number = 0
 

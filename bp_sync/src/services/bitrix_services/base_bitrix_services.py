@@ -417,3 +417,18 @@ class BaseBitrixEntityClient(Generic[SchemaTypeCreate, SchemaTypeUpdate]):
         self, external_id: int | str | None, titlt: str
     ) -> str:
         return f"[url={self.get_link(external_id)}]{titlt}[/url]"
+
+    @handle_bitrix_errors()
+    async def execute_batch(
+        self, commands: dict[str, Any], halt: int = 0
+    ) -> Any:
+        """Выполняет батч-запрос с обработкой ошибок"""
+        method = "batch"
+        params: dict[str, Any] = {"halt": halt, "cmd": commands}
+        response = await self.bitrix_client.call_api(
+            method=method, params=params
+        )
+
+        result = self._handle_response(response, method)
+
+        return result

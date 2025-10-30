@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Generator
 
 from core.logger import logger
 from models.deal_models import Deal
@@ -46,8 +46,16 @@ class DealProcessingStatusService:
             if not deals:
                 return stats
             updates: list[Deal] = []
+            commands: dict[str, Any] = {}
             for deal in deals:
+                external_id = deal.external_id
                 old_status = deal.processing_status
+                # crutch
+                deal_b24 = await self.deal_client.bitrix_client.get(
+                    external_id
+                )
+                old_status = deal_b24.processing_status
+                # end
                 new_status = await self._calculate_new_status(
                     deal.moved_date, current_time
                 )
@@ -56,13 +64,17 @@ class DealProcessingStatusService:
 
                     deal.processing_status = new_status
                     updates.append(deal)
-                    deal_data: dict[str, Any] = {
-                        "processing_status": new_status,
-                        "external_id": deal.external_id,
-                    }
+                    commands[f"update_deal_{external_id}"] = (
+                        f"crm.deal.update?id={external_id}"
+                        f"&fields[UF_CRM_1750571370]={new_status}"
+                    )
+                    # deal_data: dict[str, Any] = {
+                    #    "processing_status": new_status,
+                    #    "external_id": deal.external_id,
+                    # }
                     # TODO: сделать пакетную загрузку
-                    deal_update = DealUpdate(**deal_data)
-                    await self.deal_client.bitrix_client.update(deal_update)
+                    # deal_update = DealUpdate(**deal_data)
+                    # await self.deal_client.bitrix_client.update(deal_update)
                     # Обновляем статистику
                     stats["updated"] += 1
                     if new_status == ProcessingStatusEnum.AT_RISK:
@@ -77,12 +89,19 @@ class DealProcessingStatusService:
 
             # Сохраняем изменения
             if updates:
+                """
                 repo.session.add_all(updates)
                 await repo.session.commit()
+                for commands_chunk in self._dict_chunks(commands):
+                    bitrix_client = self.deal_client.bitrix_client
+                    result = await bitrix_client.execute_batch(commands_chunk)
+                    logger.info(f"Successfully updated in B24: {result}")
                 logger.info(
                     f"Successfully updated {stats['updated']} deals: "
                     f"{stats['at_risk']} AT_RISK, {stats['overdue']} OVERDUE"
                 )
+                """
+                ...
             else:
                 logger.info("No deals required status updates")
 
@@ -164,3 +183,11 @@ class DealProcessingStatusService:
             await self.deal_client.repo.session.rollback()
             logger.error(f"Error updating single deal {deal_id} status: {e}")
             return False
+
+    def _dict_chunks(
+        self, dictionary: dict[str, Any], chunk_size: int = 50
+    ) -> Generator[dict[str, Any], None, None]:
+        """Генератор, который возвращает части словаря по одной"""
+        items = list(dictionary.items())
+        for i in range(0, len(items), chunk_size):
+            yield dict(items[i : i + chunk_size])
