@@ -4,7 +4,7 @@ from typing import Any, Callable, Coroutine, Sequence, Type
 from sqlalchemy import and_, select
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import joinedload, load_only, selectinload
 
 from core.logger import logger
 from db.postgres import Base
@@ -14,6 +14,7 @@ from models.contact_models import Contact as ContactDB
 from models.deal_models import AdditionalInfo as AddInfoDB
 from models.deal_models import Deal as DealDB
 from models.delivery_note_models import DeliveryNote
+from models.enums import ProcessingStatusEnum
 from models.invoice_models import Invoice as InvoiceDB
 from models.lead_models import Lead as LeadDB
 from models.references import (
@@ -489,6 +490,7 @@ class DealRepository(BaseRepository[DealDB, DealCreate, DealUpdate, int]):
                 and_(
                     DealDB.stage_id.in_(first_stages),
                     DealDB.is_frozen.is_(False),
+                    DealDB.is_deleted_in_bitrix.is_(False),
                     DealDB.moved_date.is_not(None),
                     DealDB.moved_date <= current_time,
                 )
@@ -514,4 +516,78 @@ class DealRepository(BaseRepository[DealDB, DealCreate, DealUpdate, int]):
 
         except Exception as e:
             logger.error(f"Error getting first four stages: {e}")
+            return []
+
+    async def get_deals_batch(
+        self,
+        batch_size: int = 1000,
+        last_id: int = 0,
+        filters: dict[str, Any] | None = None,
+    ) -> Sequence[DealDB]:
+        """Оптимизированная выборка только необходимых полей"""
+
+        # Базовый запрос с минимальной загрузкой
+        stmt = (
+            select(DealDB)
+            .where(DealDB.external_id > last_id)
+            .order_by(DealDB.external_id)
+            .limit(batch_size)
+            .options(
+                load_only(
+                    DealDB.external_id,
+                    DealDB.category_id,
+                    # DealDB.opportunity,
+                    # DealDB.stage_id,
+                    # DealDB.closedate
+                )
+            )
+        )
+
+        if filters:
+            if filters.get("stage_id"):
+                stmt = stmt.where(DealDB.stage_id == filters["stage_id"])
+            if filters.get("closed") is not None:
+                stmt = stmt.where(DealDB.closed == filters["closed"])
+            if filters.get("date_from"):
+                stmt = stmt.where(DealDB.closedate >= filters["date_from"])
+
+        result = await self.session.execute(stmt)
+        return result.scalars().all()  # type: ignore[no-any-return]
+
+    async def get_overdue_deals(self) -> list[DealDB]:
+        """
+        Получает сделки с просроченным статусом обработки
+        (только на первых 4 стадиях).
+        """
+        try:
+            first_stages = await self.get_first_four_stages()
+            if not first_stages:
+                logger.warning("No first stages found")
+                return []
+
+            # Получаем сделки для обновления
+            stmt = (
+                select(DealDB)
+                .options(joinedload(DealDB.assigned_user))
+                .options(joinedload(DealDB.stage))
+                .where(
+                    and_(
+                        DealDB.stage_id.in_(first_stages),
+                        DealDB.is_frozen.is_(False),
+                        DealDB.is_deleted_in_bitrix.is_(False),
+                        DealDB.processing_status
+                        == (ProcessingStatusEnum.OVERDUE),
+                    )
+                )
+                .order_by(
+                    DealDB.assigned_by_id.asc(),
+                    DealDB.stage_id.asc(),
+                    DealDB.moved_date.asc(),
+                    DealDB.opportunity.desc(),
+                )
+            )
+            result = await self.session.execute(stmt)
+            return result.scalars().all()  # type: ignore[no-any-return]
+        except SQLAlchemyError as e:
+            logger.error(f"Ошибка при получении сделок: {e}")
             return []

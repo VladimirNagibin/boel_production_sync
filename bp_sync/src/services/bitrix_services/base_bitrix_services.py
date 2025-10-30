@@ -1,6 +1,6 @@
 from typing import Any, Generic, Type, TypeVar
 
-from fastapi import HTTPException, status
+from fastapi import status
 
 from core.logger import logger
 from core.settings import settings
@@ -87,15 +87,22 @@ class BaseBitrixEntityClient(Generic[SchemaTypeCreate, SchemaTypeUpdate]):
 
         if not result:
             error = response.get("error", "Unknown error")
+            error_description = response.get(
+                "error_description", "Unknown error"
+            )
             entity_ref = f"ID={entity_id}" if entity_id else ""
             logger.error(
                 f"Failed to {action} {self.entity_name} {entity_ref}: {error}"
             )
 
             if action == "get":
-                raise HTTPException(
+                raise BitrixApiError(
                     status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"{self.entity_name.capitalize()} not found",
+                    error=(
+                        f"Failed to {action} {self.entity_name} {entity_ref}: "
+                        f"{error}"
+                    ),
+                    error_description=error_description,
                 )
 
             raise BitrixApiError(
@@ -380,6 +387,7 @@ class BaseBitrixEntityClient(Generic[SchemaTypeCreate, SchemaTypeUpdate]):
     ) -> bool:
         """Отправка сообщения пользователю в Битрикс24"""
         logger.debug(f"Sending message to {user_id}. Message: {message}")
+        params: dict[str, Any] = {}
         if chat:
             params = {
                 "CHAT_ID": user_id,
@@ -409,3 +417,18 @@ class BaseBitrixEntityClient(Generic[SchemaTypeCreate, SchemaTypeUpdate]):
         self, external_id: int | str | None, titlt: str
     ) -> str:
         return f"[url={self.get_link(external_id)}]{titlt}[/url]"
+
+    @handle_bitrix_errors()
+    async def execute_batch(
+        self, commands: dict[str, Any], halt: int = 0
+    ) -> Any:
+        """Выполняет батч-запрос с обработкой ошибок"""
+        method = "batch"
+        params: dict[str, Any] = {"halt": halt, "cmd": commands}
+        response = await self.bitrix_client.call_api(
+            method=method, params=params
+        )
+
+        result = self._handle_response(response, method)
+
+        return result

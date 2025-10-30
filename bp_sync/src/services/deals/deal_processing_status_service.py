@@ -1,8 +1,9 @@
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Generator
 
 from core.logger import logger
-from models.deal_models import Deal
+
+# from models.deal_models import Deal
 from models.enums import ProcessingStatusEnum
 from schemas.deal_schemas import DealUpdate
 
@@ -10,6 +11,7 @@ from ..helpers.date_servise import DateService
 from .deal_repository import DealRepository
 
 if TYPE_CHECKING:
+    from models.deal_models import Deal
 
     from .deal_services import DealClient
 
@@ -46,30 +48,29 @@ class DealProcessingStatusService:
             if not deals:
                 return stats
             updates: list[Deal] = []
+            commands: dict[str, Any] = {}
             for deal in deals:
+                external_id = deal.external_id
                 old_status = deal.processing_status
                 new_status = await self._calculate_new_status(
                     deal.moved_date, current_time
                 )
 
                 if old_status != new_status:
+
                     deal.processing_status = new_status
                     updates.append(deal)
-                    deal_data: dict[str, Any] = {
-                        "processing_status": new_status,
-                        "external_id": deal.external_id,
-                    }
-                    # TODO: сделать пакетную загрузку
-                    deal_update = DealUpdate(**deal_data)
-                    await self.deal_client.bitrix_client.update(deal_update)
-                    # Обновляем статистику
+                    commands[f"update_deal_{external_id}"] = (
+                        f"crm.deal.update?id={external_id}"
+                        f"&fields[UF_CRM_1750571370]={new_status}"
+                    )
                     stats["updated"] += 1
                     if new_status == ProcessingStatusEnum.AT_RISK:
                         stats["at_risk"] += 1
                     elif new_status == ProcessingStatusEnum.OVERDUE:
                         stats["overdue"] += 1
 
-                    logger.debug(
+                    logger.info(
                         f"Deal {deal.external_id}: {old_status} -> "
                         f"{new_status}, moved_date: {deal.moved_date}"
                     )
@@ -78,6 +79,10 @@ class DealProcessingStatusService:
             if updates:
                 repo.session.add_all(updates)
                 await repo.session.commit()
+                for commands_chunk in self._dict_chunks(commands):
+                    bitrix_client = self.deal_client.bitrix_client
+                    result = await bitrix_client.execute_batch(commands_chunk)
+                    logger.info(f"Successfully updated in B24: {result}")
                 logger.info(
                     f"Successfully updated {stats['updated']} deals: "
                     f"{stats['at_risk']} AT_RISK, {stats['overdue']} OVERDUE"
@@ -163,3 +168,11 @@ class DealProcessingStatusService:
             await self.deal_client.repo.session.rollback()
             logger.error(f"Error updating single deal {deal_id} status: {e}")
             return False
+
+    def _dict_chunks(
+        self, dictionary: dict[str, Any], chunk_size: int = 50
+    ) -> Generator[dict[str, Any], None, None]:
+        """Генератор, который возвращает части словаря по одной"""
+        items = list(dictionary.items())
+        for i in range(0, len(items), chunk_size):
+            yield dict(items[i : i + chunk_size])

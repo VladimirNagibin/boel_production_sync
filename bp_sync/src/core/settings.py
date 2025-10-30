@@ -90,8 +90,8 @@ class Settings(BaseSettings):  # type: ignore
             },
             "allowed_events": [
                 "ONCRMDEALUPDATE",
-                # "ONCRMDEALADD",
-                # "ONCRMDEALDELETE",
+                "ONCRMDEALADD",
+                "ONCRMDEALDELETE",
             ],
             "webhook_key": self.WEB_HOOK_KEY,
         }
