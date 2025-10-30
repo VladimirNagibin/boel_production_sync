@@ -193,3 +193,44 @@ async def handle_bitrix24_webhook_raw(
                 "timestamp": time.time(),
             },
         )
+
+
+@deals_router.get(
+    "/status-deals",
+    summary="Update deal processing statuses",
+    description=(
+        "Process and update deal processing statuses based on moved_date."
+    ),
+)  # type: ignore
+async def status_deals(
+    deal_client: DealClient = Depends(get_deal_client_dep),
+) -> JSONResponse:
+    """
+    Endpoint для обновления статусов обработки сделок
+    """
+    logger.info("Start processing deal statuses")
+    try:
+        result = await deal_client.update_processing_statuses()
+
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={
+                "status": "success",
+                "message": "Deal processing completed successfully",
+                "data": result,
+                "timestamp": time.time(),
+            },
+        )
+
+    except Exception as e:
+        logger.error(f"Unhandled error in deal status processing: {e}")
+
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={
+                "status": "error",
+                "message": "Deal processing failed",
+                "error": str(e),
+                "timestamp": time.time(),
+            },
+        )
