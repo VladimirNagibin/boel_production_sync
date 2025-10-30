@@ -4,7 +4,7 @@ from typing import Any, Callable, Coroutine, Sequence, Type
 from sqlalchemy import and_, select
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import load_only, selectinload
+from sqlalchemy.orm import joinedload, load_only, selectinload
 
 from core.logger import logger
 from db.postgres import Base
@@ -14,6 +14,7 @@ from models.contact_models import Contact as ContactDB
 from models.deal_models import AdditionalInfo as AddInfoDB
 from models.deal_models import Deal as DealDB
 from models.delivery_note_models import DeliveryNote
+from models.enums import ProcessingStatusEnum
 from models.invoice_models import Invoice as InvoiceDB
 from models.lead_models import Lead as LeadDB
 from models.references import (
@@ -552,3 +553,38 @@ class DealRepository(BaseRepository[DealDB, DealCreate, DealUpdate, int]):
 
         result = await self.session.execute(stmt)
         return result.scalars().all()  # type: ignore[no-any-return]
+
+    async def get_overdue_deals(self) -> list[DealDB]:
+        """Получает сделки с просроченным статусом обработки"""
+        try:
+            first_stages = await self.get_first_four_stages()
+            if not first_stages:
+                logger.warning("No first stages found")
+                return []
+
+            # Получаем сделки для обновления
+            stmt = (
+                select(DealDB)
+                .options(joinedload(DealDB.assigned_user))
+                .options(joinedload(DealDB.stage))
+                .where(
+                    and_(
+                        DealDB.stage_id.in_(first_stages),
+                        DealDB.is_frozen.is_(False),
+                        DealDB.is_deleted_in_bitrix.is_(False),
+                        DealDB.processing_status
+                        == (ProcessingStatusEnum.OVERDUE),
+                    )
+                )
+                .order_by(
+                    DealDB.assigned_by_id.asc(),
+                    DealDB.stage_id.asc(),
+                    DealDB.moved_date.asc(),
+                    DealDB.opportunity.desc(),
+                )
+            )
+            result = await self.session.execute(stmt)
+            return result.scalars().all()  # type: ignore[no-any-return]
+        except SQLAlchemyError as e:
+            logger.error(f"Ошибка при получении сделок: {e}")
+            return []
