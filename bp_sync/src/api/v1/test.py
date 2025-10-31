@@ -111,11 +111,11 @@ async def check(
     #    4883, message, chat=True
     # )
 
-    result = await deal_client.get_formatted_data_overdue_deals()
+    await deal_client.send_notifications_overdue_deals()
 
-    print(result)
+    # print(result)
     # await deal_client.checking_deals()
-    # result = None
+    result = None
     if result:
         ...
         # print(f"{result}-------DEAL--UPDATE")

@@ -1,5 +1,9 @@
+import base64
+import mimetypes
 from typing import Any
+from urllib.parse import urlparse
 
+import requests  # type: ignore[import-untyped]
 from fastapi import Request, status
 from fastapi.responses import JSONResponse
 
@@ -89,7 +93,8 @@ class ProductHandler(BaseBitrixClient):
 
             # Формируем поля для обновления
             update_fields = await self._prepare_update_fields(product_data)
-
+            update_image = await self._prepare_update_image(product_data)
+            update_fields.update(update_image)
             if not update_fields:
                 logger.debug(f"No fields to update for product {product_id}")
                 return True
@@ -264,6 +269,47 @@ class ProductHandler(BaseBitrixClient):
             logger.error(f"Error parsing text to HTML: {str(e)}")
             return f"<strong>{title}</strong><p>{text}</p>"
 
+    async def _prepare_update_image(
+        self, product_data: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Подготовка полей для обновления"""
+        try:
+            preview_pictures: dict[str, Any] | None = product_data.get(
+                "DETAIL_PICTURE", {}
+            )
+            if isinstance(preview_pictures, dict):
+                if int(preview_pictures.get("id", 0)) > 0:
+                    return {}
+            galery_pictures: list[dict[str, Any]] | None = product_data.get(
+                "PROPERTY_101", []
+            )
+            fields: dict[str, Any] = {}
+            if isinstance(galery_pictures, list) and galery_pictures:
+                picture_data_id = (
+                    galery_pictures[0].get("value", {}).get("id", 0)
+                )
+                if int(picture_data_id) > 0:
+                    link = (
+                        f"https://{self.portal}"
+                        f"{settings.BOLASHAQ_WEB_HOOK_TOKEN}"
+                        "catalog.product.download?fields%5BfieldName%5D="
+                        f"property101&fields%5BfileId%5D={picture_data_id}&"
+                        f"fields%5BproductId%5D={product_data.get('ID',0)}"
+                    )
+                    image = self.download_image_from_url(link)
+                    if image:
+                        fields["DETAIL_PICTURE"] = {
+                            "fileData": [
+                                image["filename"],
+                                image["file_content_base64"],
+                            ]
+                        }
+                        return fields
+            return {}
+        except Exception as e:
+            logger.warning(f"Error extracting field PREVIEW_PICTURE: {str(e)}")
+            return {}
+
     async def _update_product(
         self, product_id: int, fields: dict[str, Any]
     ) -> bool:
@@ -313,6 +359,45 @@ class ProductHandler(BaseBitrixClient):
                 "error_type": error_type,
             },
         )
+
+    def download_image_from_url(self, image_url: str) -> dict[str, Any] | None:
+        """
+        Скачивает изображение по URL и возвращает данные для загрузки
+
+        Returns:
+            dict: {'content': base64, 'filename': str, 'content_type': str}
+        """
+        try:
+            response = requests.get(image_url, timeout=30)
+            response.raise_for_status()
+
+            # Определяем тип контента и расширение файла
+            content_type = response.headers.get("content-type", "image/jpeg")
+            extension = mimetypes.guess_extension(content_type) or ".jpg"
+
+            # Получаем имя файла из URL
+            parsed_url = urlparse(image_url)
+            filename = parsed_url.path.split("/")[-1] or f"image{extension}"
+
+            # Если в имени файла нет расширения, добавляем его
+            if "." not in filename:
+                filename += extension
+
+            # Кодируем в base64
+            file_content_base64 = base64.b64encode(response.content).decode(
+                "utf-8"
+            )
+
+            return {
+                "content": file_content_base64,
+                "filename": filename,
+                "content_type": content_type,
+                "file_size": len(response.content),
+            }
+
+        except Exception as e:
+            print(f"❌ Error downloading image from {image_url}: {e}")
+            return None
 
 
 def get_products_service() -> ProductHandler:
