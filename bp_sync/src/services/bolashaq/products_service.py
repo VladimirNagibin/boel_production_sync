@@ -1,7 +1,8 @@
 import base64
 import mimetypes
+import re
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
 
 import requests  # type: ignore[import-untyped]
 from fastapi import Request, status
@@ -98,7 +99,6 @@ class ProductHandler(BaseBitrixClient):
             if not update_fields:
                 logger.debug(f"No fields to update for product {product_id}")
                 return True
-
             # Обновляем товар
             success = await self._update_product(product_id, update_fields)
 
@@ -252,6 +252,7 @@ class ProductHandler(BaseBitrixClient):
 
             for line in lines:
                 # Экранируем специальные HTML символы
+                line = line.replace("<br>", "")
                 escaped_line = (
                     line.replace("&", "&amp;")
                     .replace("<", "&lt;")
@@ -301,7 +302,7 @@ class ProductHandler(BaseBitrixClient):
                         fields["DETAIL_PICTURE"] = {
                             "fileData": [
                                 image["filename"],
-                                image["file_content_base64"],
+                                image["content"],
                             ]
                         }
                         return fields
@@ -370,14 +371,15 @@ class ProductHandler(BaseBitrixClient):
         try:
             response = requests.get(image_url, timeout=30)
             response.raise_for_status()
-
+            print(f"{response.headers}=================")
             # Определяем тип контента и расширение файла
             content_type = response.headers.get("content-type", "image/jpeg")
             extension = mimetypes.guess_extension(content_type) or ".jpg"
-
-            # Получаем имя файла из URL
-            parsed_url = urlparse(image_url)
-            filename = parsed_url.path.split("/")[-1] or f"image{extension}"
+            print(f"{content_type}::{extension}")
+            filename = (
+                self._extract_filename_from_response(response, image_url)
+                or f"image{extension}"
+            )
 
             # Если в имени файла нет расширения, добавляем его
             if "." not in filename:
@@ -398,6 +400,50 @@ class ProductHandler(BaseBitrixClient):
         except Exception as e:
             print(f"❌ Error downloading image from {image_url}: {e}")
             return None
+
+    def _extract_filename_from_response(
+        self, response: requests.Response, fallback_url: str
+    ) -> str | None:
+        """
+        Извлекает имя файла из HTTP response
+
+        Приоритет:
+        1. Content-Disposition header (filename*)
+        2. Content-Disposition header (filename)
+        3. URL path
+        """
+        headers = response.headers
+
+        # 1. Пробуем извлечь из Content-Disposition (filename*)
+        content_disposition = headers.get("Content-Disposition", "")
+        if content_disposition:
+            # Ищем filename* (с кодировкой)
+            match = re.search(
+                r"filename\*=([^;]+)", content_disposition, re.IGNORECASE
+            )
+            if match:
+                filename = match.group(1).strip()
+                filename = filename.strip("\"'")
+                if filename.lower().startswith("utf-8''"):
+                    return unquote(filename[7:])
+                return unquote(filename)
+
+            # Ищем обычный filename
+            match = re.search(
+                r"filename=([^;]+)", content_disposition, re.IGNORECASE
+            )
+            if match:
+                filename = match.group(1).strip()
+                filename = filename.strip("\"'")
+                return unquote(filename)
+
+        # 2. Пробуем извлечь из URL
+        parsed_url = urlparse(fallback_url)
+        url_filename = parsed_url.path.split("/")[-1]
+        if url_filename and "." in url_filename:
+            return url_filename
+
+        return None
 
 
 def get_products_service() -> ProductHandler:
