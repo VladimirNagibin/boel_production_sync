@@ -568,8 +568,12 @@ class DealRepository(BaseRepository[DealDB, DealCreate, DealUpdate, int]):
             # Получаем сделки для обновления
             stmt = (
                 select(DealDB)
-                .options(joinedload(DealDB.assigned_user))
-                .options(joinedload(DealDB.stage))
+                .options(
+                    joinedload(DealDB.assigned_user).joinedload(
+                        UserDB.manager
+                    ),
+                    joinedload(DealDB.stage),
+                )
                 .where(
                     and_(
                         DealDB.stage_id.in_(first_stages),
