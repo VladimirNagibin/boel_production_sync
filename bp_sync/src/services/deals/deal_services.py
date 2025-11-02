@@ -82,7 +82,6 @@ CONDITION_MOVING_STAGE = {
     ),
 }
 MAX_AGE = 300
-CHAT_SUPERVISOR = 4883
 
 
 class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
@@ -1119,10 +1118,12 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
     async def send_notifications_overdue_deals(
         self,
         notification_scope: int = NotificationScopeEnum.SUPERVISOR,
-        chat_supervisor: int = CHAT_SUPERVISOR,
+        chat_supervisor: int = settings.CHAT_SUPERVISOR,
+        type_chat_supervisor: bool = settings.TYPE_CHAT_SUPERVISOR,
     ) -> None:
         deal_processing_status_service = self.deal_processing_status_service
         await deal_processing_status_service.send_notifications_overdue_deals(
             notification_scope,
             chat_supervisor,
+            type_chat_supervisor,
         )

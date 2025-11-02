@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, Generator
 
 from core.logger import logger
+from core.settings import settings
 from models.enums import ProcessingStatusEnum
 from schemas.deal_schemas import DealUpdate
 
@@ -15,7 +16,6 @@ if TYPE_CHECKING:
     from .deal_services import DealClient
 
 CHUNK_SIZE = 50
-CHAT_SUPERVISOR = 4883
 
 
 class DealProcessingStatusService:
@@ -182,21 +182,24 @@ class DealProcessingStatusService:
     async def send_notifications_overdue_deals(
         self,
         notification_scope: int = NotificationScopeEnum.SUPERVISOR,
-        chat_supervisor: int = CHAT_SUPERVISOR,
+        chat_supervisor: int = settings.CHAT_SUPERVISOR,
+        type_chat_supervisor: bool = settings.TYPE_CHAT_SUPERVISOR,
     ) -> None:
-        notifications = await self.get_formatted_data_overdue_deals(
+        notifications = await self._get_formatted_data_overdue_deals(
             notification_scope,
             chat_supervisor,
+            type_chat_supervisor,
         )
         for notification in notifications:
             await self.deal_client.bitrix_client.send_message_b24(
                 *notification
             )
 
-    async def get_formatted_data_overdue_deals(
+    async def _get_formatted_data_overdue_deals(
         self,
         notification_scope: int = NotificationScopeEnum.SUPERVISOR,
-        chat_supervisor: int = CHAT_SUPERVISOR,
+        chat_supervisor: int = settings.CHAT_SUPERVISOR,
+        type_chat_supervisor: bool = settings.TYPE_CHAT_SUPERVISOR,
     ) -> list[tuple[int, str, bool]]:
         """
         Форматирует данные о просроченных сделках в читаемое сообщение и
@@ -212,9 +215,15 @@ class DealProcessingStatusService:
             if not deals:
                 # logger
                 if send_supervisor:
-                    return [(chat_supervisor, "Нет просроченных сделок", True)]
+                    return [
+                        (
+                            chat_supervisor,
+                            "Нет просроченных сделок",
+                            type_chat_supervisor,
+                        )
+                    ]
                 return []
-            deals_data = await self.transform_overdue_deals_data(deals)
+            deals_data = await self._transform_overdue_deals_data(deals)
             if not deals_data:
                 # logger
                 if send_supervisor:
@@ -222,7 +231,7 @@ class DealProcessingStatusService:
                         (
                             chat_supervisor,
                             "Нет данных для отображения просроченных сделок",
-                            True,
+                            type_chat_supervisor,
                         )
                     ]
                 return []
@@ -249,7 +258,11 @@ class DealProcessingStatusService:
                 if message_parts:
                     message_all = "\n".join(message_parts)
                     notifications.append(
-                        (chat_supervisor, f"{title}\n{message_all}", True)
+                        (
+                            chat_supervisor,
+                            f"{title}\n{message_all}",
+                            type_chat_supervisor,
+                        )
                     )
             return notifications
 
@@ -260,12 +273,12 @@ class DealProcessingStatusService:
                     (
                         chat_supervisor,
                         f"Error formatting overdue deals data: {e}",
-                        True,
+                        type_chat_supervisor,
                     )
                 ]
             return []
 
-    async def transform_overdue_deals_data(
+    async def _transform_overdue_deals_data(
         self, deals_db: list["DealDB"]
     ) -> dict[tuple[str, int | None, int], list[dict[str, Any]]]:
         """
