@@ -2,7 +2,7 @@ import base64
 import mimetypes
 import re
 from typing import Any
-from urllib.parse import unquote, urlparse
+from urllib.parse import unquote
 
 import requests  # type: ignore[import-untyped]
 from fastapi import Request, status
@@ -371,11 +371,9 @@ class ProductHandler(BaseBitrixClient):
         try:
             response = requests.get(image_url, timeout=30)
             response.raise_for_status()
-            print(f"{response.headers}=================")
             # Определяем тип контента и расширение файла
             content_type = response.headers.get("content-type", "image/jpeg")
             extension = mimetypes.guess_extension(content_type) or ".jpg"
-            print(f"{content_type}::{extension}")
             filename = (
                 self._extract_filename_from_response(response, image_url)
                 or f"image{extension}"
@@ -438,10 +436,10 @@ class ProductHandler(BaseBitrixClient):
                 return unquote(filename)
 
         # 2. Пробуем извлечь из URL
-        parsed_url = urlparse(fallback_url)
-        url_filename = parsed_url.path.split("/")[-1]
-        if url_filename and "." in url_filename:
-            return url_filename
+        # parsed_url = urlparse(fallback_url)
+        # url_filename = parsed_url.path.split("/")[-1]
+        # if url_filename and "." in url_filename:
+        #    return url_filename
 
         return None
 

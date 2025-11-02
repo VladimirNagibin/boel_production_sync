@@ -112,11 +112,11 @@ async def check(
     #    4883, message, chat=True
     # )
 
-    # await deal_client.send_notifications_overdue_deals()
-    result = await product_hundler._transformation_fields(2177)
+    await deal_client.send_notifications_overdue_deals()
+    # result = await product_hundler._transformation_fields(2177)
     # print(result)
     # await deal_client.checking_deals()
-    # result = None
+    result = None
     if result:
         ...
         # print(f"{result}-------DEAL--UPDATE")
