@@ -29,6 +29,8 @@ from services.timeline_comments.timeline_comment_repository import (
     TimelineCommentRepository,
 )
 
+from ..deps import verify_api_key
+
 deals_router = APIRouter(prefix="/deals")
 
 
@@ -206,6 +208,7 @@ async def handle_bitrix24_webhook_raw(
 )  # type: ignore
 async def status_deals(
     deal_client: DealClient = Depends(get_deal_client_dep),
+    verify_api_key: str = Depends(verify_api_key),
 ) -> JSONResponse:
     """
     Endpoint для обновления статусов обработки сделок
@@ -257,9 +260,10 @@ async def send_overdue_deals_notifications(
         None, description="Supervisor chat ID (must be positive integer)"
     ),
     type_chat_supervisor: bool | None = Query(
-        None, description="Type supervisor chat (True - chat, Falsr - message)"
+        None, description="Type supervisor chat (True - chat, False - message)"
     ),
     deal_client: DealClient = Depends(get_deal_client_dep),
+    verify_api_key: str = Depends(verify_api_key),
 ) -> JSONResponse:
     """
     Send notifications about overdue deals with parameter validation
