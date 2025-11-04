@@ -392,10 +392,12 @@ class UserAdmin(BaseAdmin, model=User):  # type: ignore[call-arg]
     column_list = [  # Поля в списке
         "external_id",
         "full_name",
+        "active",
     ]
     column_labels = {  # Надписи полей в списке
         "external_id": "Код пользователя",
         "full_name": "Имя",
+        "active": "Активный",
     }
     column_default_sort = [("external_id", True)]  # Сортировка по умолчанию
     column_sortable_list = [  # Список полей по которым возможна сортировка
@@ -408,7 +410,7 @@ class UserAdmin(BaseAdmin, model=User):  # type: ignore[call-arg]
     ]
     form_columns = [
         "external_id",
-        # "full_name",
+        "active",
     ]
     # form_ajax_refs = {
     #    "user": {
@@ -423,6 +425,7 @@ class UserAdmin(BaseAdmin, model=User):  # type: ignore[call-arg]
     column_details_list = [
         "external_id",
         "full_name",
+        "active",
     ]  #
     icon = "fa-solid fa-user"
 
