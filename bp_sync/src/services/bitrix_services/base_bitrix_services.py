@@ -429,6 +429,4 @@ class BaseBitrixEntityClient(Generic[SchemaTypeCreate, SchemaTypeUpdate]):
             method=method, params=params
         )
 
-        result = self._handle_response(response, method)
-
-        return result
+        return self._handle_response(response, method)

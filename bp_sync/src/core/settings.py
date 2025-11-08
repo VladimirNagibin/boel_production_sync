@@ -67,6 +67,8 @@ class Settings(BaseSettings):  # type: ignore
     WEB_HOOK_LEAD_UPDATE_TOKEN: str = "lead_update_token"
     WEB_HOOK_INVOICE_UPDATE_TOKEN: str = "invoice_update_token"
     MAX_AGE_WEBHOOK: int = 300  # seconds, 5 minutes
+    CHAT_SUPERVISOR: int = 115
+    TYPE_CHAT_SUPERVISOR: bool = False
 
     @property
     def dsn(self) -> str:

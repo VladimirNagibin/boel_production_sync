@@ -1,13 +1,13 @@
 from fastapi import APIRouter, Depends, status
 from fastapi.responses import JSONResponse
 
+from services.bolashaq.products_service import (
+    ProductHandler,
+    get_products_service,
+)
 from services.companies.company_bitrix_services import CompanyBitrixClient
 from services.companies.company_services import CompanyClient
 from services.contacts.contact_bitrix_services import ContactBitrixClient
-
-# from services.deals.deal_bitrix_services import (
-#    DealBitrixClient,
-# )
 from services.deals.deal_repository import DealRepository
 from services.deals.deal_services import (
     DealClient,
@@ -85,6 +85,7 @@ async def check(
     timeline_repo: TimelineCommentRepository = Depends(
         get_timeline_comment_repository_dep
     ),
+    product_hundler: ProductHandler = Depends(get_products_service),
 ) -> JSONResponse:
     # import asyncio
     # import os
@@ -111,11 +112,11 @@ async def check(
     #    4883, message, chat=True
     # )
 
-    result = await deal_client.get_formatted_data_overdue_deals()
-
-    print(result)
+    await deal_client.send_notifications_overdue_deals()
+    # result = await product_hundler._transformation_fields(2177)
+    # print(result)
     # await deal_client.checking_deals()
-    # result = None
+    result = None
     if result:
         ...
         # print(f"{result}-------DEAL--UPDATE")

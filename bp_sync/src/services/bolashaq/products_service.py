@@ -1,5 +1,10 @@
+import base64
+import mimetypes
+import re
 from typing import Any
+from urllib.parse import unquote
 
+import requests  # type: ignore[import-untyped]
 from fastapi import Request, status
 from fastapi.responses import JSONResponse
 
@@ -89,11 +94,11 @@ class ProductHandler(BaseBitrixClient):
 
             # Формируем поля для обновления
             update_fields = await self._prepare_update_fields(product_data)
-
+            update_image = await self._prepare_update_image(product_data)
+            update_fields.update(update_image)
             if not update_fields:
                 logger.debug(f"No fields to update for product {product_id}")
                 return True
-
             # Обновляем товар
             success = await self._update_product(product_id, update_fields)
 
@@ -247,6 +252,7 @@ class ProductHandler(BaseBitrixClient):
 
             for line in lines:
                 # Экранируем специальные HTML символы
+                line = line.replace("<br>", "")
                 escaped_line = (
                     line.replace("&", "&amp;")
                     .replace("<", "&lt;")
@@ -263,6 +269,47 @@ class ProductHandler(BaseBitrixClient):
         except Exception as e:
             logger.error(f"Error parsing text to HTML: {str(e)}")
             return f"<strong>{title}</strong><p>{text}</p>"
+
+    async def _prepare_update_image(
+        self, product_data: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Подготовка полей для обновления"""
+        try:
+            preview_pictures: dict[str, Any] | None = product_data.get(
+                "DETAIL_PICTURE", {}
+            )
+            if isinstance(preview_pictures, dict):
+                if int(preview_pictures.get("id", 0)) > 0:
+                    return {}
+            galery_pictures: list[dict[str, Any]] | None = product_data.get(
+                "PROPERTY_101", []
+            )
+            fields: dict[str, Any] = {}
+            if isinstance(galery_pictures, list) and galery_pictures:
+                picture_data_id = (
+                    galery_pictures[0].get("value", {}).get("id", 0)
+                )
+                if int(picture_data_id) > 0:
+                    link = (
+                        f"https://{self.portal}"
+                        f"{settings.BOLASHAQ_WEB_HOOK_TOKEN}"
+                        "catalog.product.download?fields%5BfieldName%5D="
+                        f"property101&fields%5BfileId%5D={picture_data_id}&"
+                        f"fields%5BproductId%5D={product_data.get('ID',0)}"
+                    )
+                    image = self.download_image_from_url(link)
+                    if image:
+                        fields["DETAIL_PICTURE"] = {
+                            "fileData": [
+                                image["filename"],
+                                image["content"],
+                            ]
+                        }
+                        return fields
+            return {}
+        except Exception as e:
+            logger.warning(f"Error extracting field PREVIEW_PICTURE: {str(e)}")
+            return {}
 
     async def _update_product(
         self, product_id: int, fields: dict[str, Any]
@@ -313,6 +360,88 @@ class ProductHandler(BaseBitrixClient):
                 "error_type": error_type,
             },
         )
+
+    def download_image_from_url(self, image_url: str) -> dict[str, Any] | None:
+        """
+        Скачивает изображение по URL и возвращает данные для загрузки
+
+        Returns:
+            dict: {'content': base64, 'filename': str, 'content_type': str}
+        """
+        try:
+            response = requests.get(image_url, timeout=30)
+            response.raise_for_status()
+            # Определяем тип контента и расширение файла
+            content_type = response.headers.get("content-type", "image/jpeg")
+            extension = mimetypes.guess_extension(content_type) or ".jpg"
+            filename = (
+                self._extract_filename_from_response(response, image_url)
+                or f"image{extension}"
+            )
+
+            # Если в имени файла нет расширения, добавляем его
+            if "." not in filename:
+                filename += extension
+
+            # Кодируем в base64
+            file_content_base64 = base64.b64encode(response.content).decode(
+                "utf-8"
+            )
+
+            return {
+                "content": file_content_base64,
+                "filename": filename,
+                "content_type": content_type,
+                "file_size": len(response.content),
+            }
+
+        except Exception as e:
+            print(f"❌ Error downloading image from {image_url}: {e}")
+            return None
+
+    def _extract_filename_from_response(
+        self, response: requests.Response, fallback_url: str
+    ) -> str | None:
+        """
+        Извлекает имя файла из HTTP response
+
+        Приоритет:
+        1. Content-Disposition header (filename*)
+        2. Content-Disposition header (filename)
+        3. URL path
+        """
+        headers = response.headers
+
+        # 1. Пробуем извлечь из Content-Disposition (filename*)
+        content_disposition = headers.get("Content-Disposition", "")
+        if content_disposition:
+            # Ищем filename* (с кодировкой)
+            match = re.search(
+                r"filename\*=([^;]+)", content_disposition, re.IGNORECASE
+            )
+            if match:
+                filename = match.group(1).strip()
+                filename = filename.strip("\"'")
+                if filename.lower().startswith("utf-8''"):
+                    return unquote(filename[7:])
+                return unquote(filename)
+
+            # Ищем обычный filename
+            match = re.search(
+                r"filename=([^;]+)", content_disposition, re.IGNORECASE
+            )
+            if match:
+                filename = match.group(1).strip()
+                filename = filename.strip("\"'")
+                return unquote(filename)
+
+        # 2. Пробуем извлечь из URL
+        # parsed_url = urlparse(fallback_url)
+        # url_filename = parsed_url.path.split("/")[-1]
+        # if url_filename and "." in url_filename:
+        #    return url_filename
+
+        return None
 
 
 def get_products_service() -> ProductHandler:

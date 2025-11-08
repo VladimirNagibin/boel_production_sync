@@ -182,3 +182,9 @@ class InvoiceStage(StrEnum):
     SEND = "DT31_1:S"
     SECCESS = "DT31_1:P"
     FAIL = "DT31_1:D"
+
+
+class NotificationScopeEnum(IntEnum):
+    ALL = 0
+    SUPERVISOR = 1
+    MANAGERS = 2
