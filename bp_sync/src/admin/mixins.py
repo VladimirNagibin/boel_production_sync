@@ -36,6 +36,6 @@ class AdminListAndDetailMixin:
 
     @staticmethod
     def format_date(model: Any, attribute: str) -> str:
-        """Форматирование суммы"""
+        """Форматирование даты"""
         value = getattr(model, attribute, None)
         return value.strftime("%d.%m.%Y") if value else "-"
