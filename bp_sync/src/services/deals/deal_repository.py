@@ -137,6 +137,7 @@ class DealRepository(BaseRepository[DealDB, DealCreate, DealUpdate, int]):
                 .where(
                     DealDB.date_create >= start_date,
                     DealDB.date_create <= end_date_plus_one,
+                    DealDB.is_deleted_in_bitrix.is_(False),
                 )
                 .options(
                     # Загрузка отношений для Deal
