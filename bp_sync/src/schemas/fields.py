@@ -387,7 +387,9 @@ FIELDS_BY_TYPE_ALT: dict[str, Any] = {
         "mgo_cc_create",
         "mgo_cc_end",
         # lead
-        "birthdate" "date_closed" "date_last_shipment",
+        "birthdate",
+        "date_closed",
+        "date_last_shipment",
     ],
     "float": [
         # deal
