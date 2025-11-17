@@ -495,6 +495,7 @@ class DealRepository(BaseRepository[DealDB, DealCreate, DealUpdate, int]):
                     DealDB.is_deleted_in_bitrix.is_(False),
                     DealDB.moved_date.is_not(None),
                     DealDB.moved_date <= current_time,
+                    DealDB.category_id == 0,
                 )
             )
 
@@ -583,6 +584,7 @@ class DealRepository(BaseRepository[DealDB, DealCreate, DealUpdate, int]):
                         DealDB.is_deleted_in_bitrix.is_(False),
                         DealDB.processing_status
                         == (ProcessingStatusEnum.OVERDUE),
+                        DealDB.category_id == 0,
                     )
                 )
                 .order_by(
