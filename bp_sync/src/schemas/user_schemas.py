@@ -88,6 +88,7 @@ class BaseManager(CommonFieldMixin):
 
     default_company_id: int | None = Field(default=None)
     disk_id: int | None = Field(default=None)
+    chat_id: int | None = Field(default=None)
 
 
 class ManagerCreate(BaseManager):
