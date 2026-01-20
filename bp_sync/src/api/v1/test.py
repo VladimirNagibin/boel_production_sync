@@ -102,8 +102,11 @@ async def check(
     # }
 
     if not id_entity:
-        id_entity = 56731
+        id_entity = 28287
+    from schemas.invoice_schemas import InvoiceUpdate
 
+    inv = InvoiceUpdate(external_id=id_entity, is_loaded=True)
+    await invoice_client.bitrix_client.update(inv)
     # comm = await get_comm(deal_id, timeline_client, timeline_repo)
 
     # result = await deal_client.handle_deal(id_entity)  # type: ignore
@@ -112,7 +115,7 @@ async def check(
     #    4883, message, chat=True
     # )
 
-    await deal_client.send_notifications_overdue_deals()
+    # await deal_client.send_notifications_overdue_deals()
     # result = await product_hundler._transformation_fields(2177)
     # print(result)
     # await deal_client.checking_deals()

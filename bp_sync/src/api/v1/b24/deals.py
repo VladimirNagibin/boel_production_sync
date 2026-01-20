@@ -327,3 +327,43 @@ async def send_overdue_deals_notifications(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Internal server error: {str(e)}",
         )
+
+
+@deals_router.get(
+    "/check-deals",
+    summary="Checking deals for category and delete",
+    description=("Checking deals for category and delete."),
+)  # type: ignore
+async def check_deals(
+    deal_client: DealClient = Depends(get_deal_client_dep),
+    # verify_api_key: str = Depends(verify_api_key),
+) -> JSONResponse:
+    """
+    Endpoint для проверки на соответствие воронки удаления
+    """
+    logger.info("Start processing deal statuses")
+    try:
+        await deal_client.checking_deals()
+
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={
+                "status": "success",
+                "message": "Deal checking completed successfully",
+                # "data": result,
+                "timestamp": time.time(),
+            },
+        )
+
+    except Exception as e:
+        logger.error(f"Unhandled error in deal checking processing: {e}")
+
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={
+                "status": "error",
+                "message": "Deal checking failed",
+                "error": str(e),
+                "timestamp": time.time(),
+            },
+        )
