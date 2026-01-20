@@ -39,7 +39,8 @@ git clone <url>
 cd boel_production_sync
 ```
 2. Настройте конфигурацию - .env
-3.
+
+3. Запустить проект:
 ```bash
 docker compose up -d
 ```
