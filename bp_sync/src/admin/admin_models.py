@@ -172,6 +172,48 @@ class DealTypeAdmin(BaseAdmin, model=DealType):  # type: ignore[call-arg]
     icon = "fa-solid fa-tags"
 
 
+class CategoryAdmin(BaseAdmin, model=Category):  # type: ignore[call-arg]
+    name = "Воронка"
+    name_plural = "Воронки"
+    category = "Справочники"
+
+    column_list = [  # Поля в списке
+        "external_id",
+        "name",
+        # "ext_alt_id",
+    ]
+    column_labels = {  # Надписи полей в списке # type: ignore
+        "external_id": "Внешний код",
+        "name": "Название",
+        # "ext_alt_id": "Дополнительный код",
+    }
+    column_default_sort = [  # Сортировка по умолчанию # type: ignore
+        ("external_id", True)
+    ]
+    column_sortable_list = [  # Список полей по которым возможна сортировка
+        "external_id",
+        "name",
+    ]
+    column_searchable_list = [  # Список полей по которым возможен поиск
+        "name",
+        "external_id",
+    ]
+    form_columns = [  # Поля на форме
+        "external_id",
+        "name",
+        # "ext_alt_id",
+    ]
+    column_details_list = [
+        "id",
+        "name",
+        "external_id",
+        # "ext_alt_id",
+        "created_at",
+    ]
+    icon = "fa-solid fa-box"
+    # _is_base_class = False
+
+
 class ShippingCompanyAdmin(
     BaseAdmin, model=ShippingCompany
 ):  # type: ignore[call-arg]
