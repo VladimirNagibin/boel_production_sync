@@ -638,6 +638,7 @@ def register_models(admin: Admin) -> None:
     admin.add_view(CompanyAdmin)
     admin.add_view(DepartmentAdmin)
     admin.add_view(SourceAdmin)
+    admin.add_view(CategoryAdmin)
     admin.add_view(ShippingCompanyAdmin)
     admin.add_view(BillingAdmin)
     admin.add_view(DeliveryNoteAdmin)
