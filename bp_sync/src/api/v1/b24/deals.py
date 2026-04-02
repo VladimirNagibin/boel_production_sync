@@ -344,14 +344,14 @@ async def check_deals(
     """
     logger.info("Start processing deal statuses")
     try:
-        last_id, result = await deal_client.checking_deals(last_id)
+        current_last_id, result = await deal_client.checking_deals(last_id)
 
         return JSONResponse(
             status_code=status.HTTP_200_OK,
             content={
                 "status": result,
                 "message": "Deal checking completed successfully",
-                "last_id": last_id,
+                "last_id": current_last_id,
                 "timestamp": time.time(),
             },
         )
