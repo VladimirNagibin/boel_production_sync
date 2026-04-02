@@ -997,11 +997,11 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
                 detail=f"Failed to update single processing status: {str(e)}",
             )
 
-    async def checking_deals(self) -> None:
+    async def checking_deals(self, last_id: int = 0) -> tuple[int, bool]:
         """
         Функция обработки проверки всех сделок на удаление и воронку
         """
-        last_id = 0
+        current_last_id = last_id
         batch_number = 0
 
         logger.info("Начата проверка всех сделок.")
@@ -1020,7 +1020,8 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
 
                 if not deals:
                     logger.info("Все сделки обработаны.")
-                    break
+                    return current_last_id, True
+                    # break
 
                 logger.info(
                     "Обрабатывается пачка #%d, количество сделок: %d",
@@ -1030,6 +1031,7 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
 
                 for deal in deals:
                     await self._process_deal_data(deal)
+                    current_last_id = deal.external_id
 
                 last_id = deals[-1].external_id
                 batch_number += 1
@@ -1043,7 +1045,8 @@ class DealClient(BaseEntityClient[DealDB, DealRepository, DealBitrixClient]):
                 e,
                 exc_info=True,
             )
-            raise
+            return current_last_id, False
+            # raise
 
     async def _process_deal_data(self, deal: DealDB) -> None:
         """Обрабатывает данные одной сделки из БД."""

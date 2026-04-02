@@ -44,8 +44,6 @@ class DealProcessor:
         """Обработать одну сделку"""
         logger.info(f"Processing deal id: {deal_id}")
         try:
-            await self.deal_client.handle_deal(deal_id)
-            return True, "OK"
             # Импорт сделки
             _, needs_refresh = await self.deal_client.import_from_bitrix(
                 deal_id
