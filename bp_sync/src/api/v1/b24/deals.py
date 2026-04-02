@@ -335,6 +335,7 @@ async def send_overdue_deals_notifications(
     description=("Checking deals for category and delete."),
 )  # type: ignore
 async def check_deals(
+    last_id: int = 0,
     deal_client: DealClient = Depends(get_deal_client_dep),
     # verify_api_key: str = Depends(verify_api_key),
 ) -> JSONResponse:
@@ -343,14 +344,14 @@ async def check_deals(
     """
     logger.info("Start processing deal statuses")
     try:
-        await deal_client.checking_deals()
+        last_id, result = await deal_client.checking_deals(last_id)
 
         return JSONResponse(
             status_code=status.HTTP_200_OK,
             content={
-                "status": "success",
+                "status": result,
                 "message": "Deal checking completed successfully",
-                # "data": result,
+                "last_id": last_id,
                 "timestamp": time.time(),
             },
         )
