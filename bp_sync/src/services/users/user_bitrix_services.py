@@ -22,7 +22,8 @@ class UserBitrixClient:
         response = await self.bitrix_client.call_api(
             f"{self.entity_name}.get", {"id": entity_id}
         )
-        if not (entity_data := response.get("result")):
+        entity_data = response.get("result")
+        if entity_data is None:
             logger.warning(
                 f"{self.entity_name.capitalize()} not found: ID={entity_id}"
             )
@@ -30,4 +31,6 @@ class UserBitrixClient:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"{self.entity_name.capitalize()} not found",
             )
+        if not entity_data:
+            return UserCreate(external_id=entity_id)
         return UserCreate(**entity_data[0])
