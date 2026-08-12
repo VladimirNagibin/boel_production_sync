@@ -30,4 +30,6 @@ class UserBitrixClient:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"{self.entity_name.capitalize()} not found",
             )
+        if not entity_data:
+            return UserCreate(external_id=entity_id)
         return UserCreate(**entity_data[0])
