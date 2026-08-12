@@ -37,7 +37,8 @@ class BitrixOAuthClient(BaseBitrixClient):
         ):
             return await self._refresh_access_token(refresh_token)
         logger.warning(
-            "No valid tokens available, re-authentication required."
+            "No valid tokens available, re-authentication required. "
+            f"Re-authorize at: {self.get_auth_url()}"
         )
         raise BitrixAuthError(
             "Authentication required",

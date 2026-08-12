@@ -22,7 +22,8 @@ class UserBitrixClient:
         response = await self.bitrix_client.call_api(
             f"{self.entity_name}.get", {"id": entity_id}
         )
-        if not (entity_data := response.get("result")):
+        entity_data = response.get("result")
+        if entity_data is None:
             logger.warning(
                 f"{self.entity_name.capitalize()} not found: ID={entity_id}"
             )
