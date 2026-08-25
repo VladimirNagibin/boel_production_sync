@@ -57,10 +57,6 @@ class Settings(BaseSettings):  # type: ignore
     WEB_HOOK_TEST: bool = True
     DEAL_ID_TEST: int = 1
 
-    BOLASHAQ_BITRIX_PORTAL: str = "bolashaq"
-    BOLASHAQ_WEB_HOOK_PRODUCT_UPDATE_TOKEN: str = "token"
-    BOLASHAQ_WEB_HOOK_TOKEN: str = "/rest/token/"
-
     WEB_HOOK_COMPANY_UPDATE_TOKEN: str = "company_update_token"
     WEB_HOOK_CONTACT_UPDATE_TOKEN: str = "contact_update_token"
     WEB_HOOK_USER_UPDATE_TOKEN: str = "user_update_token"
