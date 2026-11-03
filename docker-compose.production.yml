@@ -84,9 +84,28 @@ services:
       retries: 3
       start_period: 30s
 
+  ftp:
+    image: fauria/vsftpd
+    container_name: ftp_server
+    restart: unless-stopped
+    environment:
+      - FTP_USER=${FTP_USER}
+      - FTP_PASS=${FTP_PASS}
+      - PASV_ADDRESS=${PASV_ADDRESS}   # Крайне важно: укажите публичный IP вашего сервера или доменное имя
+      - PASV_MIN_PORT=21100
+      - PASV_MAX_PORT=21110
+    ports:
+      - "21:21"
+      - "21100-21110:21100-21110"      # Диапазон портов пассивного режима должен совпадать с настройками выше
+    volumes:
+      - ftp-data:/home/vsftpd           # Постоянное хранилище
+    # Если нужно, чтобы FTP-сервер и bp_sync использовали общую директорию с файлами,
+    # можно также смонтировать code-data или отдельный volume в нужную точку
+
 volumes:
   db_data:
   redis-data:
   code-data:
   logs-data:
   rabbitmq-data:
+  ftp-data:
