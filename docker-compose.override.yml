@@ -14,6 +14,15 @@ services:
     env_file:
       - ./.env
 
+  web:
+    ports:
+      - "8080:80"
+    volumes:
+      - ./bitrix_php/src:/var/www/html/
+    env_file:
+      - ./.env
+
+
   db:
     ports:
      - 5442:5432

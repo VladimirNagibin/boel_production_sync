@@ -28,6 +28,13 @@ jobs:
           context: ./bp_sync/
           push: true
           tags: ${{ secrets.DOCKER_USERNAME }}/bp_sync:latest
+      - name: Push bitrix_php to DockerHub
+        uses: docker/build-push-action@v4
+        with:
+          context: ./bitrix_php/
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/boel_bitrix_php:latest
+
 
   deploy:
     runs-on: ubuntu-latest
