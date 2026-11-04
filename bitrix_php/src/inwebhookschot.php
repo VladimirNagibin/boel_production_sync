@@ -338,6 +338,8 @@ if (array_key_exists('error', $res)) {
                 }
             }
 
+            $id_utverd = 215;  // служебный *************************************************************************************TEST************************************************
+
             foreach ($arrmin as &$value) {
                 $pricetec = $value['price'];
                 $len = strlen($pricetec);
@@ -428,13 +430,14 @@ if (array_key_exists('error', $res)) {
                                                 if ($conn_id !== false) {
                                                     $login_result = ftp_login($conn_id, $ftpUser, $ftpPass);
                                                     ftp_pasv($conn_id, true);
+                                                    ftp_set_option($conn_id, FTP_TIMEOUT_SEC, 30);
 
                                                     // Создание файла на сервере
                                                     $file1 = fopen('php://temp', 'r+');
                                                     fwrite($file1, $text_invoice);
                                                     rewind($file1);
 
-                                                    if (ftp_fput($conn_id, 'Bitrix/request ' . round(microtime(true) * 1000, 0) . '.txt', $file1, FTP_ASCII)) {
+                                                    if (@ftp_fput($conn_id, 'Bitrix/request ' . round(microtime(true) * 1000, 0) . '.txt', $file1, FTP_ASCII)) {
                                                         echo 'File create';
                                                     } else {
                                                         echo 'File not create';
@@ -760,11 +763,12 @@ function lod_ftp($soobch)
 
     $login_result = ftp_login($conn_id, $ftpUser, $ftpPass);
     ftp_pasv($conn_id, true);
+    ftp_set_option($conn_id, FTP_TIMEOUT_SEC, 30);
     // Создание файла на сервере
     $file1 = fopen('php://temp', 'r+');
     fwrite($file1, $soobch);
     rewind($file1);
-    if (ftp_fput($conn_id, 'Bitrix/log ' . round(microtime(true) * 1000, 0) . '.txt', $file1, FTP_ASCII)) {
+    if (@ftp_fput($conn_id, 'Bitrix/log ' . round(microtime(true) * 1000, 0) . '.txt', $file1, FTP_ASCII)) {
         echo 'File create';
     } else {
         echo 'File not create';

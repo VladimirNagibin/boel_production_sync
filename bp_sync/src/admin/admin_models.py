@@ -14,6 +14,7 @@ from models.deal_models import AdditionalInfo  # noqa: F401
 from models.delivery_note_models import DeliveryNote  # noqa: F401
 from models.invoice_models import Invoice  # noqa: F401
 from models.lead_models import Lead  # noqa: F401
+from models.price_permission_models import PricePermission  # noqa: F401
 from models.references import (  # noqa: F401
     AdditionalResponsible,
     Category,
@@ -212,6 +213,70 @@ class CategoryAdmin(BaseAdmin, model=Category):  # type: ignore[call-arg]
     ]
     icon = "fa-solid fa-box"
     # _is_base_class = False
+
+
+class PricePermissionAdmin(
+    BaseAdmin, model=PricePermission
+):  # type: ignore[call-arg]
+    name = "Разрешение цен"
+    name_plural = "Разрешения цен"
+    category = "Справочники"
+    column_list = [  # Поля в списке
+        "id_company",
+        "id_product",
+        "price",
+        "id_deal",
+        "id_firm",
+        "payment_type",
+        "payment_term",
+    ]
+    column_labels = {  # Надписи полей в списке
+        "id_company": "Компания",
+        "id_product": "Товар",
+        "price": "Цена",
+        "id_deal": "Сделка",
+        "id_firm": "Фирма отгрузки",
+        "payment_type": "Тип оплаты",
+        "payment_term": "Срок оплаты",
+    }
+    column_default_sort = [("id_company", True)]  # Сортировка по умолчанию
+    column_sortable_list = [  # Список полей по которым возможна сортировка
+        "id_company",
+        "id_product",
+        "price",
+        "id_deal",
+        "id_firm",
+        "payment_type",
+        "payment_term",
+    ]
+    column_searchable_list = [  # Список полей по которым возможен поиск
+        "id_company",
+        "id_product",
+        "id_deal",
+        "id_firm",
+        "payment_type",
+    ]
+    form_columns = [  # Поля на форме
+        "id_company",
+        "id_product",
+        "price",
+        "id_deal",
+        "id_firm",
+        "payment_type",
+        "payment_term",
+    ]
+    column_details_list = [  # Поля на детальной странице
+        "id_company",
+        "id_product",
+        "price",
+        "id_deal",
+        "id_firm",
+        "payment_type",
+        "payment_term",
+        "created_at",
+        "updated_at",
+    ]
+    icon = "fa-solid fa-circle-check"
 
 
 class ShippingCompanyAdmin(
@@ -639,6 +704,7 @@ def register_models(admin: Admin) -> None:
     admin.add_view(DepartmentAdmin)
     admin.add_view(SourceAdmin)
     admin.add_view(CategoryAdmin)
+    admin.add_view(PricePermissionAdmin)
     admin.add_view(ShippingCompanyAdmin)
     admin.add_view(BillingAdmin)
     admin.add_view(DeliveryNoteAdmin)
