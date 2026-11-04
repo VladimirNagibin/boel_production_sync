@@ -200,3 +200,5 @@ logs/
 data/
 
 .env_
+ftp/
+.venv/

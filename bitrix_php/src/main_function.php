@@ -45,20 +45,56 @@ class Function_help
     public function log_ftp($soobch, $fil)
     {
         global $ftpPortal, $ftpUser, $ftpPass;
-        $conn_id = ftp_connect($ftpPortal);
-        $login_result = ftp_login($conn_id, $ftpUser, $ftpPass);
-        ftp_pasv($conn_id, true);
+
+        $conn_id = ftp_connect($ftpPortal, 21, 30);
+        if ($conn_id === false) {
+            echo 'Ошибка подключения к FTP';
+            return;
+        }
+
+        if (@ftp_login($conn_id, $ftpUser, $ftpPass) === false) {
+            echo 'Ошибка авторизации FTP';
+            ftp_close($conn_id);
+            return;
+        }
+
+        @ftp_mkdir($conn_id, 'Bitrix');
+        @ftp_mkdir($conn_id, 'Bitrix/Log');
+
+        $remote_file = 'Bitrix/Log/' . $fil . ' ' . round(microtime(true) * 1000, 0) . '.txt';
         $file1 = fopen('php://temp', 'r+');
         fwrite($file1, $soobch);
         rewind($file1);
-        if (ftp_fput($conn_id, 'Bitrix/Log/' . $fil . ' ' . round(microtime(true) * 1000,
-            0) . '.txt', $file1, FTP_ASCII)) {
+
+        ftp_set_option($conn_id, FTP_TIMEOUT_SEC, 30);
+
+        // 1) пассивный режим (адрес из PASV)
+        ftp_pasv($conn_id, true);
+        $result = @ftp_fput($conn_id, $remote_file, $file1, FTP_ASCII);
+
+        // 2) пассивный режим, IP управляющего соединения
+        if (!$result) {
+            rewind($file1);
+            ftp_set_option($conn_id, FTP_USEPASVADDRESS, false);
+            $result = @ftp_fput($conn_id, $remote_file, $file1, FTP_ASCII);
+        }
+
+        // 3) активный режим
+        if (!$result) {
+            rewind($file1);
+            ftp_pasv($conn_id, false);
+            $result = @ftp_fput($conn_id, $remote_file, $file1, FTP_ASCII);
+        }
+
+        if ($result) {
             echo 'File create';
         } else {
-            echo 'File not create';
+            $err = error_get_last();
+            echo 'File not create: ' . (isset($err['message']) ? $err['message'] : 'unknown error');
         }
+
+        fclose($file1);
         ftp_close($conn_id);
-        //fclose($fp);
     }
     public function have_right($user_tec)
     {
@@ -150,38 +186,147 @@ class Function_help
 
 class Contracts
 {
+    // Соединение с FTP
+    private static function ftp_connect()
+    {
+        global $ftpPortal, $ftpUser, $ftpPass;
+
+        $conn_id = ftp_connect($ftpPortal, 21, 30);
+        if ($conn_id === false) {
+            return false;
+        }
+
+        if (@ftp_login($conn_id, $ftpUser, $ftpPass) === false) {
+            ftp_close($conn_id);
+            return false;
+        }
+
+        ftp_set_option($conn_id, FTP_TIMEOUT_SEC, 30);
+        ftp_pasv($conn_id, true);
+
+        return $conn_id;
+    }
+    // Проверка существования файла на FTP
+    private static function ftp_file_exists($conn_id, $remote_file)
+    {
+        return @ftp_size($conn_id, $remote_file) !== -1;
+    }
+    // Чтение содержимого файла с FTP
+    private static function ftp_get_contents($conn_id, $remote_file)
+    {
+        $stream = fopen('php://temp', 'r+');
+
+        // 1) пассивный режим (адрес из PASV)
+        ftp_pasv($conn_id, true);
+        $result = @ftp_fget($conn_id, $stream, $remote_file, FTP_ASCII);
+
+        // 2) пассивный режим, IP управляющего соединения
+        if (!$result) {
+            rewind($stream);
+            ftruncate($stream, 0);
+            ftp_set_option($conn_id, FTP_USEPASVADDRESS, false);
+            $result = @ftp_fget($conn_id, $stream, $remote_file, FTP_ASCII);
+        }
+
+        // 3) активный режим
+        if (!$result) {
+            rewind($stream);
+            ftruncate($stream, 0);
+            ftp_pasv($conn_id, false);
+            $result = @ftp_fget($conn_id, $stream, $remote_file, FTP_ASCII);
+        }
+
+        if (!$result) {
+            fclose($stream);
+            return false;
+        }
+
+        rewind($stream);
+        $contents = stream_get_contents($stream);
+        fclose($stream);
+
+        return $contents;
+    }
+    // Запись содержимого в файл на FTP
+    private static function ftp_put_contents($conn_id, $remote_file, $contents)
+    {
+        $stream = fopen('php://temp', 'r+');
+        fwrite($stream, $contents);
+        rewind($stream);
+
+        // 1) пассивный режим (адрес из PASV)
+        ftp_pasv($conn_id, true);
+        $result = @ftp_fput($conn_id, $remote_file, $stream, FTP_ASCII);
+
+        // 2) пассивный режим, IP управляющего соединения
+        if (!$result) {
+            rewind($stream);
+            ftp_set_option($conn_id, FTP_USEPASVADDRESS, false);
+            $result = @ftp_fput($conn_id, $remote_file, $stream, FTP_ASCII);
+        }
+
+        // 3) активный режим
+        if (!$result) {
+            rewind($stream);
+            ftp_pasv($conn_id, false);
+            $result = @ftp_fput($conn_id, $remote_file, $stream, FTP_ASCII);
+        }
+
+        fclose($stream);
+
+        return $result;
+    }
+    // Удаление файла на FTP
+    private static function ftp_delete_file($conn_id, $remote_file)
+    {
+        return @ftp_delete($conn_id, $remote_file);
+    }
+    // Разбиение содержимого файла на строки (аналог file())
+    private static function file_lines($contents)
+    {
+        $lines = preg_split('/\r\n|\n|\r/', $contents);
+
+        // Убираем последний пустой элемент, который появляется из-за завершающего перевода строки
+        while (count($lines) > 0 && $lines[count($lines) - 1] === '') {
+            array_pop($lines);
+        }
+
+        return $lines;
+    }
     // файл найден - занято(false), файл не найден - свободно(true)
     private static function get_busy_contracts()
     {
-        $fileflag = $_SERVER['DOCUMENT_ROOT'] . '/ftp_bitrix/Contracts/flag.txt';
-        return !file_exists($fileflag);
-        /*
-        $conn_id = ftp_connect($ftpPortal);
-        $login_result = ftp_login($conn_id, $ftpUser, $ftpPass));
-        ftp_pasv($conn_id, true);
-    
-        $file_size = ftp_size($conn_id, 'Contracts/flag.txt');
-        if ($file_size != -1) {
-        $res = false; // Файл найден - занято
-        } else {
-        $res = true; // Файл не найден - свободно
+        $conn_id = self::ftp_connect();
+        if ($conn_id === false) {
+            return false; // Нет связи с FTP - считаем, что занято
         }
+
+        $exists = self::ftp_file_exists($conn_id, 'flag.txt');
         ftp_close($conn_id);
-        return $res;
-         */
+
+        return !$exists;
     }
-    // копируем файл
+    // создаём файл-флаг на FTP
     private static function set_busy_contracts()
     {
-        $file = 'flag.txt';
-        $newfile = $_SERVER['DOCUMENT_ROOT'] . '/ftp_bitrix/Contracts/flag.txt';
-        copy($file, $newfile);
+        $conn_id = self::ftp_connect();
+        if ($conn_id === false) {
+            return;
+        }
+
+        self::ftp_put_contents($conn_id, 'flag.txt', date('Y-m-d H:i:s'));
+        ftp_close($conn_id);
     }
-    // удаляем файл
+    // удаляем файл-флаг с FTP
     private static function set_free_contracts()
     {
-        $newfile = $_SERVER['DOCUMENT_ROOT'] . '/ftp_bitrix/Contracts/flag.txt';
-        unlink($newfile);
+        $conn_id = self::ftp_connect();
+        if ($conn_id === false) {
+            return;
+        }
+
+        self::ftp_delete_file($conn_id, 'flag.txt');
+        ftp_close($conn_id);
     }
     public static function get_number_contract($firma, $company, $datecontract, $id_us)
     {
@@ -213,7 +358,7 @@ class Contracts
                 //  $array_my_company_name = array('439' => 'Системы', '441' => 'Элемент', '443' => 'Торговый дом СР', '445' => 'ТехТорг', '447' => 'ИП Гузиков М.Г.');
                 self::set_busy_contracts();
                 $filereestr = '';
-                $filestart = $_SERVER['DOCUMENT_ROOT'] . '/ftp_bitrix/Contracts/';
+                $filestart = 'Contracts/';
                 if ($firma == '5381') { // ТехТорг
                     $filereestr = $filestart . "RegisterOfContractsTT.txt";
                 } elseif ($firma == '5385') { // Элемент
@@ -232,29 +377,40 @@ class Contracts
                     Bitrix_help::send_message($id_us, 'Для фирмы ' . $firma . ' нет реестра договоров');
                 }
                 if ($filereestr != '') {
-                    $arrcontracts = file($filereestr);
-                    $lastcontract = $arrcontracts[count($arrcontracts) - 1];
-                    $arrnumber = explode("/**/", $lastcontract);
-                    $lastnumber = $arrnumber[0];
-                    $lastnumber = str_replace('/54', '', $lastnumber);
-                    $lastnumber = str_replace('ЭР', '', $lastnumber);
-                    $lastnumber = str_replace('ВР', '', $lastnumber);
-                    $new_number = $lastnumber + 1;
-                    if ($firma == '5381') { // ТехТорг
-                        $new_number = $new_number . '/54';
+                    $conn_id = self::ftp_connect();
+                    if ($conn_id !== false) {
+                        $contents = self::ftp_get_contents($conn_id, $filereestr);
+                        if ($contents !== false) {
+                            $arrcontracts = self::file_lines($contents);
+                            if (count($arrcontracts) > 0) {
+                                $lastcontract = $arrcontracts[count($arrcontracts) - 1];
+                                $arrnumber = explode("/**/", $lastcontract);
+                                $lastnumber = $arrnumber[0];
+                            } else {
+                                $lastnumber = 0;
+                            }
+                            $lastnumber = str_replace('/54', '', $lastnumber);
+                            $lastnumber = str_replace('ЭР', '', $lastnumber);
+                            $lastnumber = str_replace('ВР', '', $lastnumber);
+                            $new_number = $lastnumber + 1;
+                            if ($firma == '5381') { // ТехТорг
+                                $new_number = $new_number . '/54';
+                            }
+                            if ($firma == '8897') { // Эксперты розлива
+                                $new_number = 1000000 + $new_number;
+                                $new_number = ltrim($new_number, '1');
+                                $new_number = 'ЭР' . $new_number;
+                            }
+                            if ($firma == '23217') { // Воробьёв
+                                $new_number = 1000000 + $new_number;
+                                $new_number = ltrim($new_number, '1');
+                                $new_number = 'ВР' . $new_number;
+                            }
+                            $strcontract = $new_number . '/**/' . $datecontract . '/**/' . $company;
+                            self::ftp_put_contents($conn_id, $filereestr, $contents . PHP_EOL . $strcontract);
+                        }
+                        ftp_close($conn_id);
                     }
-                    if ($firma == '8897') { // Эксперты розлива
-                        $new_number = 1000000 + $new_number;
-                        $new_number = ltrim($new_number, '1');
-                        $new_number = 'ЭР' . $new_number;
-                    }
-                    if ($firma == '23217') { // Воробьёв
-                        $new_number = 1000000 + $new_number;
-                        $new_number = ltrim($new_number, '1');
-                        $new_number = 'ВР' . $new_number;
-                    }
-                    $strcontract = $new_number . '/**/' . $datecontract . '/**/' . $company;
-                    file_put_contents($filereestr, PHP_EOL . $strcontract, FILE_APPEND);
                 }
                 self::set_free_contracts();
             } else {
@@ -287,7 +443,7 @@ class Contracts
             //  $array_my_company_name = array('439' => 'Системы', '441' => 'Элемент', '443' => 'Торговый дом СР', '445' => 'ТехТорг', '447' => 'ИП Гузиков М.Г.');
             self::set_busy_contracts();
             $filereestr = '';
-            $filestart = $_SERVER['DOCUMENT_ROOT'] . '/ftp_bitrix/Contracts/';
+            $filestart = 'Contracts/';
             if ($firma == '5381') { // ТехТорг
                 $filereestr = $filestart . "RegisterOfContractsTT1.txt";
             } elseif ($firma == '5385') { // Элемент
@@ -307,39 +463,50 @@ class Contracts
                 Bitrix_help::send_message($id_us, 'Для фирмы ' . $firma . ' нет реестра номеров счетов');
             }
             if ($filereestr != '') {
-                $arrcontracts = file($filereestr);
-                $lastcontract = $arrcontracts[count($arrcontracts) - 1];
-                $arrnumber = explode("/**/", $lastcontract);
-                $lastnumber = $arrnumber[0];
-                //ТД000000597   ТД СР
-                //El000000583   Элемент
-                //ТТ000000338   ТехТорг
-                //ГМ000000090   ИП ГМ
-                //СУ000000712   Системы
-                $prefix = '';
-                if ($firma == '5381') { // ТехТорг
-                    $prefix = 'ТТ';
-                } elseif ($firma == '5385') { // Элемент
-                    $prefix = 'El';
-                } elseif ($firma == '5383') { // ТД СР
-                    $prefix = 'ТД';
-                } elseif ($firma == '22145') { // ИП Гузиков
-                    $prefix = 'ГМ';
-                } elseif ($firma == '8897') { // Эксперты розлива
-                    $prefix = 'ЭР';
-                } elseif ($firma == '23217') { // ИП Воробьев
-                    $prefix = 'ВР';                    
-                } elseif ($firma == '8923') { // Системы
-                    $prefix = 'СУ';
-                }
-                $tr = $lastnumber;
-                $tr = str_replace($prefix, '', $tr);
-                $tr = $tr + 1;
-                $tr = sprintf("%'.09d", $tr);
-                $new_number = $prefix . $tr;
+                $conn_id = self::ftp_connect();
+                if ($conn_id !== false) {
+                    $contents = self::ftp_get_contents($conn_id, $filereestr);
+                    if ($contents !== false) {
+                        $arrcontracts = self::file_lines($contents);
+                        if (count($arrcontracts) > 0) {
+                            $lastcontract = $arrcontracts[count($arrcontracts) - 1];
+                            $arrnumber = explode("/**/", $lastcontract);
+                            $lastnumber = $arrnumber[0];
+                        } else {
+                            $lastnumber = 0;
+                        }
+                        //ТД000000597   ТД СР
+                        //El000000583   Элемент
+                        //ТТ000000338   ТехТорг
+                        //ГМ000000090   ИП ГМ
+                        //СУ000000712   Системы
+                        $prefix = '';
+                        if ($firma == '5381') { // ТехТорг
+                            $prefix = 'ТТ';
+                        } elseif ($firma == '5385') { // Элемент
+                            $prefix = 'El';
+                        } elseif ($firma == '5383') { // ТД СР
+                            $prefix = 'ТД';
+                        } elseif ($firma == '22145') { // ИП Гузиков
+                            $prefix = 'ГМ';
+                        } elseif ($firma == '8897') { // Эксперты розлива
+                            $prefix = 'ЭР';
+                        } elseif ($firma == '23217') { // ИП Воробьев
+                            $prefix = 'ВР';                    
+                        } elseif ($firma == '8923') { // Системы
+                            $prefix = 'СУ';
+                        }
+                        $tr = $lastnumber;
+                        $tr = str_replace($prefix, '', $tr);
+                        $tr = $tr + 1;
+                        $tr = sprintf("%'.09d", $tr);
+                        $new_number = $prefix . $tr;
 
-                $strcontract = $new_number . '/**/' . $datecontract . '/**/' . $company;
-                file_put_contents($filereestr, PHP_EOL . $strcontract, FILE_APPEND);
+                        $strcontract = $new_number . '/**/' . $datecontract . '/**/' . $company;
+                        self::ftp_put_contents($conn_id, $filereestr, $contents . PHP_EOL . $strcontract);
+                    }
+                    ftp_close($conn_id);
+                }
             }
             self::set_free_contracts();
         } else {
@@ -422,20 +589,56 @@ class Bitrix_help
     public static function log_ftp($soobch, $fil)
     {
         global $ftpPortal, $ftpUser, $ftpPass;
-        $conn_id = ftp_connect($ftpPortal);
-        $login_result = ftp_login($conn_id, $ftpUser, $ftpPass);
-        ftp_pasv($conn_id, true);
+
+        $conn_id = ftp_connect($ftpPortal, 21, 30);
+        if ($conn_id === false) {
+            echo 'Ошибка подключения к FTP';
+            return;
+        }
+
+        if (@ftp_login($conn_id, $ftpUser, $ftpPass) === false) {
+            echo 'Ошибка авторизации FTP';
+            ftp_close($conn_id);
+            return;
+        }
+
+        @ftp_mkdir($conn_id, 'Bitrix');
+        @ftp_mkdir($conn_id, 'Bitrix/Log');
+
+        $remote_file = 'Bitrix/Log/' . $fil . ' ' . round(microtime(true) * 1000, 0) . '.txt';
         $file1 = fopen('php://temp', 'r+');
         fwrite($file1, $soobch);
         rewind($file1);
-        if (ftp_fput($conn_id, 'Bitrix/Log/' . $fil . ' ' . round(microtime(true) * 1000,
-            0) . '.txt', $file1, FTP_ASCII)) {
-            //echo 'File create';
-        } else {
-            //echo 'File not create';
+
+        ftp_set_option($conn_id, FTP_TIMEOUT_SEC, 30);
+
+        // 1) пассивный режим (адрес из PASV)
+        ftp_pasv($conn_id, true);
+        $result = @ftp_fput($conn_id, $remote_file, $file1, FTP_ASCII);
+
+        // 2) пассивный режим, IP управляющего соединения
+        if (!$result) {
+            rewind($file1);
+            ftp_set_option($conn_id, FTP_USEPASVADDRESS, false);
+            $result = @ftp_fput($conn_id, $remote_file, $file1, FTP_ASCII);
         }
+
+        // 3) активный режим
+        if (!$result) {
+            rewind($file1);
+            ftp_pasv($conn_id, false);
+            $result = @ftp_fput($conn_id, $remote_file, $file1, FTP_ASCII);
+        }
+
+        if ($result) {
+            echo 'File create';
+        } else {
+            $err = error_get_last();
+            echo 'File not create: ' . (isset($err['message']) ? $err['message'] : 'unknown error');
+        }
+
+        fclose($file1);
         ftp_close($conn_id);
-        //fclose($fp);
     }
     public static function send_message($id_us, $soobch)
     {
@@ -621,15 +824,19 @@ class Bitrix_help
 
         // Установка соединения
         $conn_id = ftp_connect($ftpPortal);
+        if ($conn_id === false) {
+            return;
+        }
         $login_result = ftp_login($conn_id, $ftpUser, $ftpPass);
         ftp_pasv($conn_id, true);
+        ftp_set_option($conn_id, FTP_TIMEOUT_SEC, 30);
 
         // Создание файла на сервере
         $file1 = fopen('php://temp', 'r+');
         fwrite($file1, $text_invoice);
         rewind($file1);
 
-        if (ftp_fput($conn_id, 'Bitrix/request ' . round(microtime(true) * 1000, 0) . '.txt', $file1, FTP_ASCII)) {
+        if (@ftp_fput($conn_id, 'Bitrix/request ' . round(microtime(true) * 1000, 0) . '.txt', $file1, FTP_ASCII)) {
             //echo 'File create';
         } else {
             self::logFtp('File not create ' . $text_invoice, 'Error FTP');
@@ -644,15 +851,19 @@ class Bitrix_help
 
         // Установка соединения
         $conn_id = ftp_connect($ftpPortal);
+        if ($conn_id === false) {
+            return false;
+        }
         $login_result = ftp_login($conn_id, $ftpUser, $ftpPass);
         ftp_pasv($conn_id, true);
+        ftp_set_option($conn_id, FTP_TIMEOUT_SEC, 30);
 
         // Создание файла на сервере
         $file1 = fopen('php://temp', 'r+');
         fwrite($file1, $text_invoice);
         rewind($file1);
 
-        if (ftp_fput($conn_id, 'Bitrix/request ' . round(microtime(true) * 1000, 0) . '.txt', $file1, FTP_ASCII)) {
+        if (@ftp_fput($conn_id, 'Bitrix/request ' . round(microtime(true) * 1000, 0) . '.txt', $file1, FTP_ASCII)) {
             $res = TRUE;
         } else {
             self::logFtp('File not create ' . $text_invoice, 'Error FTP');
@@ -665,24 +876,56 @@ class Bitrix_help
     public static function logFtp($soobch, $fil)
     {
         global $ftpPortal, $ftpUser, $ftpPass;
-        // Запись текста в файл по ФТП
-        // Установка соединения
-        $conn_id = ftp_connect($ftpPortal);
-        $login_result = ftp_login($conn_id, $ftpUser, $ftpPass);
-        ftp_pasv($conn_id, true);
-        // Создание файла на сервере
+
+        $conn_id = ftp_connect($ftpPortal, 21, 30);
+        if ($conn_id === false) {
+            echo 'Ошибка подключения к FTP';
+            return;
+        }
+
+        if (@ftp_login($conn_id, $ftpUser, $ftpPass) === false) {
+            echo 'Ошибка авторизации FTP';
+            ftp_close($conn_id);
+            return;
+        }
+
+        @ftp_mkdir($conn_id, 'Bitrix');
+        @ftp_mkdir($conn_id, 'Bitrix/Log');
+
+        $remote_file = 'Bitrix/Log/' . $fil . ' ' . round(microtime(true) * 1000, 0) . '.txt';
         $file1 = fopen('php://temp', 'r+');
         fwrite($file1, $soobch);
         rewind($file1);
-        if (ftp_fput($conn_id, 'Bitrix/Log/' . $fil . ' ' . round(microtime(true) * 1000,
-            0) . '.txt', $file1, FTP_ASCII)) {
+
+        ftp_set_option($conn_id, FTP_TIMEOUT_SEC, 30);
+
+        // 1) пассивный режим (адрес из PASV)
+        ftp_pasv($conn_id, true);
+        $result = @ftp_fput($conn_id, $remote_file, $file1, FTP_ASCII);
+
+        // 2) пассивный режим, IP управляющего соединения
+        if (!$result) {
+            rewind($file1);
+            ftp_set_option($conn_id, FTP_USEPASVADDRESS, false);
+            $result = @ftp_fput($conn_id, $remote_file, $file1, FTP_ASCII);
+        }
+
+        // 3) активный режим
+        if (!$result) {
+            rewind($file1);
+            ftp_pasv($conn_id, false);
+            $result = @ftp_fput($conn_id, $remote_file, $file1, FTP_ASCII);
+        }
+
+        if ($result) {
             echo 'File create';
         } else {
-            echo 'File not create';
+            $err = error_get_last();
+            echo 'File not create: ' . (isset($err['message']) ? $err['message'] : 'unknown error');
         }
-        // Закрытие соединения
+
+        fclose($file1);
         ftp_close($conn_id);
-        //fclose($fp); //Закрытие файла
     }
     public static function getStorageName($idStorage)
     {
