@@ -21,7 +21,7 @@ class Function_help
     public function zapros($zap, $param)
     {
         global $bitrixPortal, $bitrixToken;
-        $queryUrl = $bitrixPortal . '/rest/' . $bitrixToken . $zap;
+        $queryUrl = $bitrixPortal . '/rest/' . $bitrixToken . '/' . $zap;
         $queryData = $param;
         $curl = curl_init();
         curl_setopt_array($curl, array(CURLOPT_SSL_VERIFYPEER => 0, CURLOPT_POST => 1,
@@ -531,7 +531,7 @@ class Bitrix_help
     public static function request($zap, $param)
     {
         global $bitrixPortal, $bitrixToken;
-        $queryUrl = $bitrixPortal . '/rest/' . $bitrixToken . $zap;
+        $queryUrl = $bitrixPortal . '/rest/' . $bitrixToken . '/' . $zap;
 
         $queryData = $param;
         $curl = curl_init();
@@ -559,7 +559,7 @@ class Bitrix_help
     public static function executeRequest($zap, $param)
     {
         global $bitrixPortal, $bitrixToken;
-        $queryUrl = $bitrixPortal . '/rest/' . $bitrixToken . $zap; 
+        $queryUrl = $bitrixPortal . '/rest/' . $bitrixToken . '/' . $zap; 
         $queryData = $param;
         $curl = curl_init();
         curl_setopt_array($curl, array(CURLOPT_SSL_VERIFYPEER => 0, CURLOPT_POST => 1,

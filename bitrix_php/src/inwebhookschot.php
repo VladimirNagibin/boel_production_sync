@@ -426,24 +426,43 @@ if (array_key_exists('error', $res)) {
                                                 $text_invoice = '{"VIEW":"DELL_INVOICE","ID":' . $id_invoice_old . '}';
 
                                                 // Установка соединения
-                                                $conn_id = ftp_connect($ftpPortal);
+                                                $conn_id = ftp_connect($ftpPortal, 21, 30);
                                                 if ($conn_id !== false) {
-                                                    $login_result = ftp_login($conn_id, $ftpUser, $ftpPass);
-                                                    ftp_pasv($conn_id, true);
-                                                    ftp_set_option($conn_id, FTP_TIMEOUT_SEC, 30);
+                                                    if (@ftp_login($conn_id, $ftpUser, $ftpPass) === true) {
+                                                        @ftp_mkdir($conn_id, 'Bitrix');
 
-                                                    // Создание файла на сервере
-                                                    $file1 = fopen('php://temp', 'r+');
-                                                    fwrite($file1, $text_invoice);
-                                                    rewind($file1);
+                                                        $remote_file = 'Bitrix/request ' . round(microtime(true) * 1000, 0) . '.txt';
+                                                        $file1 = fopen('php://temp', 'r+'); 
+                                                        fwrite($file1, $text_invoice);
+                                                        rewind($file1);
+                                                        ftp_set_option($conn_id, FTP_TIMEOUT_SEC, 30);
 
-                                                    if (@ftp_fput($conn_id, 'Bitrix/request ' . round(microtime(true) * 1000, 0) . '.txt', $file1, FTP_ASCII)) {
-                                                        echo 'File create';
-                                                    } else {
-                                                        echo 'File not create';
-                                                    }
-                                                    // Закрытие соединения
-                                                    ftp_close($conn_id);
+                                                        // 1) пассивный режим (адрес из PASV)
+                                                        ftp_pasv($conn_id, true);
+                                                        $result = @ftp_fput($conn_id, $remote_file, $file1, FTP_ASCII);
+                                                        // 2) пассивный режим, IP управляющего соединения
+                                                        if (!$result) {
+                                                            rewind($file1);
+                                                            ftp_set_option($conn_id, FTP_USEPASVADDRESS, false);
+                                                            $result = @ftp_fput($conn_id, $remote_file, $file1, FTP_ASCII);
+                                                        }
+                                                        // 3) активный режим
+                                                        if (!$result) {
+                                                            rewind($file1);
+                                                            ftp_pasv($conn_id, false);
+                                                            $result = @ftp_fput($conn_id, $remote_file, $file1, FTP_ASCII);
+                                                        }
+
+                                                        if ($result) {
+                                                            echo 'File create';
+                                                        } else {
+                                                            $err = error_get_last();
+                                                            echo 'File not create: ' . (isset($err['message']) ? $err['message'] : 'unknown error');
+                                                        }
+
+                                                        fclose($file1);
+                                                        ftp_close($conn_id);
+                                                    }   
                                                 }
                                             }
                                         }
@@ -711,7 +730,7 @@ function zapros($zap, $param)
 {
     global $bitrixPortal, $bitrixToken;
 
-    $queryUrl = $bitrixPortal . '/rest/' . $bitrixToken . $zap;
+    $queryUrl = $bitrixPortal . '/rest/' . $bitrixToken . '/' . $zap;
     $queryData = $param;
 
     $curl = curl_init();
