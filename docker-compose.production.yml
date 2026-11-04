@@ -86,7 +86,6 @@ services:
 
   ftp:
     image: fauria/vsftpd
-    container_name: ftp_server
     restart: unless-stopped
     environment:
       - FTP_USER=${FTP_USER}
