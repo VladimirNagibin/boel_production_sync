@@ -11,6 +11,10 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
 
   bp_sync-migrations:
     image: vlnag/bp_sync
@@ -21,6 +25,17 @@ services:
       db:
         condition: service_healthy
     command: alembic upgrade head
+
+  web:
+    image: vlnag/boel_bitrix_php
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8080:80"
+    env_file:
+      - ./.env
 
   db:
     image: postgres:17.4-bookworm
@@ -43,6 +58,12 @@ services:
     command: redis-server --requirepass ${REDIS_PASSWORD} --save 60 1 --appendonly yes
     volumes:
       - redis-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD}\" ping | grep -q PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
 
   rabbitmq:
     container_name: rabbitmq
@@ -63,9 +84,28 @@ services:
       retries: 3
       start_period: 30s
 
+  ftp:
+    image: fauria/vsftpd
+    container_name: ftp_server
+    restart: unless-stopped
+    environment:
+      - FTP_USER=${FTP_USER}
+      - FTP_PASS=${FTP_PASS}
+      - PASV_ADDRESS=${PASV_ADDRESS}   # Крайне важно: укажите публичный IP вашего сервера или доменное имя
+      - PASV_MIN_PORT=21100
+      - PASV_MAX_PORT=21110
+    ports:
+      - "21:21"
+      - "21100-21110:21100-21110"      # Диапазон портов пассивного режима должен совпадать с настройками выше
+    volumes:
+      - ftp-data:/home/vsftpd           # Постоянное хранилище
+    # Если нужно, чтобы FTP-сервер и bp_sync использовали общую директорию с файлами,
+    # можно также смонтировать code-data или отдельный volume в нужную точку
+
 volumes:
   db_data:
   redis-data:
   code-data:
   logs-data:
   rabbitmq-data:
+  ftp-data:
