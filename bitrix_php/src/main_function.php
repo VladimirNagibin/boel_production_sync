@@ -186,6 +186,8 @@ class Function_help
 
 class Contracts
 {
+    private const BUSY_FLAG_FILE = 'Contracts/flag.txt';
+
     // Соединение с FTP
     private static function ftp_connect()
     {
@@ -301,7 +303,7 @@ class Contracts
             return false; // Нет связи с FTP - считаем, что занято
         }
 
-        $exists = self::ftp_file_exists($conn_id, 'flag.txt');
+        $exists = self::ftp_file_exists($conn_id, self::BUSY_FLAG_FILE);
         ftp_close($conn_id);
 
         return !$exists;
@@ -314,7 +316,8 @@ class Contracts
             return;
         }
 
-        self::ftp_put_contents($conn_id, 'flag.txt', date('Y-m-d H:i:s'));
+        @ftp_mkdir($conn_id, 'Contracts');
+        self::ftp_put_contents($conn_id, self::BUSY_FLAG_FILE, date('Y-m-d H:i:s'));
         ftp_close($conn_id);
     }
     // удаляем файл-флаг с FTP
@@ -325,7 +328,7 @@ class Contracts
             return;
         }
 
-        self::ftp_delete_file($conn_id, 'flag.txt');
+        self::ftp_delete_file($conn_id, self::BUSY_FLAG_FILE);
         ftp_close($conn_id);
     }
     public static function get_number_contract($firma, $company, $datecontract, $id_us)
