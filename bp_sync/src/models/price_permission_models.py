@@ -2,7 +2,7 @@
 
 from decimal import Decimal
 
-from sqlalchemy import Index, Numeric
+from sqlalchemy import BigInteger, Index, Numeric, true
 from sqlalchemy.orm import Mapped, mapped_column
 
 from db.postgres import Base
@@ -58,3 +58,29 @@ class PricePermission(Base):
             f"<PricePermission(id_company={self.id_company}, "
             f"id_product={self.id_product}, price={self.price})>"
         )
+
+
+class InvoiceBusy(Base):
+    """Блокировка счёта на время обработки.
+
+    Используется для предотвращения параллельной обработки одного и того же
+    счёта вебхуком. Запись с ``busy = true`` означает, что счёт в данный
+    момент занят.
+    """
+
+    __tablename__ = "invoice_busy"
+
+    id_invoice: Mapped[int] = mapped_column(
+        BigInteger,
+        unique=True,
+        comment="ID счёта (внешний код в Битрикс24)",
+    )
+    busy: Mapped[bool] = mapped_column(
+        default=True,
+        server_default=true(),
+        comment="Признак занятости счёта",
+    )
+
+    def __repr__(self) -> str:
+        """Строковое представление для отладки."""
+        return f"<InvoiceBusy(id_invoice={self.id_invoice}, busy={self.busy})>"

@@ -14,7 +14,10 @@ from models.deal_models import AdditionalInfo  # noqa: F401
 from models.delivery_note_models import DeliveryNote  # noqa: F401
 from models.invoice_models import Invoice  # noqa: F401
 from models.lead_models import Lead  # noqa: F401
-from models.price_permission_models import PricePermission  # noqa: F401
+from models.price_permission_models import (  # noqa: F401
+    InvoiceBusy,
+    PricePermission,
+)
 from models.references import (  # noqa: F401
     AdditionalResponsible,
     Category,
@@ -277,6 +280,47 @@ class PricePermissionAdmin(
         "updated_at",
     ]
     icon = "fa-solid fa-circle-check"
+
+
+class InvoiceBusyAdmin(BaseAdmin, model=InvoiceBusy):  # type: ignore[call-arg]
+    name = "Занятость счёта"
+    name_plural = "Занятость счетов"
+    category = "Справочники"
+    column_list = [  # Поля в списке
+        "id_invoice",
+        "busy",
+        "created_at",
+        "updated_at",
+    ]
+    column_labels = {  # Надписи полей в списке
+        "id_invoice": "ID счёта",
+        "busy": "Занят",
+        "created_at": "Создано",
+        "updated_at": "Обновлено",
+    }
+    column_default_sort = [("id_invoice", True)]  # Сортировка по умолчанию
+    column_sortable_list = [  # Список полей по которым возможна сортировка
+        "id_invoice",
+        "busy",
+        "created_at",
+        "updated_at",
+    ]
+    column_searchable_list = [  # Список полей по которым возможен поиск
+        "id_invoice",
+    ]
+    form_columns = [  # Поля на форме
+        "id_invoice",
+        "busy",
+    ]
+    column_details_list = [  # Поля на детальной странице
+        "id",
+        "id_invoice",
+        "busy",
+        "created_at",
+        "updated_at",
+        "is_deleted_in_bitrix",
+    ]
+    icon = "fa-solid fa-lock"
 
 
 class ShippingCompanyAdmin(
@@ -705,6 +749,7 @@ def register_models(admin: Admin) -> None:
     admin.add_view(SourceAdmin)
     admin.add_view(CategoryAdmin)
     admin.add_view(PricePermissionAdmin)
+    admin.add_view(InvoiceBusyAdmin)
     admin.add_view(ShippingCompanyAdmin)
     admin.add_view(BillingAdmin)
     admin.add_view(DeliveryNoteAdmin)
