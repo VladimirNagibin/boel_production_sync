@@ -5,7 +5,7 @@ echo '</br>';
 # echo $_SERVER['DOCUMENT_ROOT'];
 # Bitrix_help::log_ftp('test', 'test');
 echo '</br>';
-$result = Contracts::get_number_invoice(8897, 'Company', '2021-01-01', '202');
+$result = Contracts::get_number_invoice(1, 'Company', '2021-01-01', '202');
 echo $result;
 
 $ftpPortal = getenv('FTP_PORTAL');
