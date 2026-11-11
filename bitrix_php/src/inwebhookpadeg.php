@@ -134,6 +134,9 @@ $parametr = 'id=' . $id . '&fields[UF_CRM_1632315102]=' . $dolgn . '&fields[UF_C
 //UF_CRM_1654683828 - номер договора формат НОМЕР/-/ФИРМА   UF_CRM_1631903199 - ФИРМА  UF_CRM_1631941968 - ИД ФИРМЫ
 $parametr .= '&fields[UF_CRM_1654683828]=' . $number_new.'|-|'.$firm . '&fields[UF_CRM_1631903199]=' . $firm . '&fields[UF_CRM_1631941968]=' . $firm;
 //log_ftp($parametr,'padeg');
+
+echo $parametr;
+
 $res = zapros($zapros, $parametr); 
 {
    if (array_key_exists('error', $res))
@@ -288,6 +291,7 @@ function zapros3($param)
     global $grammems_api_key;
 
    $url = 'https://htmlweb.ru/json/service/grammems/?grammems=' . urlencode($param) . '&api_key=' . urlencode($grammems_api_key);
+   echo $url;
    $ch = curl_init($url);
    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 
