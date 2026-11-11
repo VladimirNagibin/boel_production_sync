@@ -5,8 +5,8 @@ echo '</br>';
 # echo $_SERVER['DOCUMENT_ROOT'];
 # Bitrix_help::log_ftp('test', 'test');
 echo '</br>';
-# $result = Contracts::get_number_invoice(8897, 'Company', '2021-01-01', '202');
-# echo $result;
+$result = Contracts::get_number_invoice(8897, 'Company', '2021-01-01', '202');
+echo $result;
 
 $ftpPortal = getenv('FTP_PORTAL');
 $ftpUser = getenv('FTP_USER');
@@ -14,7 +14,7 @@ $ftpPass = getenv('FTP_PASS');
 
 
 
-sendupdate1c(111111, 'gnom', 2);
+# sendupdate1c(111111, 'gnom', 2);
 
 
 function sendupdate1c($id11, $xml_id11, $fl11)
