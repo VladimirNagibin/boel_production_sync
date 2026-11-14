@@ -12,7 +12,9 @@ from admin.admin_models import register_models
 from admin.authenticate import BasicAuthBackend
 from api.v1.accounting_documents import account_router
 from api.v1.b24.b24_router import b24_router
+from api.v1.invoice_tasks import invoice_tasks_router
 from api.v1.messages import messages_router
+from api.v1.numbering import numbering_router
 from api.v1.reports import reports_router
 from api.v1.test import test_router
 from api.v1.upload_product_codes import upload_codes_router
@@ -98,6 +100,16 @@ app = FastAPI(
 app.include_router(b24_router, prefix="/api/v1/b24", tags=["b24"])
 app.include_router(
     messages_router, prefix="/api/v1/messages", tags=["messages_rabbitmq"]
+)
+app.include_router(
+    invoice_tasks_router,
+    prefix="/api/v1/invoice-tasks",
+    tags=["invoice_tasks"],
+)
+app.include_router(
+    numbering_router,
+    prefix="/api/v1/numbering",
+    tags=["numbering"],
 )
 app.include_router(
     reports_router,

@@ -15,6 +15,8 @@ $postgresPort = getenv('POSTGRES_PORT');
 $postgresUser = getenv('POSTGRES_USER');
 $postgresPassword = getenv('POSTGRES_PASSWORD');
 $postgresDb = getenv('POSTGRES_DB');
+$bpSyncApiUrl = getenv('BP_SYNC_API_URL') ?: 'http://bp_sync:8000';
+$bpSyncApiKey = getenv('BITRIX_CLIENT_SECRET');
 
 class Function_help
 {
@@ -186,6 +188,8 @@ class Function_help
 
 class Contracts
 {
+    private const BUSY_FLAG_FILE = 'Contracts/flag.txt';
+
     // Соединение с FTP
     private static function ftp_connect()
     {
@@ -301,7 +305,7 @@ class Contracts
             return false; // Нет связи с FTP - считаем, что занято
         }
 
-        $exists = self::ftp_file_exists($conn_id, 'flag.txt');
+        $exists = self::ftp_file_exists($conn_id, self::BUSY_FLAG_FILE);
         ftp_close($conn_id);
 
         return !$exists;
@@ -314,7 +318,8 @@ class Contracts
             return;
         }
 
-        self::ftp_put_contents($conn_id, 'flag.txt', date('Y-m-d H:i:s'));
+        @ftp_mkdir($conn_id, 'Contracts');
+        self::ftp_put_contents($conn_id, self::BUSY_FLAG_FILE, date('Y-m-d H:i:s'));
         ftp_close($conn_id);
     }
     // удаляем файл-флаг с FTP
@@ -325,11 +330,12 @@ class Contracts
             return;
         }
 
-        self::ftp_delete_file($conn_id, 'flag.txt');
+        self::ftp_delete_file($conn_id, self::BUSY_FLAG_FILE);
         ftp_close($conn_id);
     }
     public static function get_number_contract($firma, $company, $datecontract, $id_us)
     {
+        return self::get_number_bp_sync($firma, 'contract');
         // Bitrix_help::send_message(215, 'Старт ');
         //$function_message = new Function_help();
         $id_us = 215;
@@ -421,6 +427,7 @@ class Contracts
     }
     public static function get_number_invoice($firma, $company, $datecontract, $id_us)
     {
+        return self::get_number_bp_sync($firma, 'invoice');
         $id_us = 215;
         $new_number = '';
         $flbusy = self::get_busy_contracts();
@@ -512,6 +519,61 @@ class Contracts
         } else {
             Bitrix_help::send_message($id_us, 'Реестр номеров счетов занят. Попробуйте ещё раз'); 
         }
+        return $new_number;
+    }
+    public static function get_number_bp_sync($id_firm, $doc_type)
+    {
+        global $bpSyncApiUrl, $bpSyncApiKey;
+
+        $new_number = '';
+        if (empty($bpSyncApiUrl)) {
+            return $new_number;
+        }
+
+        $url = rtrim($bpSyncApiUrl, '/') . '/api/v1/numbering/number?' . http_build_query(array(
+            'id_firm' => $id_firm,
+            'doc_type' => $doc_type,
+        ));
+
+        $curl = curl_init();
+        curl_setopt_array($curl, array(
+            CURLOPT_SSL_VERIFYPEER => 0,
+            CURLOPT_RETURNTRANSFER => 1,
+            CURLOPT_HEADER => 0,
+            CURLOPT_URL => $url,
+            CURLOPT_TIMEOUT => 30,
+            CURLOPT_HTTPHEADER => array(
+                'X-API-Key: ' . $bpSyncApiKey,
+            ),
+        ));
+        $response = curl_exec($curl);
+        $http_code = curl_getinfo($curl, CURLINFO_RESPONSE_CODE);
+        $curl_error = curl_error($curl);
+        curl_close($curl);
+
+        if ($response === false) {
+            Bitrix_help::log_ftp(
+                'bp_sync numbering request failed: ' . $curl_error,
+                'bp_sync_numbering_error'
+            );
+            return $new_number;
+        }
+
+        $result = json_decode($response, true);
+
+        if (!is_array($result) || $http_code !== 200) {
+            $detail = isset($result['detail']) ? $result['detail'] : 'HTTP ' . $http_code;
+            Bitrix_help::log_ftp(
+                'bp_sync numbering error: ' . $detail,
+                'bp_sync_numbering_error'
+            );
+            return $new_number;
+        }
+
+        if (isset($result['number'])) {
+            $new_number = (string) $result['number'];
+        }
+
         return $new_number;
     }
 }
