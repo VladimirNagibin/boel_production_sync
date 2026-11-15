@@ -1577,4 +1577,128 @@ class Bitrix_help
         $result = self::request_sql($sql);
         return $result;
     }  
+    public static function send_invoice_1C_bp_sync($invoice_id, $action_id)
+    // Послать сообщение в bp_sync об изменении счёта.
+    // action_id: 0 - deleted_invoice, 1 - new_invoice, 2 - updated_invoice
+    {
+        global $bpSyncApiUrl, $bpSyncApiKey;
+
+        if (empty($bpSyncApiUrl)) {
+            $message = 'bp_sync invoice task error: BP_SYNC_API_URL is empty';
+            self::log_ftp($message, 'bp_sync_invoice_task_error');
+            self::notify_about_invoice_task_error($message);
+            return false;
+        }
+
+        $action_map = array(
+            0 => 'deleted_invoice',
+            1 => 'new_invoice',
+            2 => 'updated_invoice',
+        );
+
+        $action_id = (int) $action_id;
+        $invoice_id = (int) $invoice_id;
+
+        if (!isset($action_map[$action_id])) {
+            $message = 'bp_sync invoice task error: неизвестный action_id '
+                . $action_id . ' для счёта ' . $invoice_id;
+            self::log_ftp($message, 'bp_sync_invoice_task_error');
+            self::notify_about_invoice_task_error($message);
+            return false;
+        }
+
+        $action = $action_map[$action_id];
+        $url = rtrim($bpSyncApiUrl, '/') . '/api/v1/invoice-tasks';
+        $payload = json_encode(array(
+            'invoice_id' => $invoice_id,
+            'action' => $action,
+        ));
+
+        $curl = curl_init();
+        curl_setopt_array($curl, array(
+            CURLOPT_SSL_VERIFYPEER => 0,
+            CURLOPT_RETURNTRANSFER => 1,
+            CURLOPT_HEADER => 0,
+            CURLOPT_POST => 1,
+            CURLOPT_URL => $url,
+            CURLOPT_TIMEOUT => 30,
+            CURLOPT_HTTPHEADER => array(
+                'Content-Type: application/json',
+                'X-API-Key: ' . $bpSyncApiKey,
+            ),
+            CURLOPT_POSTFIELDS => $payload,
+        ));
+        $response = curl_exec($curl);
+        $http_code = curl_getinfo($curl, CURLINFO_RESPONSE_CODE);
+        $curl_error = curl_error($curl);
+        curl_close($curl);
+
+        if ($response === false) {
+            $message = 'bp_sync invoice task error: ' . $curl_error
+                . ' (invoice_id=' . $invoice_id
+                . ', action=' . $action . ')';
+            self::log_ftp($message, 'bp_sync_invoice_task_error');
+            self::notify_about_invoice_task_error($message);
+            return false;
+        }
+
+        $result = json_decode($response, true);
+
+        if ($http_code === 201 || $http_code === 409) {
+            return true;
+        }
+
+        if (is_array($result)) {
+            if (isset($result['error'])) {
+                $detail = $result['error'];
+            } elseif (isset($result['detail'])) {
+                $detail = $result['detail'];
+            } else {
+                $detail = 'HTTP ' . $http_code;
+            }
+        } else {
+            $detail = 'HTTP ' . $http_code;
+        }
+
+        $message = 'bp_sync invoice task error: ' . $detail
+            . ' (invoice_id=' . $invoice_id
+            . ', action=' . $action . ')';
+        self::log_ftp($message, 'bp_sync_invoice_task_error');
+        self::notify_about_invoice_task_error($message);
+
+        return false;
+    }
+
+    private static function notify_about_invoice_task_error($message)
+    {
+        $bitrix_sent = false;
+
+        try {
+            $result = self::send_message(
+                self::$nameObserverService,
+                $message
+            );
+            $bitrix_sent = is_array($result)
+                && !array_key_exists('error', $result);
+        } catch (Exception $e) {
+            $bitrix_sent = false;
+        }
+
+        if ($bitrix_sent) {
+            return;
+        }
+
+        $mail_to = getenv('MAIL_TO');
+        if (empty($mail_to)) {
+            $mail_to = getenv('ADMIN_EMAIL');
+        }
+
+        if (!empty($mail_to)) {
+            @mail(
+                $mail_to,
+                'bp_sync invoice task error',
+                $message
+            );
+        }
+    }
 }
