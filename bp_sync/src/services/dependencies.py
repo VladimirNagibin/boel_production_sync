@@ -43,6 +43,7 @@ from .invoices.invoice_services import InvoiceClient
 from .leads.lead_bitrix_services import LeadBitrixClient
 from .leads.lead_repository import LeadRepository
 from .leads.lead_services import LeadClient
+from .numbering.numbering_service import NumberingService
 from .products.code_services import CodeService
 from .products.product_bitrix_services import ProductBitrixClient
 from .timeline_comments.timeline_comment_bitrix_services import (
@@ -290,6 +291,10 @@ async def create_billing_repository() -> BillingRepository:
     return BillingRepository(session=get_session_context())
 
 
+async def create_numbering_service() -> NumberingService:
+    return NumberingService(get_session_context())
+
+
 async def create_timeline_comment_bitrix_client() -> (
     TimeLineCommentBitrixClient
 ):
@@ -445,6 +450,11 @@ async def get_invoice_bitrix_client_dep() -> InvoiceBitrixClient:
 async def get_billing_repository_dep() -> BillingRepository:
     client = await get_service("billing_repository")
     return cast(BillingRepository, client)
+
+
+async def get_numbering_service_dep() -> NumberingService:
+    client = await get_service("numbering_service")
+    return cast(NumberingService, client)
 
 
 async def get_delivery_note_repository_dep() -> DeliveryNoteRepository:

@@ -19,6 +19,7 @@ from models.deal_models import AdditionalInfo, Deal  # noqa: F401
 from models.delivery_note_models import DeliveryNote  # noqa: F401
 from models.invoice_models import Invoice  # noqa: F401
 from models.lead_models import Lead  # noqa: F401
+from models.numbering import NumberingRule  # noqa: F401
 from models.price_permission_models import (  # noqa: F401
     InvoiceBusy,
     PricePermission,

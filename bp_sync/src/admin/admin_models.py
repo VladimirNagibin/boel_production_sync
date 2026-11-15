@@ -14,6 +14,7 @@ from models.deal_models import AdditionalInfo  # noqa: F401
 from models.delivery_note_models import DeliveryNote  # noqa: F401
 from models.invoice_models import Invoice  # noqa: F401
 from models.lead_models import Lead  # noqa: F401
+from models.numbering import NumberingRule  # noqa: F401
 from models.price_permission_models import (  # noqa: F401
     InvoiceBusy,
     PricePermission,
@@ -321,6 +322,63 @@ class InvoiceBusyAdmin(BaseAdmin, model=InvoiceBusy):  # type: ignore[call-arg]
         "is_deleted_in_bitrix",
     ]
     icon = "fa-solid fa-lock"
+
+
+class NumberingRuleAdmin(
+    BaseAdmin, model=NumberingRule
+):  # type: ignore[call-arg]
+    name = "Нумерация документов"
+    name_plural = "Нумерация документов"
+    category = "Справочники"
+    column_list = [  # Поля в списке
+        "id_firm",
+        "doc_type",
+        "prefix",
+        "length",
+        "current_number",
+        "created_at",
+        "updated_at",
+    ]
+    column_labels = {  # Надписи полей в списке
+        "id_firm": "Фирма отгрузки",
+        "doc_type": "Тип документа",
+        "prefix": "Префикс",
+        "length": "Длина номера",
+        "current_number": "Текущий номер",
+        "created_at": "Создано",
+        "updated_at": "Обновлено",
+    }
+    column_default_sort = [("id_firm", True)]  # Сортировка по умолчанию
+    column_sortable_list = [  # Список полей по которым возможна сортировка
+        "id_firm",
+        "doc_type",
+        "prefix",
+        "length",
+        "current_number",
+    ]
+    column_searchable_list = [  # Список полей по которым возможен поиск
+        "id_firm",
+        "prefix",
+    ]
+    form_columns = [  # Поля на форме
+        "id_firm",
+        "doc_type",
+        "prefix",
+        "length",
+        "current_number",
+    ]
+    column_details_list = [  # Поля на детальной странице
+        "id",
+        "id_firm",
+        "doc_type",
+        "prefix",
+        "length",
+        "current_number",
+        "created_at",
+        "updated_at",
+        "is_deleted_in_bitrix",
+    ]
+    icon = "fa-solid fa-list-ol"
 
 
 class ShippingCompanyAdmin(
@@ -750,6 +808,7 @@ def register_models(admin: Admin) -> None:
     admin.add_view(CategoryAdmin)
     admin.add_view(PricePermissionAdmin)
     admin.add_view(InvoiceBusyAdmin)
+    admin.add_view(NumberingRuleAdmin)
     admin.add_view(ShippingCompanyAdmin)
     admin.add_view(BillingAdmin)
     admin.add_view(DeliveryNoteAdmin)
