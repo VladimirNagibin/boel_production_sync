@@ -452,76 +452,77 @@ if (count($res_arr) > 0) {
                             if (($products_update_deal1 == 1) or ($uf_company_id != $deal_company_id)) {
                                 updateprintinvoice($id_pech_form);
                             }
+                            // Со склада не формируем пока **********************************************************************************************************   
+                            // // 1. Заведение накладной // Перенесли после сборки // Отменили
+                            // Bitrix_help::sendUpdate1c('NEW_DEAL', $uf_deal_id);
+                            // // 2. Заведение сделки на отгрузку, привязка к тек сделке, формирование печатной формы
+                            // if (empty($idDealConnect)) {
+                            //     $parametrNewDeal = '';
+                            //     //$idStore = getStorageId($uf_deal_id);
+                            //     if (!empty($idStore)) {
+                            //         $assignrdByIdStorage = Bitrix_help::getStorageMan($idStore);
+                            //         if (!empty($assignrdByIdStorage)) {
+                            //             $parametrNewDeal .= "fields[TITLE]=$name_deal отгрузка со склада";
+                            //             $parametrNewDeal .= '&fields[CATEGORY_ID]=5&fields[STAGE_ID]=C5:NEW';
+                            //             $parametrNewDeal .= "&fields[TYPE_ID]=$type_id";
+                            //             $parametrNewDeal .= "&fields[COMPANY_ID]=$uf_company_id";
+                            //             $parametrNewDeal .= "&fields[CONTACT_ID]=$uf_contact_id";
+                            //             $parametrNewDeal .= "&fields[ASSIGNED_BY_ID]=$assignrdByIdStorage";
+                            //             $parametrNewDeal .= "&fields[UF_CRM_1655891443]=$uf_deal_id";
+                            //             $parametrNewDeal .= "&fields[UF_CRM_1655141630]=$typeShipment";
+                            //             $parametrNewDeal .= "&fields[UF_CRM_1632738604]=C5:NEW";
+                            //             $parametrNewDeal .= "&fields[UF_CRM_1657360424]=НОВЫЙ";
+                            //             $textProduct = '<ul>';
+                            //             if (count($product_rows_array) > 0) {
+                            //                 foreach ($product_rows_array as $value) {
+                            //                     //$textProduct .= '\r\n\t<li>'.$value['QUANTITY'].' '.$value['MEASURE_NAME'].' || '.$value['PRODUCT_NAME'] .'<br>\r\n </li>';
+                            //                     $productName = $value['PRODUCT_NAME'];
+                            //                     $productName = str_replace('"', '', $productName);
+                            //                     $textProduct .= '<li>' . $value['QUANTITY'] . ' ' . $value['MEASURE_NAME'] . ' || ' . $productName . '<br> </li>';
+                            //                 }
+                            //                 unset($value);
+                            //             }
+                            //             $textProduct .= '</ul>';
+                            //             $parametrNewDeal .= "&fields[COMMENTS]=$textProduct";
 
-                            // 1. Заведение накладной // Перенесли после сборки // Отменили
-                            Bitrix_help::sendUpdate1c('NEW_DEAL', $uf_deal_id);
-                            // 2. Заведение сделки на отгрузку, привязка к тек сделке, формирование печатной формы
-                            if (empty($idDealConnect)) {
-                                $parametrNewDeal = '';
-                                //$idStore = getStorageId($uf_deal_id);
-                                if (!empty($idStore)) {
-                                    $assignrdByIdStorage = Bitrix_help::getStorageMan($idStore);
-                                    if (!empty($assignrdByIdStorage)) {
-                                        $parametrNewDeal .= "fields[TITLE]=$name_deal отгрузка со склада";
-                                        $parametrNewDeal .= '&fields[CATEGORY_ID]=5&fields[STAGE_ID]=C5:NEW';
-                                        $parametrNewDeal .= "&fields[TYPE_ID]=$type_id";
-                                        $parametrNewDeal .= "&fields[COMPANY_ID]=$uf_company_id";
-                                        $parametrNewDeal .= "&fields[CONTACT_ID]=$uf_contact_id";
-                                        $parametrNewDeal .= "&fields[ASSIGNED_BY_ID]=$assignrdByIdStorage";
-                                        $parametrNewDeal .= "&fields[UF_CRM_1655891443]=$uf_deal_id";
-                                        $parametrNewDeal .= "&fields[UF_CRM_1655141630]=$typeShipment";
-                                        $parametrNewDeal .= "&fields[UF_CRM_1632738604]=C5:NEW";
-                                        $parametrNewDeal .= "&fields[UF_CRM_1657360424]=НОВЫЙ";
-                                        $textProduct = '<ul>';
-                                        if (count($product_rows_array) > 0) {
-                                            foreach ($product_rows_array as $value) {
-                                                //$textProduct .= '\r\n\t<li>'.$value['QUANTITY'].' '.$value['MEASURE_NAME'].' || '.$value['PRODUCT_NAME'] .'<br>\r\n </li>';
-                                                $productName = $value['PRODUCT_NAME'];
-                                                $productName = str_replace('"', '', $productName);
-                                                $textProduct .= '<li>' . $value['QUANTITY'] . ' ' . $value['MEASURE_NAME'] . ' || ' . $productName . '<br> </li>';
-                                            }
-                                            unset($value);
-                                        }
-                                        $textProduct .= '</ul>';
-                                        $parametrNewDeal .= "&fields[COMMENTS]=$textProduct";
-
-                                        $resNewDeal = Bitrix_help::request('crm.deal.add', $parametrNewDeal);
-                                        if (count($resNewDeal) > 0) {
-                                            $newDealId = $resNewDeal['result'];
-                                            Bitrix_help::setCommentsDeal($newDealId, $textProduct);
-                                            // $product_rows_array1 - массив товаров
-                                            products_upd_deal($product_rows_array, array(), $newDealId);
-                                            $store = Bitrix_help::getStorageName($idStore);
-                                            $parameterSbor = 'templateId=133&entityTypeId=2&entityId=' . $newDealId;
-                                            $parameterSbor .= '&stampsEnabled=0&values[DealName]=' . $name_deal;
-                                            $parameterSbor .= '&values[Men]=' . Bitrix_help::nameuser($responsible_id) . '&values[Store]=' . $store;
-                                            $resPrint = Bitrix_help::request('crm.documentgenerator.document.add', $parameterSbor);
-                                            if (count($resPrint) > 0) {
-                                                $id_schotpech = $resPrint['result']['document'];
-                                                $id_pech_form = $id_schotpech['id'];
-                                                Bitrix_help::request('crm.deal.update', "id=$newDealId&fields[UF_CRM_1656227383]=$id_pech_form");
-                                            }
-                                            //$responsibleObserver = Bitrix_help::getObserverService();
-                                            Bitrix_help::setObserverDeal($newDealId, $responsible_id, 1);
-                                            //Bitrix_help::setObserverDeal($newDealId,$responsibleObserver,1);
-                                            $parametr_deal .= '&fields[UF_CRM_1655891443]=' . $newDealId; // Добавляем связь с новой сделкой на отгрузку
-                                        } else {
-                                            // Не создана отгрузка
-                                            Bitrix_help::send_message($serviceUser, "Не создана отгрузка :: $id");
-                                        }
-                                    } else {
-                                        // Не найден кладовщик
-                                        Bitrix_help::send_message($serviceUser, "Не найден кладовщик :: $id");
-                                    }
-                                } else {
-                                    // Не найден склад отгрузки
-                                    Bitrix_help::send_message($serviceUser, "Не найден склад отгрузки :: $id");
-                                }
-                            } else {
-                                // Связанная сделка уже существует
-                                Bitrix_help::send_message($serviceUser, "Связанная сделка уже существует :: $id");
-                            }
-                            // 3. Запрос на отгрузку // Пока не до конца понятна логика // Запуск вручную
+                            //             $resNewDeal = Bitrix_help::request('crm.deal.add', $parametrNewDeal);
+                            //             if (count($resNewDeal) > 0) {
+                            //                 $newDealId = $resNewDeal['result'];
+                            //                 Bitrix_help::setCommentsDeal($newDealId, $textProduct);
+                            //                 // $product_rows_array1 - массив товаров
+                            //                 products_upd_deal($product_rows_array, array(), $newDealId);
+                            //                 $store = Bitrix_help::getStorageName($idStore);
+                            //                 $parameterSbor = 'templateId=133&entityTypeId=2&entityId=' . $newDealId;
+                            //                 $parameterSbor .= '&stampsEnabled=0&values[DealName]=' . $name_deal;
+                            //                 $parameterSbor .= '&values[Men]=' . Bitrix_help::nameuser($responsible_id) . '&values[Store]=' . $store;
+                            //                 $resPrint = Bitrix_help::request('crm.documentgenerator.document.add', $parameterSbor);
+                            //                 if (count($resPrint) > 0) {
+                            //                     $id_schotpech = $resPrint['result']['document'];
+                            //                     $id_pech_form = $id_schotpech['id'];
+                            //                     Bitrix_help::request('crm.deal.update', "id=$newDealId&fields[UF_CRM_1656227383]=$id_pech_form");
+                            //                 }
+                            //                 //$responsibleObserver = Bitrix_help::getObserverService();
+                            //                 Bitrix_help::setObserverDeal($newDealId, $responsible_id, 1);
+                            //                 //Bitrix_help::setObserverDeal($newDealId,$responsibleObserver,1);
+                            //                 $parametr_deal .= '&fields[UF_CRM_1655891443]=' . $newDealId; // Добавляем связь с новой сделкой на отгрузку
+                            //             } else {
+                            //                 // Не создана отгрузка
+                            //                 Bitrix_help::send_message($serviceUser, "Не создана отгрузка :: $id");
+                            //             }
+                            //         } else {
+                            //             // Не найден кладовщик
+                            //             Bitrix_help::send_message($serviceUser, "Не найден кладовщик :: $id");
+                            //         }
+                            //     } else {
+                            //         // Не найден склад отгрузки
+                            //         Bitrix_help::send_message($serviceUser, "Не найден склад отгрузки :: $id");
+                            //     }
+                            // } else {
+                            //     // Связанная сделка уже существует
+                            //     Bitrix_help::send_message($serviceUser, "Связанная сделка уже существует :: $id");
+                            // }
+                            // // 3. Запрос на отгрузку // Пока не до конца понятна логика // Запуск вручную
+                            // Со склада не формируем пока **********************************************************************************************************
                         } else {
                             // Цены ниже запрашиваемых. Исправьте цены в сделке и создайте счёт заново. Откат.
                             $parametr = $parametr . '&fields[stageId]=' . $inv_tec_stage . '&fields[ufCrm_SMART_INVOICE_1651509493]=' . $inv_tec_stage;
@@ -841,6 +842,8 @@ function checkprice($product_rows_array1, $product_deal_array1, $deal_check_resp
 }
 function sendupdate1c($id11, $xml_id11, $fl11)
 {
+    Bitrix_help::send_invoice_1C_bp_sync($id11, $fl11);
+    return;
     global $ftpPortal, $ftpUser, $ftpPass;
 
     // Послать сообщение в 1С об изменении счёта 1 - новый, 2 - изменённый, 0 - удалить Параметры(ид счёта, код 1С, тип события) // Записать JSON по FTP
