@@ -12,6 +12,6 @@ $ftpPortal = getenv('FTP_PORTAL');
 $ftpUser = getenv('FTP_USER');
 $ftpPass = getenv('FTP_PASS');
 
-Bitrix_help::send_invoice_1C_bp_sync(123, 3);
+# Bitrix_help::send_invoice_1C_bp_sync(123, 3);
 
 # sendupdate1c(111111, 'gnom', 2);
