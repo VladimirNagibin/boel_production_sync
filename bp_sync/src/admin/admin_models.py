@@ -14,6 +14,12 @@ from models.deal_models import AdditionalInfo  # noqa: F401
 from models.delivery_note_models import DeliveryNote  # noqa: F401
 from models.invoice_models import Invoice  # noqa: F401
 from models.lead_models import Lead  # noqa: F401
+from models.marketplace_models import (  # noqa: F401
+    MarketplaceAccount,
+    MarketplaceOrder,
+    MarketplaceOrderItem,
+    MarketplaceSyncRun,
+)
 from models.numbering import NumberingRule  # noqa: F401
 from models.price_permission_models import (  # noqa: F401
     InvoiceBusy,
@@ -798,6 +804,108 @@ class DeliveryNoteAdmin(BaseAdmin):
 """
 
 
+class MarketplaceAccountAdmin(
+    BaseAdmin, model=MarketplaceAccount
+):  # type: ignore[call-arg]
+    name = "Кабинет маркетплейса"
+    name_plural = "Кабинеты маркетплейсов"
+    category = "Маркетплейсы"
+    column_list = [
+        "marketplace",
+        "name",
+        "source_id",
+        "assigned_by_id",
+        "is_active",
+        "sync_cursor",
+    ]
+    column_searchable_list = ["marketplace", "name"]
+    form_columns = [
+        "marketplace",
+        "name",
+        "client_id",
+        "api_key",
+        "api_base",
+        "source_id",
+        "assigned_by_id",
+        "is_active",
+        "sync_cursor",
+    ]
+    icon = "fa-solid fa-store"
+
+
+class MarketplaceOrderAdmin(
+    BaseAdmin, model=MarketplaceOrder
+):  # type: ignore[call-arg]
+    name = "Заказ маркетплейса"
+    name_plural = "Заказы маркетплейсов"
+    category = "Маркетплейсы"
+    column_list = [
+        "marketplace",
+        "external_order_id",
+        "status",
+        "total",
+        "sync_status",
+        "deal_id",
+        "last_error",
+    ]
+    column_searchable_list = ["external_order_id", "status", "sync_status"]
+    form_columns = [
+        "marketplace",
+        "account_id",
+        "external_order_id",
+        "status",
+        "total",
+        "sync_status",
+        "deal_id",
+        "last_error",
+    ]
+    icon = "fa-solid fa-cart-shopping"
+
+
+class MarketplaceOrderItemAdmin(
+    BaseAdmin, model=MarketplaceOrderItem
+):  # type: ignore[call-arg]
+    name = "Позиция заказа"
+    name_plural = "Позиции заказов"
+    category = "Маркетплейсы"
+    column_list = ["order_id", "sku", "title", "quantity", "price"]
+    column_searchable_list = ["sku", "title"]
+    form_columns = ["order_id", "sku", "title", "quantity", "price"]
+    icon = "fa-solid fa-box-open"
+
+
+class MarketplaceSyncRunAdmin(
+    BaseAdmin, model=MarketplaceSyncRun
+):  # type: ignore[call-arg]
+    name = "Запуск синхронизации"
+    name_plural = "Запуски синхронизации"
+    category = "Маркетплейсы"
+    column_list = [
+        "marketplace",
+        "account_id",
+        "status",
+        "started_at",
+        "finished_at",
+        "orders_processed",
+        "orders_created",
+        "orders_updated",
+        "orders_with_error",
+    ]
+    form_columns = [
+        "marketplace",
+        "account_id",
+        "status",
+        "started_at",
+        "finished_at",
+        "orders_processed",
+        "orders_created",
+        "orders_updated",
+        "orders_with_error",
+        "error",
+    ]
+    icon = "fa-solid fa-arrows-rotate"
+
+
 # Регистрация всех моделей
 def register_models(admin: Admin) -> None:
     # Основные сущности
@@ -822,6 +930,10 @@ def register_models(admin: Admin) -> None:
     admin.add_view(ContractAdmin)
     admin.add_view(ContactAdmin)
     admin.add_view(InvoiceAdmin)
+    admin.add_view(MarketplaceAccountAdmin)
+    admin.add_view(MarketplaceOrderAdmin)
+    admin.add_view(MarketplaceOrderItemAdmin)
+    admin.add_view(MarketplaceSyncRunAdmin)
 
     """
     admin.add_view(ContactAdmin(Contact, name="Контакты"))

@@ -296,3 +296,31 @@ class PaymentTermEnum(IntEnum):
 #    COURIER = 545
 #    TRANSPORT_COMPANY = 547
 #    NOT_DEFINE = 0
+
+
+class MarketplaceEnum(StrEnum):
+    """Маркетплейсы, из которых загружаются заказы."""
+
+    OZON = "ozon"
+    WILDBERRIES = "wildberries"
+    YANDEX_MARKET = "yandex_market"
+
+    @classmethod
+    def get_display_name(cls, value: str) -> str:
+        """Возвращает человекочитаемое название маркетплейса."""
+        display_name_map: dict[str, str] = {
+            "ozon": "Ozon",
+            "wildberries": "Wildberries",
+            "yandex_market": "Яндекс Маркет",
+        }
+        return display_name_map.get(value, "Неизвестно")
+
+
+class MarketplaceSyncStatusEnum(StrEnum):
+    """Статусы синхронизации заказа маркетплейса со сделкой."""
+
+    NEW = "new"
+    DEAL_CREATED = "deal_created"
+    DEAL_UPDATED = "deal_updated"
+    ERROR = "error"
+    IGNORED = "ignored"

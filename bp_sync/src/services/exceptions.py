@@ -82,3 +82,24 @@ class MaxRetriesExceededError(LockAcquisitionError):
     """Достигнуто максимальное количество попыток"""
 
     pass
+
+
+class MarketplaceApiError(Exception):
+    """Ошибка API маркетплейса."""
+
+    def __init__(
+        self,
+        message: str = "Marketplace API error",
+        status_code: int | None = None,
+        detail: Any = None,
+    ):
+        self.message = message
+        self.status_code = status_code
+        self.detail = detail
+        super().__init__(message)
+
+
+class MarketplaceSyncError(Exception):
+    """Ошибка синхронизации заказа маркетплейса."""
+
+    pass

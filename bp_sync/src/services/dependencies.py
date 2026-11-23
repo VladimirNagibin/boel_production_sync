@@ -57,6 +57,8 @@ from .token_services.token_storage import TokenStorage
 from .users.user_bitrix_services import UserBitrixClient
 from .users.user_repository import UserRepository
 from .users.user_services import UserClient
+from .marketplaces.marketplace_repository import MarketplaceRepository
+from .marketplaces.marketplace_services import MarketplaceService
 
 ModelBase = TypeVar("ModelBase", bound=DeclarativeBase)
 
@@ -321,6 +323,17 @@ async def create_measure_repository() -> MeasureRepository:
     return MeasureRepository(get_session_context())
 
 
+async def create_marketplace_repository() -> MarketplaceRepository:
+    return MarketplaceRepository(get_session_context())
+
+
+async def create_marketplace_service() -> MarketplaceService:
+    return MarketplaceService(
+        repository=await create_marketplace_repository(),
+        deal_client=await create_deal_client(),
+    )
+
+
 async def get_service(service_name: str) -> Any:
     """Получает сервис из реестра или создает новый"""
     cache = _services_cache_ctx.get()
@@ -482,6 +495,11 @@ async def get_product_bitrix_client_dep() -> ProductBitrixClient:
 async def get_measure_repository_dep() -> MeasureRepository:
     client = await get_service("measure_repository")
     return cast(MeasureRepository, client)
+
+
+async def get_marketplace_service_dep() -> MarketplaceService:
+    client = await get_service("marketplace_service")
+    return cast(MarketplaceService, client)
 
 
 async def get_deal_repository_dep() -> DealRepository:
