@@ -66,6 +66,15 @@ class Settings(BaseSettings):  # type: ignore
     CHAT_SUPERVISOR: int = 115
     TYPE_CHAT_SUPERVISOR: bool = False
 
+    # Интеграция с маркетплейсами
+    OZON_CLIENT_ID: str = ""
+    OZON_API_KEY: str = ""
+    OZON_API_BASE: str = "https://api-seller.ozon.ru"
+    MARKETPLACE_DEFAULT_ASSIGNED: int = 1
+    MARKETPLACE_DEFAULT_STAGE_ID: str = "NEW"
+    MARKETPLACE_DEFAULT_CLOSED_DAYS: int = 30
+    MARKETPLACE_ORDER_SYNC_DAYS: int = 1
+
     @property
     def dsn(self) -> str:
         return (

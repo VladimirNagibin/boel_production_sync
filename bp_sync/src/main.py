@@ -13,6 +13,7 @@ from admin.authenticate import BasicAuthBackend
 from api.v1.accounting_documents import account_router
 from api.v1.b24.b24_router import b24_router
 from api.v1.invoice_tasks import invoice_tasks_router
+from api.v1.marketplaces import marketplaces_router
 from api.v1.messages import messages_router
 from api.v1.numbering import numbering_router
 from api.v1.reports import reports_router
@@ -125,6 +126,11 @@ app.include_router(
     account_router,
     prefix="/api/v1/account",
     tags=["account"],
+)
+app.include_router(
+    marketplaces_router,
+    prefix="/api/v1/marketplaces",
+    tags=["marketplaces"],
 )
 app.include_router(test_router, prefix="/api/v1/test", tags=["test"])
 
