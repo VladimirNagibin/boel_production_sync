@@ -1498,6 +1498,11 @@ class Bitrix_help
         13247 => 611405,
         13617 => 639243,
         13615 => 648679,
+        13533 => 734859,
+        14087 => 735043,
+        11827 => 735295,
+        11717 => 735489,
+        15393 => 735491,
     );
         if (array_key_exists($idUser,$idDiskUserArray)){
         $idDisk = $idDiskUserArray[$idUser];
